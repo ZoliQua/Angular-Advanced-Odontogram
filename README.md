@@ -1,59 +1,23 @@
-# AngularAdvancedOdontogram
+# Angular Advanced Odontogram
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.20.
+Angular port of [react-advanced-odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)
+— an interactive, SVG-based dental odontogram (dental chart) editor.
+Work in progress; 1.0.0 = full feature parity with the React module v2.2.0
+(payload version 2.19, JSON/FHIR round-trip compatible).
 
-## Development server
+## Status
 
-To start a local development server, run:
+- [x] Phase 1 — engine core (framework-free) + test corpus green
+- [ ] Phase 2 — `OdontogramShellComponent`
+- [ ] Phase 3 — Settings & dialogs
+- [ ] Phase 4 — Periodontal chart & exports
+- [ ] Phase 5 — docs, packaging, 1.0.0
 
-```bash
-ng serve
-```
+## Development
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+    npm install
+    npm run gen:assets   # regenerate SVG asset modules after editing an SVG
+    npm test             # Vitest core suite (incl. golden parity fixtures)
+    npm run build:styles && npx ng build angular-advanced-odontogram
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Design spec: `docs/superpowers/specs/2026-08-06-angular-odontogram-port-design.md`.
