@@ -5,6 +5,7 @@
 /tmp
 /out-tsc
 /bazel-out
+/projects/angular-advanced-odontogram/styles.css
 
 # Node
 /node_modules
