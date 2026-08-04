@@ -1,0 +1,107 @@
+[
+  {
+    "name": "empty",
+    "parsed": {
+      "version": "2.19",
+      "globals": {},
+      "teeth": {}
+    }
+  },
+  {
+    "name": "edentulous",
+    "parsed": {
+      "version": "2.19",
+      "globals": {
+        "edentulous": true
+      },
+      "teeth": {}
+    }
+  },
+  {
+    "name": "mixed",
+    "parsed": {
+      "version": "2.19",
+      "globals": {},
+      "teeth": {
+        "12": {
+          "toothSelection": "none"
+        },
+        "14": {
+          "toothSelection": "milktooth"
+        },
+        "15": {
+          "toothSelection": "implant"
+        },
+        "16": {
+          "toothSelection": "tooth-under-gum"
+        },
+        "17": {
+          "toothSelection": "no-tooth-after-extraction"
+        },
+        "33": {
+          "endo": "endo-medical-filling"
+        },
+        "34": {
+          "endo": "endo-filling"
+        },
+        "35": {
+          "endo": "endo-filling-incomplete"
+        },
+        "36": {
+          "endo": "endo-glass-pin"
+        },
+        "37": {
+          "endo": "endo-metal-pin"
+        },
+        "46": {
+          "mobility": "m1"
+        },
+        "47": {
+          "mobility": "m2"
+        },
+        "48": {
+          "mobility": "m3"
+        },
+        "50": {
+          "periapicalType": "granuloma"
+        }
+      }
+    }
+  },
+  {
+    "name": "branches",
+    "parsed": {
+      "version": "2.19",
+      "globals": {},
+      "teeth": {
+        "11": {
+          "caries": [
+            "caries-occlusal"
+          ],
+          "cariesSeverity": {
+            "occlusal": 4
+          }
+        },
+        "12": {
+          "fillingSurfaceMaterials": {
+            "mesial": "composite",
+            "occlusal": "amalgam"
+          }
+        },
+        "13": {
+          "calculus": true,
+          "extractionPlan": true
+        },
+        "14": {
+          "toothSelection": "none",
+          "missingClosed": true
+        },
+        "15": {
+          "toothSubstrate": "crownprep",
+          "restorationType": "crown",
+          "restorationMaterial": "metal-ceramic"
+        }
+      }
+    }
+  }
+]
