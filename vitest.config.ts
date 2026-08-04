@@ -4,6 +4,8 @@ import { defineConfig } from "vitest/config";
 // shell components land (Phases 2-4 re-enable them with an Angular mount
 // helper). Generated in the source repo via:
 //   grep -l -E "from [\"']react[\"']|@testing-library/react|from [\"']\.\./App[\"']|useI18n" *.ts *.tsx
+// The grep was filename/keyword-based; useI18n.test.ts was a false positive
+// (it only tests the framework-free i18n bus) and has been removed.
 const REACT_DEPENDENT = [
   "App.test.tsx", "ds1-confirm-revert.test.tsx", "ds1-confirm.test.ts",
   "p4a-case-meta.test.ts", "p4a-case-panel.test.ts", "p4b-classification-ui.test.ts",
@@ -31,7 +33,7 @@ const REACT_DEPENDENT = [
   "ui2-perio-settings.test.tsx", "ui2-row-visibility.test.ts",
   "ui3a-central-band.test.ts", "ui3a-diamond-tiles.test.ts",
   "ui3b-build-perio-svg.test.ts", "ui3b-export-options-modal.test.ts",
-  "ui3b-mpi-implant-gate.test.ts", "useI18n.test.ts", "warnings.test.ts",
+  "ui3b-mpi-implant-gate.test.ts", "warnings.test.ts",
 ];
 
 const TESTS = "projects/angular-advanced-odontogram/src/lib/core/__tests__";
@@ -41,7 +43,9 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: [`./${TESTS}/setup.ts`],
-    include: [`${TESTS}/**/*.{test,spec}.{ts,tsx}`],
+    include: [
+      "projects/angular-advanced-odontogram/src/lib/core/**/__tests__/**/*.{test,spec}.{ts,tsx}",
+    ],
     exclude: [
       "**/node_modules/**",
       ...REACT_DEPENDENT.map((f) => `${TESTS}/${f}`),

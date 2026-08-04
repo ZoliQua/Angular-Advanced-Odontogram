@@ -11,5 +11,11 @@
     "tslib": "^2.3.0",
     "jspdf": "^4.2.1"
   },
-  "sideEffects": false
+  "exports": {
+    "./styles.css": {
+      "style": "./styles.css",
+      "default": "./styles.css"
+    }
+  },
+  "sideEffects": ["**/*.css"]
 }
