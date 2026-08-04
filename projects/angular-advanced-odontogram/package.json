@@ -8,7 +8,8 @@
     "@angular/core": "^21.2.0"
   },
   "dependencies": {
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "jspdf": "^4.2.1"
   },
   "sideEffects": false
 }

@@ -13,8 +13,8 @@
 ## Global Constraints
 
 - Target repo: `/Users/Zoli/Sites/Angular-Advanced-Odontogram` (git repo already initialized on `main`; the spec is committed).
-- Core files under `lib/core/` are **byte-identical** to `$ENGINE/src/` except: (1) the `?raw` import block in `odontogram.ts` (lines 37–42), (2) `src/assets` → `assets` path constants inside copied test files. Any other diff is a bug.
-- Do NOT copy: `App.tsx`, `PerioChart.tsx`, `PerioSidebar.tsx`, `SettingsModal.tsx`, `DualStateConfirm.tsx`, `ExportOptionsModal.tsx`, `main.tsx`, `index.ts`, `i18n/useI18n.ts`, `vite-env.d.ts` — these are React shell files rewritten in later phases.
+- Core files under `lib/core/` are **byte-identical** to `$ENGINE/src/` except: (1) the `?raw` import block in `odontogram.ts` (lines 37–42), (2) `src/assets` → `assets` path constants inside copied test files, (3) `i18n/useI18n.ts`: React-only hook + `react` import stripped, framework-free i18n bus kept byte-identical. Any other diff is a bug.
+- Do NOT copy: `App.tsx`, `PerioChart.tsx`, `PerioSidebar.tsx`, `SettingsModal.tsx`, `DualStateConfirm.tsx`, `ExportOptionsModal.tsx`, `main.tsx`, `index.ts`, `vite-env.d.ts` — these are React shell files rewritten in later phases.
 - Package name `angular-advanced-odontogram`, version `0.1.0`, MIT license, npm as package manager.
 - Payload/data compatibility target: payload version 2.19 (whatever the copied core does — never "fix" core behavior in this phase).
 - Every task ends with exactly one commit, authored solely by `Zoltán Dul <zoltan.dul@gmail.com>`. NEVER add a `Co-Authored-By` trailer or any AI attribution. Each dispatch assigns the commit's exact `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE` (backdating policy: repo-root `CLAUDE.md`); prefix the `git commit` with it verbatim.

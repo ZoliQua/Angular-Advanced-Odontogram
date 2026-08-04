@@ -42,15 +42,19 @@ framework-free.**
 |---|---|---|---|---|
 | Engine core | `odontogram.ts` | 9,461 | none (85 direct DOM calls) | copy verbatim¹ |
 | Pure logic | `registry/` (9), `fhir/` (7), `perioClassification.ts`, `perioGraphic.ts`, `perioExport.ts`, `perioPdf.ts`, `bridgeOverlay.ts`, `status_extras.ts`, `theme.ts`, `plugin.ts`, `tour.ts`, `utils/numbering.ts`, `perioIndexNames.ts`, `i18n/translations.ts` | ~4,500 | none | copy verbatim |
-| React shell | `App.tsx` (1,039), `PerioChart.tsx` (2,360), `PerioSidebar.tsx` (451), `SettingsModal.tsx` (652), `DualStateConfirm.tsx` (125), `ExportOptionsModal.tsx` (228), `i18n/useI18n.ts`, `main.tsx` | ~4,900 | yes | rewrite as Angular |
+| React shell | `App.tsx` (1,039), `PerioChart.tsx` (2,360), `PerioSidebar.tsx` (451), `SettingsModal.tsx` (652), `DualStateConfirm.tsx` (125), `ExportOptionsModal.tsx` (228), `main.tsx` | ~4,900 | yes | rewrite as Angular |
 | Styling | `index.css` (Tailwind 3 + `--odon-*` CSS vars) | 80 KB | n/a | copy; prebuild to shipped `styles.css` |
 | Assets | `assets/teeth-svgs/`, `assets/icon-svgs/` | — | n/a | copy + codegen (§5) |
 | Tests | `src/__tests__/` — 152 entries incl. golden `parity/` fixtures | — | mixed | core tests copied; `.tsx` tests re-written (§7) |
 
-¹ Sole permitted edit: the `?raw` SVG import block at the top of
+¹ Two permitted edits: (1) the `?raw` SVG import block at the top of
 `odontogram.ts` (and the icon `?raw` imports currently in `App.tsx`) is
-replaced by imports from generated TS asset modules (§5). Everything else in
-core files is byte-identical to the React repo.
+replaced by imports from generated TS asset modules (§5); (2) `i18n/useI18n.ts`
+is copied WITH its framework-free i18n bus (`t`, `getI18nLanguage`,
+`setI18nLanguage`, `onI18nChange`) byte-identical, but with the React-only
+`useI18n()` hook and its `react` import removed — the hook's role moves to
+the Phase-2 `I18nService`. Everything else in core files is byte-identical to
+the React repo.
 
 **How the shell and engine couple:** the shell renders a static DOM skeleton
 with fixed ids (`#toothGrid`, `#cariesChecks`, `#modsChecks`,
