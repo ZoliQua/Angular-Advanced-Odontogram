@@ -4,7 +4,11 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../out-tsc/spec",
-    "types": ["vitest/globals"],
+    // "node" added (Task 6): several ported specs read fixture assets
+    // (SVG/CSS) via `node:fs`/`node:url`, exactly like their corpus
+    // originals (e.g. secondary-caries-parity.test.ts, sp16-fillings-card.test.ts) —
+    // without it ngtsc can't resolve those built-in module types (TS2307).
+    "types": ["vitest/globals", "node"],
     // Matches tsconfig.lib.json's relaxation: specs that import the real
     // (non-mocked) core/odontogram.ts — the framework-free engine, an exact
     // behavioral transcription of loosely-typed source — pull its whole

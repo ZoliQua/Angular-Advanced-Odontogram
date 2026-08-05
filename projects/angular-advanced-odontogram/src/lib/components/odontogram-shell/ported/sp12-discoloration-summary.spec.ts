@@ -1,0 +1,26 @@
+// Angular port of core/__tests__/sp12-discoloration-summary.test.ts.
+// Framework-free (swept into REACT_DEPENDENT by the exclusion grep's
+// "useI18n" keyword match only) — verbatim port, import paths adjusted for
+// components/odontogram-shell/ported/.
+import { describe, it, expect, beforeEach } from "vitest";
+import { getToothStateSummary, getOdontogramSummary, __setToothStateForTest } from "../../../core/odontogram";
+import { setI18nLanguage, t } from "../../../core/i18n/useI18n";
+beforeEach(() => setI18nLanguage("en"));
+describe("SP12 Task 4: discoloration in summaries", () => {
+  it("tooltip shows the cause", () => {
+    __setToothStateForTest(11, { toothSelection: "tooth-base", discoloration: "tetracycline" });
+    expect(getToothStateSummary(11).join(" · ")).toContain(t("discoloration.tetracycline"));
+  });
+  it("whole-mouth has a discoloration section listing the tooth", () => {
+    __setToothStateForTest(21, { toothSelection: "tooth-base", discoloration: "fluorosis" });
+    const d = getOdontogramSummary().sections.find(s => s.key === "discoloration")!;
+    expect(d).toBeTruthy();
+    expect(d.items.join(" | ")).toContain(t("discoloration.fluorosis"));
+  });
+  it("suppressed under a crown (gate consistency)", () => {
+    __setToothStateForTest(16, { toothSelection: "tooth-base", restorationType: "crown", restorationMaterial: "zircon", discoloration: "tetracycline" });
+    expect(getToothStateSummary(16).join(" · ")).not.toContain(t("discoloration.tetracycline"));
+    const d = getOdontogramSummary().sections.find(s => s.key === "discoloration")!;
+    expect(d.items.join(" | ")).not.toContain("16 (");
+  });
+});
