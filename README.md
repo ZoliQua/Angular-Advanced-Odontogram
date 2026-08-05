@@ -17,7 +17,9 @@ Work in progress; 1.0.0 = full feature parity with the React module v2.2.0
 
     npm install
     npm run gen:assets   # regenerate SVG asset modules after editing an SVG
-    npm test             # Vitest core suite (incl. golden parity fixtures)
+    npm test             # test:corpus (Vitest core suite, incl. golden parity fixtures) + test:ng (Angular specs, ngtsc-compiled via `ng test`)
+    npm run test:corpus  # plain Vitest — the framework-free engine + copied React-derived corpus only
+    npm run test:ng      # Angular component/service *.spec.ts files, via `ng test` (needed for signal input()/output() support)
     npm run build:styles && npx ng build angular-advanced-odontogram
 
 Design spec: `docs/superpowers/specs/2026-08-06-angular-odontogram-port-design.md`.

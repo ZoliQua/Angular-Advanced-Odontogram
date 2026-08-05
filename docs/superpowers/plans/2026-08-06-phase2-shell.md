@@ -110,6 +110,8 @@ git add -A
 git commit -m "test: Angular TestBed infrastructure under Vitest"
 ```
 
+**Amended during execution (Task 3):** this infra was only ever exercised against `smoke.spec.ts`'s plain, input/output-free `SmokeComponent`. Task 3 discovered that plain `vitest run`'s JIT compilation (no ngtsc) cannot see a component's signal-based `input()`/`output()`/`viewChild()` field metadata at all — that metadata is only injected by ngtsc rewriting the `@Component()` decorator's arguments at compile time, and no `target`/`useDefineForClassFields`/decorator-emit setting in `vitest.config.ts` changes that (verified empirically). Since the project's own `angular.json` already ships an `@angular/build:unit-test` (Vitest-backed, ngtsc-compiled) target, Angular component specs (`*.spec.ts` under `src/lib`) now run there via `npm run test:ng` (`ng test angular-advanced-odontogram --watch=false`, scoped with `include: ["**/*.spec.ts"]` so it doesn't also try to compile the plain-JS `__tests__` corpus), while the copied React-derived corpus stays on plain `vitest run` via `npm run test:corpus`. `npm test` chains both (`test:corpus && test:ng`). `angular-test-setup.ts` (this task's `initTestEnvironment` call) became redundant once Angular specs moved off plain vitest — the `@angular/build:unit-test` builder auto-initializes TestBed per its own `setupFiles` schema doc ("The application's polyfills and the Angular TestBed are always initialized before these files") — so it was deleted; `vitest.config.ts`'s `setupFiles`/`include` were narrowed back to corpus-only.
+
 ---
 
 ### Task 2: I18nService
@@ -287,6 +289,8 @@ Adjust the exact class-name selectors to the REAL ones from the TSX after readin
 - [ ] **Step 4: Run its spec → PASS; `npm test` → all green.**
 - [ ] **Step 5: Export from public-api; `npx ng build angular-advanced-odontogram` green.**
 - [ ] **Step 6: Commit** — `git commit -m "feat: DualStateConfirm dialog component"`
+
+**Amended during execution:** this was the first component to use `input.required()`/`output()`, and it exposed that plain `vitest run`'s JIT compilation (Task 1's original infra) cannot register Angular's signal-based `input()`/`output()`/`viewChild()` field metadata — that wiring only exists when ngtsc compiles the `@Component()` decorator (confirmed via `ng build`'s emitted `ɵcmp` metadata, and via an isolated minimal repro that failed identically regardless of esbuild `target`/`useDefineForClassFields` settings). Fix-forward (round 2, controller-directed): a dual-runner split — the copied React-derived corpus stays on plain `vitest run` (`npm run test:corpus`, 95 passed + 1 skipped), and Angular component/service specs (this one, `i18n.service.spec.ts`, `smoke.spec.ts`) now run under the project's existing `@angular/build:unit-test` builder (`npm run test:ng`, i.e. `ng test angular-advanced-odontogram --watch=false`; 3 files / 15 tests green — proven via ngtsc-compiled output, not a workaround). `npm test` chains both. No new dependency or plugin was added. See the Task 1 section above for the corresponding infra-side amendment note.
 
 ---
 

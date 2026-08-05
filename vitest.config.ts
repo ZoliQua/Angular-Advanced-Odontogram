@@ -42,13 +42,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
-    setupFiles: [
-      `./${TESTS}/setup.ts`,
-      "./projects/angular-advanced-odontogram/src/lib/testing/angular-test-setup.ts",
-    ],
+    setupFiles: [`./${TESTS}/setup.ts`],
     include: [
       "projects/angular-advanced-odontogram/src/lib/core/**/__tests__/**/*.{test,spec}.{ts,tsx}",
-      "projects/angular-advanced-odontogram/src/lib/**/*.spec.ts",
     ],
     exclude: [
       "**/node_modules/**",

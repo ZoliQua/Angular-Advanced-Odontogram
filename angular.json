@@ -27,7 +27,8 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/angular-advanced-odontogram/tsconfig.spec.json"
+            "tsConfig": "projects/angular-advanced-odontogram/tsconfig.spec.json",
+            "include": ["**/*.spec.ts"]
           }
         }
       }

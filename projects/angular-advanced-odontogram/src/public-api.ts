@@ -12,3 +12,4 @@ export * from "./lib/core/utils/numbering";
 export type * from "./lib/core/fhir/types";
 export * from "./lib/core/i18n/translations";
 export * from "./lib/i18n/i18n.service";
+export * from "./lib/components/dual-state-confirm/dual-state-confirm.component";

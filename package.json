@@ -8,7 +8,9 @@
     "build": "ng build",
     "build:styles": "tailwindcss -i projects/angular-advanced-odontogram/src/lib/core/index.css -o projects/angular-advanced-odontogram/styles.css --minify",
     "watch": "ng build --watch --configuration development",
-    "test": "vitest run",
+    "test": "npm run test:corpus && npm run test:ng",
+    "test:corpus": "vitest run",
+    "test:ng": "ng test angular-advanced-odontogram --watch=false",
     "test:watch": "vitest",
     "parity:capture": "PARITY_CAPTURE=1 vitest run projects/angular-advanced-odontogram/src/lib/core/__tests__/parity/capture.test.ts",
     "gen:assets": "node scripts/generate-svg-assets.mjs"
