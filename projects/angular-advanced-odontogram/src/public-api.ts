@@ -11,3 +11,4 @@ export * from "./lib/core/perioClassification";
 export * from "./lib/core/utils/numbering";
 export type * from "./lib/core/fhir/types";
 export * from "./lib/core/i18n/translations";
+export * from "./lib/i18n/i18n.service";
