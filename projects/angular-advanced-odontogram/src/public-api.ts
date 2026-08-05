@@ -13,3 +13,4 @@ export type * from "./lib/core/fhir/types";
 export * from "./lib/core/i18n/translations";
 export * from "./lib/i18n/i18n.service";
 export * from "./lib/components/dual-state-confirm/dual-state-confirm.component";
+export * from "./lib/components/odontogram-shell/odontogram-shell.component";

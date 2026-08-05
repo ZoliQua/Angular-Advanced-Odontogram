@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
-import { provideZonelessChangeDetection } from "@angular/core";
+import { Component, provideZonelessChangeDetection } from "@angular/core";
 import { I18nService } from "./i18n.service";
 import { setI18nLanguage } from "../core/i18n/useI18n";
 
@@ -29,5 +29,32 @@ describe("I18nService", () => {
     const svc = TestBed.inject(I18nService);
     const raw = svc.t("app.title", { x: 1 }); // params on a paramless key are a no-op
     expect(typeof raw).toBe("string");
+  });
+
+  // Carry-forward fix (Task 3 review): t() must read `_lang` first so an
+  // OnPush template binding that calls `i18n.t(...)` is registered as a
+  // reactive consumer of the language signal and re-renders on
+  // setLanguage(), without needing any other signal read in the template.
+  it("a template binding calling i18n.t() refreshes after setLanguage()", async () => {
+    @Component({
+      imports: [],
+      // "panel.controls" actually differs between languages ("Controls" en /
+      // "Vezérlők" hu), unlike "app.title" (an untranslated brand name).
+      template: `<span id="label">{{ i18n.t('panel.controls') }}</span>`,
+    })
+    class HostComponent {
+      readonly i18n = TestBed.inject(I18nService);
+    }
+
+    const f = TestBed.createComponent(HostComponent);
+    await f.whenStable();
+    const label = f.nativeElement.querySelector("#label") as HTMLElement;
+    const before = label.textContent;
+
+    f.componentInstance.i18n.setLanguage("hu");
+    await f.whenStable();
+
+    expect(label.textContent).not.toBe(before);
+    expect(label.textContent).toBe(f.componentInstance.i18n.t("panel.controls"));
   });
 });

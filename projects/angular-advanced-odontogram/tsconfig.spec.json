@@ -4,7 +4,17 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../out-tsc/spec",
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    // Matches tsconfig.lib.json's relaxation: specs that import the real
+    // (non-mocked) core/odontogram.ts — the framework-free engine, an exact
+    // behavioral transcription of loosely-typed source — pull its whole
+    // module graph into ngtsc's spec compile unit. Without this, that graph
+    // fails root tsconfig.json's strict/noPropertyAccessFromIndexSignature
+    // checks the lib build never applied to these files in the first place.
+    "strict": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
 }

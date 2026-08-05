@@ -26,6 +26,11 @@ export class I18nService {
   }
 
   t(key: string, params?: Record<string, string | number>): string {
+    // Read the language signal first (even though coreT() doesn't need it —
+    // it resolves against the core bus's own currentLanguage) so any OnPush
+    // template binding that calls t() registers `_lang` as a reactive
+    // dependency and re-evaluates when the language changes.
+    this._lang();
     return params === undefined ? coreT(key) : coreT(key, params);
   }
 }
