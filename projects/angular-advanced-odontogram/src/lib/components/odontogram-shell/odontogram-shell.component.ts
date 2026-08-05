@@ -21,9 +21,13 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from "@angular/core";
 import {
+  acceptDualStateConfirm,
+  cancelDualStateConfirm,
   destroyOdontogram,
+  formatToothLabel,
   getOdontogramSummary,
   getPerioViewMode,
   hasAnyPerioData,
@@ -31,10 +35,12 @@ import {
   isDualStateConfirmPending,
   isPerioOverlayOpen,
   onStateChange,
+  openPerioOverlay,
   registerPlugins,
   setCariesDepthEnabled,
   setDiscolorationDetailLevel,
   setIcdasEnabled,
+  setImportFormat,
   setNotesEnabled,
   setNumberingSystem,
   setPulpDetailLevel,
@@ -58,6 +64,8 @@ import type { OdontogramPlugin } from "../../core/plugin";
 import type { NumberingSystem } from "../../core/utils/numbering";
 import type { Language } from "../../core/i18n/translations";
 import { I18nService } from "../../i18n/i18n.service";
+import { startIntroTour } from "../../core/tour";
+import { DualStateConfirmComponent } from "../dual-state-confirm/dual-state-confirm.component";
 import {
   icon8Svg,
   iconGumSvg,
@@ -98,12 +106,135 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
 @Component({
   selector: "aao-odontogram-shell",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [DualStateConfirmComponent],
   template: `
-    <div class="odontogram-root" [attr.dir]="isRtl() ? 'rtl' : 'ltr'" [attr.lang]="lang()">
-      <!-- Task 5: topbar, perio-launch bar, tooth-info card, modal mounts -->
+    <div class="odontogram-root" #root [attr.dir]="isRtl() ? 'rtl' : 'ltr'" [attr.lang]="lang()">
+      <header class="topbar">
+        <div class="brand">
+          <div class="dot"></div>
+          <div>
+            <div class="title">{{ i18n.t('app.title') }}</div>
+            <div class="subtitle">{{ i18n.t('app.subtitleLang') }} {{ i18n.t('app.subtitleNumbering.' + currentNumbering()) }} {{ i18n.t(isDark() ? 'app.subtitleMode.dark' : 'app.subtitleMode.light') }}</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn-theme" (click)="startIntroTour()" [attr.title]="i18n.t('intro.start')" [attr.aria-label]="i18n.t('intro.start')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          </button>
+          <div class="topbar-group dropdown" #languageGroup>
+            <button class="btn-theme" (click)="languageOpen.set(!languageOpen())" aria-haspopup="menu" [attr.aria-expanded]="languageOpen()" [attr.title]="i18n.t('language.label')" [attr.aria-label]="i18n.t('language.label')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+            </button>
+            @if (languageOpen()) {
+              <div class="dropdown-menu" role="menu" [attr.aria-label]="i18n.t('language.label')">
+                @for (opt of languageOptions; track opt.value) {
+                  <button
+                    class="dropdown-item"
+                    role="menuitemradio"
+                    [attr.aria-checked]="lang() === opt.value"
+                    (click)="selectLanguage(opt.value)"
+                  >{{ i18n.t(opt.labelKey) }}</button>
+                }
+              </div>
+            }
+          </div>
+          <button
+            class="btn-theme"
+            (click)="toggleDark()"
+            [attr.title]="isDark() ? i18n.t('theme.light') : i18n.t('theme.dark')"
+            [attr.aria-label]="isDark() ? i18n.t('theme.light') : i18n.t('theme.dark')"
+          >
+            @if (isDark()) {
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+              </svg>
+            } @else {
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+              </svg>
+            }
+          </button>
+          <div class="topbar-group">
+            <button class="btn-theme" (click)="settingsOpen.set(true)" aria-haspopup="dialog" [attr.aria-expanded]="settingsOpen()" [attr.title]="i18n.t('settings.title')" [attr.aria-label]="i18n.t('settings.title')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+          </div>
+          <!-- Hidden export buttons kept for host capture + wireControls wiring -->
+          <button id="btnStatusExport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('topbar.exportStatus') }}</button>
+          <button id="btnStatusFhirExport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('topbar.exportFhir') }}</button>
+          <button id="btnStatusPngExport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('topbar.exportPng') }}</button>
+          <button id="btnStatusJpgExport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('topbar.exportJpg') }}</button>
+          <button id="btnStatusSvgExport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('export.menu.svg') }}</button>
+          <button id="btnPerioSvgExport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('export.menu.perioSvg') }}</button>
+          <button id="btnPerioPngExport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('export.menu.perioPng') }}</button>
+          <button id="btnPerioJpgExport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('export.menu.perioJpg') }}</button>
+          <div class="topbar-group dropdown" #exportGroup>
+            <button id="btnExportMenu" class="btn-theme" (click)="exportOpen.set(!exportOpen())" aria-haspopup="menu" [attr.aria-expanded]="exportOpen()" [attr.title]="i18n.t('topbar.export')" [attr.aria-label]="i18n.t('topbar.export')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            </button>
+            @if (exportOpen()) {
+              <div class="dropdown-menu" role="menu" [attr.aria-label]="i18n.t('topbar.export')">
+                <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusExport'); exportOpen.set(false)">{{ i18n.t('export.menu.statusJson') }}</button>
+                <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusFhirExport'); exportOpen.set(false)">{{ i18n.t('export.menu.fhir') }}</button>
+                <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusPngExport'); exportOpen.set(false)">{{ i18n.t('export.menu.png') }}</button>
+                <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusJpgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.jpg') }}</button>
+                <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusSvgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.svg') }}</button>
+                <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioSvgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioSvg') }}</button>
+                <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioPngExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioPng') }}</button>
+                <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioJpgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioJpg') }}</button>
+                <button class="dropdown-item" role="menuitem" (click)="exportOpen.set(false); pdfOpen.set(true)">{{ i18n.t('export.menu.pdf') }}</button>
+              </div>
+            }
+          </div>
+          <button id="btnStatusImport" hidden aria-hidden="true" tabindex="-1">{{ i18n.t('topbar.importStatus') }}</button>
+          <div class="topbar-group dropdown" #importGroup>
+            <button id="btnImportMenu" class="btn-theme" (click)="importOpen.set(!importOpen())" aria-haspopup="menu" [attr.aria-expanded]="importOpen()" [attr.title]="i18n.t('topbar.import')" [attr.aria-label]="i18n.t('topbar.import')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 8l5-5 5 5M12 3v12"/></svg>
+            </button>
+            @if (importOpen()) {
+              <div class="dropdown-menu" role="menu" [attr.aria-label]="i18n.t('topbar.import')">
+                <button class="dropdown-item" role="menuitem" (click)="importStatusJson()">{{ i18n.t('import.menu.statusJson') }}</button>
+                <button class="dropdown-item" role="menuitem" (click)="importFhirJson()">{{ i18n.t('import.menu.fhir') }}</button>
+              </div>
+            }
+          </div>
+          <input id="statusImportInput" type="file" accept="application/json" hidden />
+        </div>
+      </header>
       <main class="layout">
-        <!-- Task 5: viewMode style binding (App.tsx 659-661) -->
-        <div class="chart-column">
+        <div class="perio-launch-bar">
+          @if (viewMode() === 'toggle') {
+            <div id="appViewToggle" class="chart-mode-toggle" role="tablist">
+              <button
+                id="appViewOdontogram"
+                type="button"
+                [class]="'chart-mode-btn' + (activeView() === 'odontogram' ? ' is-active' : '')"
+                role="tab"
+                [attr.aria-selected]="activeView() === 'odontogram'"
+                (click)="activeView.set('odontogram')"
+              >{{ i18n.t('view.odontogram') }}</button>
+              <button
+                id="appViewDentalChart"
+                type="button"
+                [class]="'chart-mode-btn' + (activeView() === 'dentalChart' ? ' is-active' : '')"
+                role="tab"
+                [attr.aria-selected]="activeView() === 'dentalChart'"
+                (click)="activeView.set('dentalChart')"
+              >{{ i18n.t('view.dentalChart') }}</button>
+            </div>
+          } @else {
+            <button
+              type="button"
+              id="openPerioOverlayBtn"
+              class="btn btn-ghost"
+              (click)="openPerioOverlay()"
+              [attr.title]="i18n.t('perio.open')"
+              [attr.aria-label]="i18n.t('perio.open')"
+            >{{ i18n.t('perio.open') }}</button>
+          }
+        </div>
+        <div class="chart-column" [style.display]="isPerioView() ? 'none' : null">
         <section class="chart">
           <div class="chart-header">
             <div>
@@ -131,11 +262,59 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
           </div>
           <div id="toothGrid" class="tooth-grid" dir="ltr" [attr.aria-label]="i18n.t('chart.aria.toothGrid')"></div>
         </section>
+        @if (toothInfoOn() && summary(); as s) {
+          <section class="tooth-info card" [attr.aria-label]="i18n.t('toothInfo.title')">
+            <div class="card-title">{{ i18n.t('toothInfo.title') }}</div>
+            <p class="tooth-info-overview">{{ s.overview }}</p>
+            @if (s.permanentList) {
+              <p class="tooth-info-list">{{ s.permanentList }}</p>
+            }
+            @if (s.missingList) {
+              <p class="tooth-info-list">{{ s.missingList }}</p>
+            }
+            @for (sec of s.sections; track sec.key) {
+              <p class="tooth-info-line">
+                <span class="tooth-info-heading">{{ sec.heading }}:</span>
+                @if (sec.items.length) {
+                  {{ sec.items.join(', ') }}
+                } @else {&ngsp;<span class="tooth-info-empty">{{ sec.emptyText }}</span>
+                }
+              </p>
+            }
+            @if (s.plannedChanges && s.plannedChanges.length > 0) {
+              <div id="plannedChangesBox" class="planned-changes">
+                <div class="tooth-info-heading">{{ i18n.t('toothInfo.plannedChanges') }}</div>
+                @for (c of s.plannedChanges; track c.toothNo + '-' + c.axis) {
+                  <p class="planned-changes-item">
+                    {{ formatToothLabel(c.toothNo) }}: {{ i18n.t('planChange.axis.' + c.axis) }} {{ c.from }} → {{ c.to }}
+                  </p>
+                }
+              </div>
+            }
+            @if (s.implants; as implants) {
+              <p class="tooth-info-line">
+                <span class="tooth-info-heading">{{ implants.heading }}:</span>
+                {{ implants.text }}
+              </p>
+            }
+            <p class="tooth-info-line">
+              <span class="tooth-info-heading">{{ s.periodontalTitle }}:</span>
+              {{ s.periodontalText }}
+            </p>
+          </section>
+        }
         </div>
+        @if (isPerioView()) {
+          <div class="dental-chart-column" dir="ltr">
+            <!-- Phase 4: PerioChart inline -->
+          </div>
+        }
 
         <aside class="panel">
-          <!-- Task 5: isPerioView style binding + PerioSidebar mount (App.tsx 745-746) -->
-          <div class="panel-odontogram-controls">
+          @if (isPerioView()) {
+            <!-- Phase 4: PerioSidebar -->
+          }
+          <div class="panel-odontogram-controls" [style.display]="isPerioView() ? 'none' : null">
           <div class="panel-header">
             <div>
               <div class="panel-title-row">
@@ -406,13 +585,35 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
           </div>
         </aside>
       </main>
+
+      <!-- Phase 4: PerioChart popup (viewMode === "popup", perioOpen) -->
+
+      <!-- Phase 3: SettingsModal -->
+
+      <aao-dual-state-confirm
+        [open]="confirmOpen()"
+        (accept)="acceptDualStateConfirm()"
+        (cancel)="cancelDualStateConfirm()"
+      />
+
+      <!-- Phase 3: ExportOptionsModal -->
     </div>
   `,
 })
 export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected readonly i18n = inject(I18nService);
-  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly engineLifecycle = inject(ODONTOGRAM_ENGINE_LIFECYCLE);
+
+  // Task 5: viewChild reference to the root div, replacing the Task 4
+  // `ElementRef.querySelector(".odontogram-root")` route for theme-config
+  // application — a direct template reference is the idiomatic Angular seam
+  // and avoids a DOM query on every themeConfig() change.
+  private readonly rootRef = viewChild<ElementRef<HTMLElement>>("root");
+  // App.tsx 529/583/606's `languageRef`/`exportRef`/`importRef` — the click-away
+  // listener (App.tsx 454-469) checks `.contains(target)` against these.
+  private readonly languageGroupRef = viewChild<ElementRef<HTMLElement>>("languageGroup");
+  private readonly exportGroupRef = viewChild<ElementRef<HTMLElement>>("exportGroup");
+  private readonly importGroupRef = viewChild<ElementRef<HTMLElement>>("importGroup");
 
   // Inputs (React prop parity — names match App.tsx's AppProps).
   readonly language = input<Language>();
@@ -445,6 +646,31 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected readonly iconPulpSvg = iconPulpSvg;
   protected readonly iconNoSelectionUrl = iconNoSelectionUrl;
 
+  // Free engine functions the template invokes directly (App.tsx 4-19
+  // imports) — exposed as instance fields, same precedent as the icon
+  // strings above, so the inline template can call them as bare identifiers.
+  protected readonly startIntroTour = startIntroTour;
+  protected readonly openPerioOverlay = openPerioOverlay;
+  protected readonly formatToothLabel = formatToothLabel;
+  protected readonly acceptDualStateConfirm = acceptDualStateConfirm;
+  protected readonly cancelDualStateConfirm = cancelDualStateConfirm;
+
+  // App.tsx 160-173's LANGUAGE_OPTIONS, verbatim (order + labelKeys).
+  protected readonly languageOptions: ReadonlyArray<{ value: Language; labelKey: string }> = [
+    { value: "hu", labelKey: "language.hu" },
+    { value: "en", labelKey: "language.en" },
+    { value: "de", labelKey: "language.de" },
+    { value: "es", labelKey: "language.es" },
+    { value: "it", labelKey: "language.it" },
+    { value: "sk", labelKey: "language.sk" },
+    { value: "pl", labelKey: "language.pl" },
+    { value: "ru", labelKey: "language.ru" },
+    { value: "pt-br", labelKey: "language.pt-br" },
+    { value: "zh", labelKey: "language.zh" },
+    { value: "ar", labelKey: "language.ar" },
+    { value: "fr", labelKey: "language.fr" },
+  ];
+
   // Language: controlled/uncontrolled per the React useI18n hook
   // (useI18n.ts 68-91) — I18nService's `lang` signal already mirrors the
   // core bus, so it stands in for React's `internalLang` state.
@@ -457,10 +683,12 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     () => this.numberingSystem() ?? this.internalNumbering(),
   );
 
-  // Dark mode: only managed internally when standalone (App.tsx 286-299).
+  // Dark mode: controlled via `darkMode` input, or standalone via internal
+  // state (App.tsx 286-299/301-309).
   private readonly internalDark = signal<boolean>(
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false,
   );
+  protected readonly isDark = computed(() => this.darkMode() ?? this.internalDark());
 
   // Local mirrors of the 11 detail-level/mode props (App.tsx 228-240) — kept
   // alongside each engine setter effect below, same precedent as the two
@@ -481,7 +709,7 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
 
   // Tooth-info summary gate (App.tsx 238) — the tooth-info card that reads
   // `summary` is Task 5 scope; the signal + its refresh effect are wired now.
-  private readonly toothInfoOn = signal(true);
+  protected readonly toothInfoOn = signal(true);
 
   // onStateChange mirrors (App.tsx 395-452).
   protected readonly summary = signal<OdontogramSummary | null>(null);
@@ -489,6 +717,11 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected readonly perioOpen = signal(false);
   protected readonly viewMode = signal<PerioViewMode>(getPerioViewMode());
   protected readonly confirmOpen = signal(false);
+
+  // App.tsx 277's `isPerioView` — only true in toggle-mode dentalChart.
+  protected readonly isPerioView = computed(
+    () => this.viewMode() === "toggle" && this.activeView() === "dentalChart",
+  );
 
   // Pure local UI state (App.tsx 225-247/261) — later tasks (topbar,
   // export/import/settings/pdf menus) bind these; created now so this file
@@ -522,10 +755,7 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
 
     // Theme config (App.tsx 332-334).
     effect(() => {
-      applyThemeConfig(
-        this.host.nativeElement.querySelector<HTMLElement>(".odontogram-root"),
-        this.themeConfig(),
-      );
+      applyThemeConfig(this.rootRef()?.nativeElement ?? null, this.themeConfig());
     });
 
     // Plugins (App.tsx 337-339).
@@ -663,10 +893,28 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  // App.tsx 454-469: one `document` click listener closing the three
+  // dropdowns (language/export/import) when the click lands outside their
+  // wrapper element — registered in ngAfterViewInit, removed in ngOnDestroy,
+  // exactly like the React effect's own add/removeEventListener pair.
+  private readonly documentClickHandler = (event: MouseEvent): void => {
+    const target = event.target as Node;
+    if (!this.languageGroupRef()?.nativeElement.contains(target)) {
+      this.languageOpen.set(false);
+    }
+    if (!this.exportGroupRef()?.nativeElement.contains(target)) {
+      this.exportOpen.set(false);
+    }
+    if (!this.importGroupRef()?.nativeElement.contains(target)) {
+      this.importOpen.set(false);
+    }
+  };
+
   ngAfterViewInit(): void {
     // App.tsx 320-325: fire-and-forget, exactly like the untouched React
     // effect — the engine's own init is async but not awaited here either.
     void this.engineLifecycle.init();
+    document.addEventListener("click", this.documentClickHandler);
   }
 
   ngOnDestroy(): void {
@@ -674,6 +922,7 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     // via effect()'s onCleanup, so Angular tears them down automatically as
     // part of this component's destroy — no separate bookkeeping needed.
     this.engineLifecycle.destroy();
+    document.removeEventListener("click", this.documentClickHandler);
   }
 
   /** useI18n.ts 77-84: emits regardless of mode; only pushes into the core
@@ -683,5 +932,45 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     if (this.language() === undefined) {
       this.i18n.setLanguage(next);
     }
+  }
+
+  /** App.tsx 541-544: pick a language from the dropdown, then close it. */
+  protected selectLanguage(next: Language): void {
+    this.setLang(next);
+    this.languageOpen.set(false);
+  }
+
+  /** App.tsx 301-309, verbatim: standalone flips `internalDark`; controlled
+   *  (a `darkMode` input is bound) never touches internal state — either way
+   *  `darkModeChange` always emits. */
+  protected toggleDark(): void {
+    const next = !this.isDark();
+    if (this.darkMode() !== undefined) {
+      this.darkModeChange.emit(next);
+    } else {
+      this.internalDark.set(next);
+      this.darkModeChange.emit(next);
+    }
+  }
+
+  /** App.tsx 589-599's proxy-click pattern: the visible dropdown item clicks
+   *  the matching hidden `#btnStatus*`/`#btnPerio*` button, which is the
+   *  engine's own wireControls() capture target. */
+  protected proxyClick(id: string): void {
+    (document.getElementById(id) as HTMLButtonElement | null)?.click();
+  }
+
+  /** App.tsx 612: status-JSON import menu item. */
+  protected importStatusJson(): void {
+    setImportFormat("status");
+    this.proxyClick("btnStatusImport");
+    this.importOpen.set(false);
+  }
+
+  /** App.tsx 613: FHIR import menu item. */
+  protected importFhirJson(): void {
+    setImportFormat("fhir");
+    this.proxyClick("btnStatusImport");
+    this.importOpen.set(false);
   }
 }
