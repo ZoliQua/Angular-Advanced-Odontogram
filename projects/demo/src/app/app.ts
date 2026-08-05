@@ -1,11 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
+import { OdontogramShellComponent } from 'angular-advanced-odontogram';
 
 @Component({
   selector: 'app-root',
-  imports: [],
+  imports: [OdontogramShellComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {
-  protected readonly title = signal('demo');
-}
+export class App {}

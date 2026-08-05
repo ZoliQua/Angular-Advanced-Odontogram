@@ -144,10 +144,11 @@ independently; `openPerioOverlay()`/`closePerioOverlay()` keep working.
 ### Remaining components
 
 `PerioSidebarComponent`, `SettingsModalComponent` (tabs: general | panels |
-toothDetails | caries | pulpa | periodontal | notes), `DualStateConfirmComponent`
-(focus-trapped blocking confirm; DS-1 gate), `ExportOptionsModalComponent` —
-each a direct port of its React counterpart, keeping DOM ids/classes and the
+toothDetails | caries | pulpa | periodontal | notes), `ExportOptionsModalComponent`
+— each a direct port of its React counterpart, keeping DOM ids/classes and the
 dialog contracts (focus trap, Esc/click-away, z-index layering) identical.
+(`DualStateConfirmComponent`, originally listed here, shipped in Phase 2
+instead — see §8.)
 
 ### I18nService (replaces `useI18n`)
 
@@ -216,11 +217,16 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
 
 1. **Scaffold + core.** Workspace, library + demo projects, Tailwind/Vitest
    wiring, SVG codegen, core copied, pure-logic test suite green.
-2. **Odontogram shell.** OdontogramShellComponent template + lifecycle +
-   inputs/outputs; engine boots; SVG-fingerprint parity fixtures green.
-   Demo app shows the working odontogram.
-3. **Modals & settings.** SettingsModal, DualStateConfirm, ExportOptionsModal;
-   DS-1 confirm flow tests green.
+2. **Odontogram shell — DELIVERED (2026-08-06).** OdontogramShellComponent
+   template + lifecycle + inputs/outputs; engine boots; SVG-fingerprint
+   parity fixtures green. Demo app shows the working odontogram. Scope note:
+   `DualStateConfirmComponent` was pulled forward from Phase 3 into this
+   phase — the shell's topbar/panel wiring (the DS-1 gate on plan→status
+   edits) depends on it directly, so it shipped alongside the shell rather
+   than waiting for the Phase 3 modals batch. `I18nService` and the 35
+   shell-scoped ported specs also landed in this phase (see CHANGELOG).
+3. **Modals & settings.** SettingsModal, ExportOptionsModal (DualStateConfirm
+   moved to Phase 2 — see above); settings-dependent test batch.
 4. **Perio & exports.** PerioChart + PerioSidebar; JSON/FHIR/SVG/PNG/JPG/PDF
    export-import; FHIR + roundtrip goldens green; `fr`/RTL smoke checks.
 5. **Release.** Demo polish, README (EN + HU first; remaining 10 languages in a

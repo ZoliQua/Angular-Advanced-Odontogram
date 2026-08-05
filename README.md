@@ -8,10 +8,26 @@ Work in progress; 1.0.0 = full feature parity with the React module v2.2.0
 ## Status
 
 - [x] Phase 1 — engine core (framework-free) + test corpus green
-- [ ] Phase 2 — `OdontogramShellComponent`
+- [x] Phase 2 — `OdontogramShellComponent` (topbar/menus/summary/confirm) + demo app
 - [ ] Phase 3 — Settings & dialogs
 - [ ] Phase 4 — Periodontal chart & exports
 - [ ] Phase 5 — docs, packaging, 1.0.0
+
+## Usage
+
+```html
+<aao-odontogram-shell [enableNotes]="true" />
+```
+
+Build the library styles before building/serving anything that consumes the
+component (the demo app does this — see `projects/demo`):
+
+    npm run build:styles && npx ng build angular-advanced-odontogram
+
+`npm run build:styles` must run first — it emits
+`projects/angular-advanced-odontogram/styles.css` from the Tailwind source,
+which the demo's `angular.json` `styles` array references directly (the
+source-side artifact, not `dist/`).
 
 ## Development
 
