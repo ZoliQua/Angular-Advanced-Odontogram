@@ -28,7 +28,8 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "tsConfig": "projects/angular-advanced-odontogram/tsconfig.spec.json",
-            "include": ["**/*.spec.ts"]
+            "include": ["**/*.spec.ts"],
+            "setupFiles": ["projects/angular-advanced-odontogram/src/lib/testing/reset-engine-state.ts"]
           }
         }
       }

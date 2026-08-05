@@ -189,6 +189,7 @@ describe("OdontogramShellComponent Task 5: dynamic sections", () => {
     destroyOdontogram.mockClear();
     __resetChartStateForTest();
     setI18nLanguage("en");
+    document.documentElement.classList.remove("dark");
     TestBed.configureTestingModule({
       imports: [OdontogramShellComponent],
       providers: [
@@ -199,6 +200,16 @@ describe("OdontogramShellComponent Task 5: dynamic sections", () => {
         },
       ],
     });
+  });
+
+  // Task-5 review fix: this used to be an inline `if (!wasDark) …remove…`
+  // cleanup at the end of the "standalone toggle" test below, which only ran
+  // when that test's own assertions passed — a failure between the click and
+  // the cleanup line left `.dark` on `document.documentElement` for every
+  // later test/file. `afterEach` runs regardless of the test's outcome, so
+  // this can never leak the class onward (ordering-independent fix).
+  afterEach(() => {
+    document.documentElement.classList.remove("dark");
   });
 
   it("(b) the language dropdown opens on click and closes on an outside click", async () => {
@@ -388,7 +399,7 @@ describe("OdontogramShellComponent Task 5: dynamic sections", () => {
 
     expect(emitted).toEqual([!wasDark]);
     expect(document.documentElement.classList.contains("dark")).toBe(!wasDark);
-    if (!wasDark) document.documentElement.classList.remove("dark"); // leave global DOM as found
+    // Cleanup moved to the describe-level `afterEach` above (Task-5 review fix).
   });
 
   it("dark mode: controlled (darkMode input bound) toggle only emits — never flips the document class itself", async () => {
