@@ -74,6 +74,7 @@ import { I18nService } from "../../i18n/i18n.service";
 import { startIntroTour } from "../../core/tour";
 import { DualStateConfirmComponent } from "../dual-state-confirm/dual-state-confirm.component";
 import { SettingsModalComponent, type SettingsState } from "../settings-modal/settings-modal.component";
+import { ExportOptionsModalComponent } from "../export-options-modal/export-options-modal.component";
 import {
   icon8Svg,
   iconGumSvg,
@@ -114,7 +115,7 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
 @Component({
   selector: "aao-odontogram-shell",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DualStateConfirmComponent, SettingsModalComponent],
+  imports: [DualStateConfirmComponent, SettingsModalComponent, ExportOptionsModalComponent],
   template: `
     <div class="odontogram-root" #root [attr.dir]="isRtl() ? 'rtl' : 'ltr'" [attr.lang]="lang()">
       <header class="topbar">
@@ -608,7 +609,7 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
         (cancel)="cancelDualStateConfirm()"
       />
 
-      <!-- Phase 3: ExportOptionsModal -->
+      <aao-export-options-modal [open]="pdfOpen()" (close)="pdfOpen.set(false)" />
     </div>
   `,
 })

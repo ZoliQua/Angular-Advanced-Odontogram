@@ -66,6 +66,7 @@ import { afterEach, beforeEach } from "vitest";
 import {
   __resetChartStateForTest,
   __setActiveToothForTest,
+  setNumberingSystem,
   setPerioIndexNameMode,
   setPerioRowVisibility,
   setPerioViewMode,
@@ -101,6 +102,13 @@ export function resetEngineStateForTest(): void {
   __setActiveToothForTest(null);
   // i18n language bus.
   setI18nLanguage("en");
+  // Phase 3 Task 4 fold-in (controller-mandated, from Task 3's review):
+  // the tooth-numbering-system singleton (`core/odontogram.ts`'s module-level
+  // `numberingSystem`, module default "FDI") has no reset seam of its own
+  // either — same leak class as the perio-settings singletons below. No spec
+  // in this suite currently flips it, but this is defense-in-depth against a
+  // future one leaking it silently across files under `test.isolate: false`.
+  setNumberingSystem("FDI");
   // Perio chart view-mode toggle (module default — see
   // `core/odontogram.ts`'s `let perioViewMode: PerioViewMode = "toggle"`).
   setPerioViewMode("toggle");
