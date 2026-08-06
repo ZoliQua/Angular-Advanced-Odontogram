@@ -9,7 +9,7 @@ Work in progress; 1.0.0 = full feature parity with the React module v2.2.0
 
 - [x] Phase 1 — engine core (framework-free) + test corpus green
 - [x] Phase 2 — `OdontogramShellComponent` (topbar/menus/summary/confirm) + demo app
-- [ ] Phase 3 — Settings & dialogs
+- [x] Phase 3 — Settings & dialogs
 - [ ] Phase 4 — Periodontal chart & exports
 - [ ] Phase 5 — docs, packaging, 1.0.0
 

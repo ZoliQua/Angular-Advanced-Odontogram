@@ -34,3 +34,27 @@ versioning: [SemVer](https://semver.org/).
   `projects/angular-advanced-odontogram/src/lib/components/odontogram-shell/ported/`.
 - `demo` app: renders `<aao-odontogram-shell [enableNotes]="true" />`
   full-page, consuming the library through the workspace path alias.
+- `SettingsModalComponent` (`aao-settings-modal`): the app's Settings dialog,
+  7 declaratively-registered tabs (general/panels/toothDetails/caries/pulpa/
+  notes/periodontal) driving every live setting the app exposes, with the
+  `SETTINGS_TABS` registry + `SettingsState` view-model exported for
+  consumers; the `role="tablist"` tab strip implements the APG tabs pattern
+  (roving tabindex, Arrow Left/Right/Up/Down wrap, Home/End,
+  activation-follows-focus). Wired into `OdontogramShellComponent` via a
+  `settingsState` computed.
+- `ExportOptionsModalComponent` (`aao-export-options-modal`): the PDF/image
+  export options dialog, driven by a DI-injected `EXPORT_PDF_FN` token so
+  hosts can substitute the PDF export implementation (and tests can spy on
+  it without `vi.mock`).
+- Shared dialog-focus-trap helpers (`components/shared/dialog-focus.ts`):
+  `trapTabKey`/`focusFirst`/`nextDialogTitleId`, extracted from
+  `DualStateConfirmComponent`'s inline focus-trap logic and reused by
+  `SettingsModalComponent`/`ExportOptionsModalComponent`.
+- `I18nService`: fixed a listener leak — the `onI18nChange` subscription is
+  now unsubscribed via `DestroyRef.onDestroy`, instead of living for the
+  lifetime of the module.
+- 4 more tests ported from the source repo's React/Testing-Library corpus to
+  Angular `TestBed` specs, under
+  `projects/angular-advanced-odontogram/src/lib/components/settings-modal/ported/`:
+  `sp13-settings-tab`, `settings-modal-a11y`, `ui2-perio-settings`,
+  `sp15-settings`.

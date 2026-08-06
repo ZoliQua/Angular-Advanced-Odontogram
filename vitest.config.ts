@@ -48,7 +48,7 @@ const REACT_DEPENDENT = [
   "r2c-proposed-legend.test.ts", // ported: components/odontogram-shell/ported/r2c-proposed-legend.spec.ts
   "restoration-summary.test.ts", // ported: components/odontogram-shell/ported/restoration-summary.spec.ts
   "secondary-caries-parity.test.ts", // ported: components/odontogram-shell/ported/secondary-caries-parity.spec.ts
-  "settings-modal-a11y.test.tsx", // phase-3 (SettingsModal markup)
+  "settings-modal-a11y.test.tsx", // ported: components/settings-modal/ported/settings-modal-a11y.spec.ts
   "sp10-filling-defect-summary.test.ts", // ported: components/odontogram-shell/ported/sp10-filling-defect-summary.spec.ts
   "sp10-filling-defect.test.ts", // ported: components/odontogram-shell/ported/sp10-filling-defect.spec.ts
   "sp11-wear-summary.test.ts", // ported: components/odontogram-shell/ported/sp11-wear-summary.spec.ts
@@ -56,13 +56,13 @@ const REACT_DEPENDENT = [
   "sp12-discoloration-summary.test.ts", // ported: components/odontogram-shell/ported/sp12-discoloration-summary.spec.ts
   "sp12-discoloration-ui.test.ts", // ported: components/odontogram-shell/ported/sp12-discoloration-ui.spec.ts
   "sp12-discoloration.test.ts", // ported: components/odontogram-shell/ported/sp12-discoloration.spec.ts
-  "sp13-settings-tab.test.ts", // phase-3 (SettingsModal markup)
+  "sp13-settings-tab.test.ts", // ported: components/settings-modal/ported/sp13-settings-tab.spec.ts
   "sp13-wear-layout.test.ts", // ported: components/odontogram-shell/ported/sp13-wear-layout.spec.ts
   "sp14-ortho-summary.test.ts", // ported: components/odontogram-shell/ported/sp14-ortho-summary.spec.ts
   "sp14-ortho-ui.test.ts", // ported: components/odontogram-shell/ported/sp14-ortho-ui.spec.ts
   "sp14-orthodontics.test.ts", // ported: components/odontogram-shell/ported/sp14-orthodontics.spec.ts (framework-free; not in the task-6 brief's explicit list but satisfies the same rule)
   "sp15-filling-defect-summary.test.ts", // ported: components/odontogram-shell/ported/sp15-filling-defect-summary.spec.ts (framework-free; not in the task-6 brief's explicit list but satisfies the same rule)
-  "sp15-settings.test.ts", // phase-3 (imports SETTINGS_TABS from ../SettingsModal directly)
+  "sp15-settings.test.ts", // ported: components/settings-modal/ported/sp15-settings.spec.ts
   "sp15-stale-render.test.ts", // ported: components/odontogram-shell/ported/sp15-stale-render.spec.ts
   "sp16-fillings-card.test.ts", // ported: components/odontogram-shell/ported/sp16-fillings-card.spec.ts
   "sp17-followups.test.ts", // ported: components/odontogram-shell/ported/sp17-followups.spec.ts
@@ -79,7 +79,7 @@ const REACT_DEPENDENT = [
   "ui1-row-labels.test.ts", // phase-4 (PerioChart markup)
   "ui1-sidebar-style.test.tsx", // phase-4 (PerioSidebar markup)
   "ui2-index-names.test.ts", // phase-4 (PerioChart + PerioSidebar markup)
-  "ui2-perio-settings.test.tsx", // phase-3 (imports SETTINGS_TABS from ../SettingsModal directly)
+  "ui2-perio-settings.test.tsx", // ported: components/settings-modal/ported/ui2-perio-settings.spec.ts
   "ui2-row-visibility.test.ts", // phase-4 (PerioChart markup)
   "ui3a-central-band.test.ts", // phase-4 (PerioChart markup)
   "ui3a-diamond-tiles.test.ts", // phase-4 (PerioChart markup)

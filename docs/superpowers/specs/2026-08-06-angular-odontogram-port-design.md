@@ -225,8 +225,13 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
    edits) depends on it directly, so it shipped alongside the shell rather
    than waiting for the Phase 3 modals batch. `I18nService` and the 35
    shell-scoped ported specs also landed in this phase (see CHANGELOG).
-3. **Modals & settings.** SettingsModal, ExportOptionsModal (DualStateConfirm
-   moved to Phase 2 — see above); settings-dependent test batch.
+3. **Modals & settings — DELIVERED (2026-08-06).** SettingsModal (7 tabs,
+   `SETTINGS_TABS`/`SettingsState`, APG tablist), ExportOptionsModal
+   (DI-injected `EXPORT_PDF_FN`; DualStateConfirm moved to Phase 2 — see
+   above); shared dialog-focus helper extracted for both modals; `I18nService`
+   listener-dispose fix; 4 settings-dependent tests ported to Angular specs
+   (`sp13-settings-tab`, `settings-modal-a11y`, `ui2-perio-settings`,
+   `sp15-settings`).
 4. **Perio & exports.** PerioChart + PerioSidebar; JSON/FHIR/SVG/PNG/JPG/PDF
    export-import; FHIR + roundtrip goldens green; `fr`/RTL smoke checks.
 5. **Release.** Demo polish, README (EN + HU first; remaining 10 languages in a
