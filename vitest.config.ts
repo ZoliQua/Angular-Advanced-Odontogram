@@ -25,22 +25,18 @@ const REACT_DEPENDENT = [
   "p4b-classification-ui.test.ts", // phase-4 (renders <App/> together with PerioChart classification UI)
   "perio-graphic-rows.test.ts", // phase-4 (PerioChart markup)
   "perio-graphical-presentation.test.ts", // phase-4 (mounts <App, PerioChart> together)
-  "perio-p1-core.test.ts", // phase-4 (perio-chart feature area)
   "perio-p1-ui.test.ts", // phase-4 (PerioChart markup)
   "perio-p2-grid.test.ts", // phase-4 (PerioChart markup)
   "perio-p2-keyboard.test.ts", // phase-4 (PerioChart markup)
   "perio-p2-overlay.test.ts", // phase-4 (PerioChart markup)
   "perio-p2b-rows.test.ts", // phase-4 (PerioChart markup)
-  "perio-polish-diff.test.ts", // phase-4 (perio-chart feature area)
   "pgb-info-buttons.test.ts", // phase-4 (PerioChart markup)
   "pgb-mm-overlays.test.ts", // phase-4 (PerioChart markup)
   "pgb-switcher.test.ts", // phase-4 (PerioChart markup)
   "pgc-cairo.test.ts", // phase-4 (PerioChart markup)
   "pgc-rows.test.ts", // phase-4 (PerioChart markup)
   "pgd-rows.test.ts", // phase-4 (PerioChart markup)
-  "pgd-summary.test.ts", // phase-4 (perio-chart feature area)
   "pge-rows.test.ts", // phase-4 (PerioChart markup)
-  "pge-summary.test.ts", // phase-4 (perio-chart feature area)
   "public-api-exports.test.ts", // ported: components/odontogram-shell/ported/public-api-exports.spec.ts
   "r2a-toggle-ui.test.ts", // ported: components/odontogram-shell/ported/r2a-toggle-ui.spec.ts
   "r2b-changes-box.test.ts", // ported: components/odontogram-shell/ported/r2b-changes-box.spec.ts
@@ -83,7 +79,6 @@ const REACT_DEPENDENT = [
   "ui2-row-visibility.test.ts", // phase-4 (PerioChart markup)
   "ui3a-central-band.test.ts", // phase-4 (PerioChart markup)
   "ui3a-diamond-tiles.test.ts", // phase-4 (PerioChart markup)
-  "ui3b-build-perio-svg.test.ts", // phase-4 (perio-chart feature area)
   "ui3b-export-options-modal.test.ts", // phase-4 (ExportOptionsModal's perio SVG/PNG/JPG export controls — UI3 perio-graphical-presentation family)
   "ui3b-mpi-implant-gate.test.ts", // phase-4 (PerioChart markup)
   "warnings.test.ts", // ported: components/odontogram-shell/ported/warnings.spec.ts
