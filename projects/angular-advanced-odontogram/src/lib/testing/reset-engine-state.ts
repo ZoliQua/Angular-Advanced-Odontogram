@@ -63,8 +63,30 @@
 // No file under `lib/core/` is modified by this fix — every reset below goes
 // through an already-exported test seam or public setter.
 import { afterEach, beforeEach } from "vitest";
-import { __resetChartStateForTest, __setActiveToothForTest, setPerioViewMode } from "../core/odontogram";
+import {
+  __resetChartStateForTest,
+  __setActiveToothForTest,
+  setPerioIndexNameMode,
+  setPerioRowVisibility,
+  setPerioViewMode,
+  type PerioRowId,
+} from "../core/odontogram";
 import { setI18nLanguage } from "../core/i18n/useI18n";
+
+// Phase 3 Task 3: the Settings -> Periodontal tab's two module-level
+// singletons (`core/odontogram.ts`'s `perioRowVisibility`/`perioIndexNameMode`)
+// join the leak-prone list above once `SettingsModalComponent` lets a spec
+// actually flip them — same class of defect the file-level comment documents:
+// no test seam resets these, so a spec that toggles a row (or switches the
+// index-name mode) leaks it to every later spec in the same
+// `test.isolate: false` run. Neither singleton has a bulk-reset export, so
+// this restores them via their own public setters: every row back to visible
+// (the module's own default — see `defaultPerioRowVisibility()`) and the mode
+// back to "translated" (the module's own default).
+const ALL_PERIO_ROW_IDS: readonly PerioRowId[] = [
+  "plaque", "bop", "cal", "gm", "pd", "furcation", "mobility", "cej",
+  "rootConcavity", "pi", "gi", "mpi", "mbi", "kg", "gt", "miller",
+];
 
 /** Resets every known core/odontogram + i18n singleton to its default state.
  *  Exported (not just used internally) so a spec file can call it mid-test
@@ -82,6 +104,11 @@ export function resetEngineStateForTest(): void {
   // Perio chart view-mode toggle (module default — see
   // `core/odontogram.ts`'s `let perioViewMode: PerioViewMode = "toggle"`).
   setPerioViewMode("toggle");
+  // Perio-settings singletons (Task 3): every row back to visible, index-name
+  // mode back to "translated" — both module defaults (see
+  // `defaultPerioRowVisibility()` / `let perioIndexNameMode = "translated"`).
+  for (const id of ALL_PERIO_ROW_IDS) setPerioRowVisibility(id, true);
+  setPerioIndexNameMode("translated");
   // Dark-mode DOM class some shell specs flip on `document.documentElement`.
   document.documentElement.classList.remove("dark");
 }

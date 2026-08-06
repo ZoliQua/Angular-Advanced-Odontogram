@@ -29,6 +29,8 @@ import {
   destroyOdontogram,
   formatToothLabel,
   getOdontogramSummary,
+  getPerioIndexNameMode,
+  getPerioRowVisibility,
   getPerioViewMode,
   hasAnyPerioData,
   initOdontogram,
@@ -43,6 +45,9 @@ import {
   setImportFormat,
   setNotesEnabled,
   setNumberingSystem,
+  setPerioIndexNameMode,
+  setPerioRowVisibility,
+  setPerioViewMode,
   setPulpDetailLevel,
   setRadiographicDepthMode,
   setReadOnly,
@@ -51,6 +56,8 @@ import {
   setSurfaceNotation,
   setWearDetailLevel,
   type OdontogramSummary,
+  type PerioIndexNameMode,
+  type PerioRowId,
   type PerioViewMode,
   type PulpDetailLevel,
   type RadiographicDepthMode,
@@ -66,6 +73,7 @@ import type { Language } from "../../core/i18n/translations";
 import { I18nService } from "../../i18n/i18n.service";
 import { startIntroTour } from "../../core/tour";
 import { DualStateConfirmComponent } from "../dual-state-confirm/dual-state-confirm.component";
+import { SettingsModalComponent, type SettingsState } from "../settings-modal/settings-modal.component";
 import {
   icon8Svg,
   iconGumSvg,
@@ -106,7 +114,7 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
 @Component({
   selector: "aao-odontogram-shell",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DualStateConfirmComponent],
+  imports: [DualStateConfirmComponent, SettingsModalComponent],
   template: `
     <div class="odontogram-root" #root [attr.dir]="isRtl() ? 'rtl' : 'ltr'" [attr.lang]="lang()">
       <header class="topbar">
@@ -588,7 +596,11 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
 
       <!-- Phase 4: PerioChart popup (viewMode === "popup", perioOpen) -->
 
-      <!-- Phase 3: SettingsModal -->
+      <aao-settings-modal
+        [open]="settingsOpen()"
+        [settings]="settingsState()"
+        (close)="settingsOpen.set(false)"
+      />
 
       <aao-dual-state-confirm
         [open]="confirmOpen()"
@@ -716,6 +728,15 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected readonly hasPerio = signal(false);
   protected readonly perioOpen = signal(false);
   protected readonly viewMode = signal<PerioViewMode>(getPerioViewMode());
+  // Task 3: mirror the two Settings -> Periodontal tab module flags into
+  // shell state (App.tsx 262-271/437-444) — same precedent as `viewMode`
+  // mirroring `perioViewMode` above, kept in sync via the onStateChange
+  // subscription in the constructor so a host calling the setters directly
+  // still re-renders the Settings modal.
+  protected readonly perioRowVisibilityState = signal<Record<PerioRowId, boolean>>(
+    getPerioRowVisibility(),
+  );
+  protected readonly perioIndexNameModeState = signal<PerioIndexNameMode>(getPerioIndexNameMode());
   protected readonly confirmOpen = signal(false);
 
   // App.tsx 277's `isPerioView` — only true in toggle-mode dentalChart.
@@ -732,6 +753,113 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected readonly importOpen = signal(false);
   protected readonly settingsOpen = signal(false);
   protected readonly pdfOpen = signal(false);
+
+  // Task 3: the Settings modal's `on*` handlers (App.tsx 471-513) — arrow
+  // function fields (stable identity, bound to the instance) so `settingsState`
+  // below can hand them to `SettingsModalComponent` without rebinding on every
+  // recomputation. Each one mirrors the React comment at 471-473: update local
+  // shell state AND call the same module accessor the old controls used, so
+  // the setting still does exactly what it did, only from the modal now.
+  protected readonly onNumbering = (v: NumberingSystem): void => this.setNumbering(v);
+  protected readonly onLanguage = (v: Language): void => this.setLang(v);
+  protected readonly onToggleDark = (): void => this.toggleDark();
+  protected readonly onToothInfo = (v: boolean): void => this.toothInfoOn.set(v);
+  protected readonly onSecondaryCariesMode = (v: SecondaryCariesMode): void => {
+    this.secondaryMode.set(v);
+    setSecondaryCariesMode(v);
+  };
+  protected readonly onIcdas = (v: boolean): void => {
+    this.icdasOn.set(v);
+    setIcdasEnabled(v);
+  };
+  protected readonly onCariesDepth = (v: boolean): void => {
+    this.cariesDepthOn.set(v);
+    setCariesDepthEnabled(v);
+  };
+  protected readonly onRootCariesMode = (v: RootCariesMode): void => {
+    this.rootMode.set(v);
+    setRootCariesMode(v);
+  };
+  protected readonly onRadiographicDepthMode = (v: RadiographicDepthMode): void => {
+    this.radiographicMode.set(v);
+    setRadiographicDepthMode(v);
+  };
+  protected readonly onPulpLevel = (v: PulpDetailLevel): void => {
+    this.pulpLevel.set(v);
+    setPulpDetailLevel(v);
+  };
+  protected readonly onWearDetailLevel = (v: ToothDetailLevel): void => {
+    this.wearLevel.set(v);
+    setWearDetailLevel(v);
+  };
+  protected readonly onDiscolorationDetailLevel = (v: ToothDetailLevel): void => {
+    this.discoLevel.set(v);
+    setDiscolorationDetailLevel(v);
+  };
+  protected readonly onSurfaceNotation = (v: SurfaceNotation): void => {
+    this.notation.set(v);
+    setSurfaceNotation(v);
+  };
+  protected readonly onNotes = (v: boolean): void => {
+    this.notesOn.set(v);
+    setNotesEnabled(v);
+  };
+  protected readonly onShowStatusCard = (v: boolean): void => this.showStatusCardOn.set(v);
+  protected readonly onShowOrthoCard = (v: boolean): void => this.showOrthoCardOn.set(v);
+  // perioViewMode/perioRowVisibility/perioIndexNameMode call the engine setter
+  // only (App.tsx 507-512) — the onStateChange mirror in the constructor is
+  // what feeds the new value back into shell state (and thus into the next
+  // `settingsState()` read), exactly as the React comment above `settingsState`
+  // describes for these three fields.
+  protected readonly onPerioViewMode = (v: PerioViewMode): void => setPerioViewMode(v);
+  protected readonly onPerioRowVisibility = (id: PerioRowId, v: boolean): void =>
+    setPerioRowVisibility(id, v);
+  protected readonly onPerioIndexNameMode = (v: PerioIndexNameMode): void =>
+    setPerioIndexNameMode(v);
+
+  // Task 3: the live settings surface for the Settings modal (App.tsx 474-513,
+  // `settingsState`) — a computed so every field always reflects current shell
+  // state; the `on*` handlers above are stable across recomputations.
+  protected readonly settingsState = computed<SettingsState>(() => ({
+    numbering: this.currentNumbering(),
+    onNumbering: this.onNumbering,
+    language: this.lang(),
+    onLanguage: this.onLanguage,
+    isDark: this.isDark(),
+    onToggleDark: this.onToggleDark,
+    toothInfo: this.toothInfoOn(),
+    onToothInfo: this.onToothInfo,
+    secondaryCariesMode: this.secondaryMode(),
+    onSecondaryCariesMode: this.onSecondaryCariesMode,
+    icdas: this.icdasOn(),
+    onIcdas: this.onIcdas,
+    cariesDepth: this.cariesDepthOn(),
+    onCariesDepth: this.onCariesDepth,
+    rootCariesMode: this.rootMode(),
+    onRootCariesMode: this.onRootCariesMode,
+    radiographicDepthMode: this.radiographicMode(),
+    onRadiographicDepthMode: this.onRadiographicDepthMode,
+    pulpLevel: this.pulpLevel(),
+    onPulpLevel: this.onPulpLevel,
+    wearDetailLevel: this.wearLevel(),
+    onWearDetailLevel: this.onWearDetailLevel,
+    discolorationDetailLevel: this.discoLevel(),
+    onDiscolorationDetailLevel: this.onDiscolorationDetailLevel,
+    surfaceNotation: this.notation(),
+    onSurfaceNotation: this.onSurfaceNotation,
+    notes: this.notesOn(),
+    onNotes: this.onNotes,
+    showStatusCard: this.showStatusCardOn(),
+    onShowStatusCard: this.onShowStatusCard,
+    showOrthoCard: this.showOrthoCardOn(),
+    onShowOrthoCard: this.onShowOrthoCard,
+    perioViewMode: this.viewMode(),
+    onPerioViewMode: this.onPerioViewMode,
+    perioRowVisibility: this.perioRowVisibilityState(),
+    onPerioRowVisibility: this.onPerioRowVisibility,
+    perioIndexNameMode: this.perioIndexNameModeState(),
+    onPerioIndexNameMode: this.onPerioIndexNameMode,
+  }));
 
   constructor() {
     // Language: push the effective language into the core i18n bus whenever
@@ -886,6 +1014,20 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
       onCleanup(onStateChange(refresh));
     });
 
+    // Task 3: perio-row-visibility / perio-index-name-mode mirrors (App.tsx
+    // 437-444) — the previously-deferred 6th onStateChange subscription, same
+    // precedent as the viewMode mirror above so a host calling
+    // setPerioRowVisibility()/setPerioIndexNameMode() directly still
+    // re-renders the Settings -> Periodontal tab.
+    effect((onCleanup) => {
+      const refresh = () => {
+        this.perioRowVisibilityState.set(getPerioRowVisibility());
+        this.perioIndexNameModeState.set(getPerioIndexNameMode());
+      };
+      refresh();
+      onCleanup(onStateChange(refresh));
+    });
+
     // Dual-state confirm pending flag (App.tsx 446-452) — subscribe only, no
     // initial read (a confirm can only be requested by a post-mount edit).
     effect((onCleanup) => {
@@ -938,6 +1080,18 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected selectLanguage(next: Language): void {
     this.setLang(next);
     this.languageOpen.set(false);
+  }
+
+  /** App.tsx 311-318, verbatim: controlled/uncontrolled numbering, same shape
+   *  as `setLang` above — always emits `numberingChange`; only writes
+   *  `internalNumbering` when uncontrolled (no `numberingSystem` input bound). */
+  protected setNumbering(next: NumberingSystem): void {
+    if (this.numberingSystem() !== undefined) {
+      this.numberingChange.emit(next);
+      return;
+    }
+    this.internalNumbering.set(next);
+    this.numberingChange.emit(next);
   }
 
   /** App.tsx 301-309, verbatim: standalone flips `internalDark`; controlled

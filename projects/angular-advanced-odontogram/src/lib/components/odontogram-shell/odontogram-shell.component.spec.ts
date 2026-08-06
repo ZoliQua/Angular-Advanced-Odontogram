@@ -38,9 +38,11 @@ import {
   acceptDualStateConfirm,
   cancelDualStateConfirm,
   formatToothLabel,
+  getPerioRowVisibility,
   getToothPerio,
   isDualStateConfirmPending,
   setChartMode,
+  setNumberingSystem,
   setPerioSite,
 } from "../../core/odontogram";
 import { setI18nLanguage, t } from "../../core/i18n/useI18n";
@@ -426,5 +428,128 @@ describe("OdontogramShellComponent Task 5: dynamic sections", () => {
 
     const root = f.nativeElement.querySelector(".odontogram-root") as HTMLElement;
     expect(root.style.getPropertyValue("--odon-accent")).toBe("#123456");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 3: SettingsModal wiring + the perio-settings mirrors. The engine
+// lifecycle (init/destroy) is still DI-faked exactly as above; every OTHER
+// engine entry point is the REAL, unmocked `core/odontogram` export — same
+// route as Task 5's describe block above. `resetEngineStateForTest()`
+// (wired as a global Vitest setupFile, see `../../testing/reset-engine-state.ts`)
+// runs before/after every test in the whole `npm run test:ng` run, so the
+// perio-settings singletons this task's spec dirties are reset automatically;
+// `numberingSystem` has no such seam (out of this task's scope), so its own
+// `afterEach` below restores it directly.
+// ---------------------------------------------------------------------------
+describe("OdontogramShellComponent Task 3: settings modal wiring", () => {
+  beforeEach(() => {
+    initOdontogram.mockClear();
+    destroyOdontogram.mockClear();
+    __resetChartStateForTest();
+    setI18nLanguage("en");
+    document.documentElement.classList.remove("dark");
+    TestBed.configureTestingModule({
+      imports: [OdontogramShellComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        {
+          provide: ODONTOGRAM_ENGINE_LIFECYCLE,
+          useValue: { init: initOdontogram, destroy: destroyOdontogram },
+        },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    document.documentElement.classList.remove("dark");
+    setNumberingSystem("FDI");
+  });
+
+  function openSettings(f: ReturnType<typeof TestBed.createComponent>): void {
+    (f.nativeElement.querySelector('[aria-haspopup="dialog"]') as HTMLButtonElement).click();
+  }
+
+  it("(a) clicking the settings gear opens the modal; close works", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    expect(f.nativeElement.querySelector(".odon-settings-modal")).toBeNull();
+
+    openSettings(f);
+    await f.whenStable();
+    expect(f.nativeElement.querySelector(".odon-settings-modal")).not.toBeNull();
+
+    (f.nativeElement.querySelector(".odon-settings-close") as HTMLButtonElement).click();
+    await f.whenStable();
+    expect(f.nativeElement.querySelector(".odon-settings-modal")).toBeNull();
+  });
+
+  it("(b) changing the numbering select in the general tab calls through to the REAL engine's setNumberingSystem", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    expect(formatToothLabel(14)).toBe("14"); // FDI default
+
+    openSettings(f);
+    await f.whenStable();
+    // General is the default active tab (SETTINGS_TABS[0]) — its first
+    // `.odon-settings-select` is the numbering select (TSX 256-298).
+    const numberingSelect = f.nativeElement.querySelector(".odon-settings-select") as HTMLSelectElement;
+    numberingSelect.value = "UNIVERSAL";
+    numberingSelect.dispatchEvent(new Event("change"));
+    await f.whenStable();
+
+    expect(formatToothLabel(14)).toBe("5"); // UNIVERSAL mapping (numbering.ts toLabel)
+  });
+
+  it("(c) toggling a periodontal row updates the REAL engine's getPerioRowVisibility() and survives modal close/reopen", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    expect(getPerioRowVisibility().bop).toBe(true);
+
+    openSettings(f);
+    await f.whenStable();
+    const perioTab = f.nativeElement.querySelector("#odon-settings-tab-periodontal") as HTMLButtonElement;
+    perioTab.click();
+    await f.whenStable();
+
+    const bopCheckbox = f.nativeElement.querySelector(
+      `input[aria-label="${t("settings.perio.row.bop")}"]`,
+    ) as HTMLInputElement;
+    expect(bopCheckbox.checked).toBe(true);
+    bopCheckbox.checked = false;
+    bopCheckbox.dispatchEvent(new Event("change"));
+    await f.whenStable();
+
+    expect(getPerioRowVisibility().bop).toBe(false);
+
+    // Close and reopen — the modal component instance stays mounted (only its
+    // `@if (open())`-guarded content unmounts), so `activeTab` stays on
+    // "periodontal" and the checkbox must still reflect the REAL engine state.
+    (f.nativeElement.querySelector(".odon-settings-close") as HTMLButtonElement).click();
+    await f.whenStable();
+    openSettings(f);
+    await f.whenStable();
+
+    const bopCheckboxAfter = f.nativeElement.querySelector(
+      `input[aria-label="${t("settings.perio.row.bop")}"]`,
+    ) as HTMLInputElement;
+    expect(bopCheckboxAfter.checked).toBe(false);
+  });
+
+  it("(d) settingsState mirrors current values — icdas on renders as a checked checkbox", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    f.componentRef.setInput("enableIcdas", true);
+    await f.whenStable();
+
+    openSettings(f);
+    await f.whenStable();
+    const cariesTab = f.nativeElement.querySelector("#odon-settings-tab-caries") as HTMLButtonElement;
+    cariesTab.click();
+    await f.whenStable();
+
+    const icdasCheckbox = f.nativeElement.querySelector(
+      `input[aria-label="${t("icdas.enable")}"]`,
+    ) as HTMLInputElement;
+    expect(icdasCheckbox.checked).toBe(true);
   });
 });
