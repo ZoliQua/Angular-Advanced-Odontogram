@@ -439,8 +439,7 @@ describe("OdontogramShellComponent Task 5: dynamic sections", () => {
 // (wired as a global Vitest setupFile, see `../../testing/reset-engine-state.ts`)
 // runs before/after every test in the whole `npm run test:ng` run, so the
 // perio-settings singletons this task's spec dirties are reset automatically;
-// `numberingSystem` has no such seam (out of this task's scope), so its own
-// `afterEach` below restores it directly.
+// `numberingSystem` reset is handled by the shared reset helper (see above).
 // ---------------------------------------------------------------------------
 describe("OdontogramShellComponent Task 3: settings modal wiring", () => {
   beforeEach(() => {
@@ -463,7 +462,6 @@ describe("OdontogramShellComponent Task 3: settings modal wiring", () => {
 
   afterEach(() => {
     document.documentElement.classList.remove("dark");
-    setNumberingSystem("FDI");
   });
 
   function openSettings(f: ReturnType<typeof TestBed.createComponent>): void {

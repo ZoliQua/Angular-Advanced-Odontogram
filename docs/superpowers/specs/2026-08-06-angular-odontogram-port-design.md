@@ -144,7 +144,7 @@ independently; `openPerioOverlay()`/`closePerioOverlay()` keep working.
 ### Remaining components
 
 `PerioSidebarComponent`, `SettingsModalComponent` (tabs: general | panels |
-toothDetails | caries | pulpa | periodontal | notes), `ExportOptionsModalComponent`
+toothDetails | caries | pulpa | notes | periodontal), `ExportOptionsModalComponent`
 — each a direct port of its React counterpart, keeping DOM ids/classes and the
 dialog contracts (focus trap, Esc/click-away, z-index layering) identical.
 (`DualStateConfirmComponent`, originally listed here, shipped in Phase 2
