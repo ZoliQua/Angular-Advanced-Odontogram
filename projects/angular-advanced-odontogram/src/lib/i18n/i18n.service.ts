@@ -3,7 +3,7 @@
 // repaints subscribe to it directly; this service only mirrors it for
 // Angular templates. Controlled/uncontrolled language-prop semantics live in
 // OdontogramShellComponent, mirroring the React useI18n hook.
-import { Injectable, Signal, signal } from "@angular/core";
+import { DestroyRef, Injectable, Signal, inject, signal } from "@angular/core";
 import {
   t as coreT,
   getI18nLanguage,
@@ -18,7 +18,8 @@ export class I18nService {
   readonly lang: Signal<Language> = this._lang.asReadonly();
 
   constructor() {
-    onI18nChange((lang) => this._lang.set(lang));
+    const unsubscribe = onI18nChange((lang) => this._lang.set(lang));
+    inject(DestroyRef).onDestroy(unsubscribe);
   }
 
   setLanguage(lang: Language): void {

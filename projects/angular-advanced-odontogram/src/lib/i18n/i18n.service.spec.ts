@@ -57,4 +57,25 @@ describe("I18nService", () => {
     expect(label.textContent).not.toBe(before);
     expect(label.textContent).toBe(f.componentInstance.i18n.t("panel.controls"));
   });
+
+  // Hygiene fix (Phase 3 Task 1): the constructor's onI18nChange subscription
+  // must be disposed via inject(DestroyRef).onDestroy(...), otherwise a
+  // destroyed injector's I18nService instance keeps mirroring the core bus
+  // forever (a listener leak across TestBed.resetTestingModule()/real app
+  // injector teardown). Assert behaviorally: after resetTestingModule() the
+  // old instance's `lang` signal stops tracking the core bus, while a fresh
+  // instance from the new module keeps tracking it.
+  it("disposes its onI18nChange listener when its injector is destroyed", () => {
+    const oldSvc = TestBed.inject(I18nService);
+    expect(oldSvc.lang()).toBe("en");
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
+    const newSvc = TestBed.inject(I18nService);
+
+    setI18nLanguage("hu");
+
+    expect(newSvc.lang()).toBe("hu");
+    expect(oldSvc.lang()).toBe("en"); // stale instance's listener was disposed
+  });
 });

@@ -27,24 +27,7 @@ import {
   viewChild,
 } from "@angular/core";
 import { I18nService } from "../../i18n/i18n.service";
-
-const FOCUSABLE =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// jsdom performs no layout, so `offsetParent` is always `null` there — the
-// TSX's `el.offsetParent !== null` visibility filter (source line 67) would
-// exclude every element under Vitest/jsdom and break the focus trap in
-// tests. Feature-detect jsdom via its distinctive `navigator.userAgent` and
-// fall back to "always visible" only in that environment; real browsers keep
-// the original offsetParent check verbatim.
-const IS_JSDOM =
-  typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent);
-
-function isVisible(el: HTMLElement): boolean {
-  return IS_JSDOM ? true : el.offsetParent !== null;
-}
-
-let nextTitleId = 0;
+import { focusFirst, nextDialogTitleId, trapTabKey } from "../shared/dialog-focus";
 
 @Component({
   selector: "aao-dual-state-confirm",
@@ -92,7 +75,7 @@ export class DualStateConfirmComponent {
   readonly cancel = output<void>();
 
   protected readonly i18n = inject(I18nService);
-  protected readonly titleId = `dualStateConfirmTitle-${nextTitleId++}`;
+  protected readonly titleId = nextDialogTitleId("dualStateConfirmTitle");
 
   private readonly dialogRef = viewChild<ElementRef<HTMLElement>>("dialog");
   private openerEl: HTMLElement | null = null;
@@ -108,8 +91,7 @@ export class DualStateConfirmComponent {
       if (!isOpen || !dialog) return;
 
       this.openerEl = (document.activeElement as HTMLElement | null) ?? null;
-      const first = dialog.querySelector<HTMLElement>(FOCUSABLE);
-      (first ?? dialog).focus();
+      focusFirst(dialog);
 
       onCleanup(() => {
         this.openerEl?.focus?.();
@@ -130,19 +112,6 @@ export class DualStateConfirmComponent {
     if (e.key !== "Tab") return;
     const dialog = this.dialogRef()?.nativeElement;
     if (!dialog) return;
-    const items = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-      (el) => isVisible(el) || el === document.activeElement,
-    );
-    if (items.length === 0) return;
-    const firstEl = items[0];
-    const lastEl = items[items.length - 1];
-    const active = document.activeElement as HTMLElement | null;
-    if (e.shiftKey && active === firstEl) {
-      e.preventDefault();
-      lastEl.focus();
-    } else if (!e.shiftKey && active === lastEl) {
-      e.preventDefault();
-      firstEl.focus();
-    }
+    trapTabKey(dialog, e);
   }
 }
