@@ -26,6 +26,7 @@ import {
 import {
   acceptDualStateConfirm,
   cancelDualStateConfirm,
+  closePerioOverlay,
   destroyOdontogram,
   formatToothLabel,
   getOdontogramSummary,
@@ -75,6 +76,8 @@ import { startIntroTour } from "../../core/tour";
 import { DualStateConfirmComponent } from "../dual-state-confirm/dual-state-confirm.component";
 import { SettingsModalComponent, type SettingsState } from "../settings-modal/settings-modal.component";
 import { ExportOptionsModalComponent } from "../export-options-modal/export-options-modal.component";
+import { PerioChartComponent } from "../perio-chart/perio-chart.component";
+import { PerioSidebarComponent } from "../perio-sidebar/perio-sidebar.component";
 import {
   icon8Svg,
   iconGumSvg,
@@ -115,7 +118,13 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
 @Component({
   selector: "aao-odontogram-shell",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DualStateConfirmComponent, SettingsModalComponent, ExportOptionsModalComponent],
+  imports: [
+    DualStateConfirmComponent,
+    SettingsModalComponent,
+    ExportOptionsModalComponent,
+    PerioChartComponent,
+    PerioSidebarComponent,
+  ],
   template: `
     <div class="odontogram-root" #root [attr.dir]="isRtl() ? 'rtl' : 'ltr'" [attr.lang]="lang()">
       <header class="topbar">
@@ -315,13 +324,13 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
         </div>
         @if (isPerioView()) {
           <div class="dental-chart-column" dir="ltr">
-            <!-- Phase 4: PerioChart inline -->
+            <aao-perio-chart [inline]="true" />
           </div>
         }
 
         <aside class="panel">
           @if (isPerioView()) {
-            <!-- Phase 4: PerioSidebar -->
+            <aao-perio-sidebar />
           }
           <div class="panel-odontogram-controls" [style.display]="isPerioView() ? 'none' : null">
           <div class="panel-header">
@@ -595,7 +604,9 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
         </aside>
       </main>
 
-      <!-- Phase 4: PerioChart popup (viewMode === "popup", perioOpen) -->
+      @if (viewMode() === 'popup') {
+        <aao-perio-chart [open]="perioOpen()" (closeChart)="onPerioClose()" />
+      }
 
       <aao-settings-modal
         [open]="settingsOpen()"
@@ -1127,5 +1138,13 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     setImportFormat("fhir");
     this.proxyClick("btnStatusImport");
     this.importOpen.set(false);
+  }
+
+  /** App.tsx 1029's `onClose={closePerioOverlay}` — the popup PerioChart's
+   *  close button (Escape/backdrop-click/close-icon all funnel through the
+   *  same `closeChart` output) closes the overlay via the real engine flag;
+   *  the `perioOpen` mirror effect above then reflects it back to `false`. */
+  protected onPerioClose(): void {
+    closePerioOverlay();
   }
 }

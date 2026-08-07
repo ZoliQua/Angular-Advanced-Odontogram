@@ -37,13 +37,17 @@ import {
   __setToothStateForTest,
   acceptDualStateConfirm,
   cancelDualStateConfirm,
+  closePerioOverlay,
   formatToothLabel,
   getPerioRowVisibility,
   getToothPerio,
   isDualStateConfirmPending,
+  isPerioOverlayOpen,
+  openPerioOverlay,
   setChartMode,
   setNumberingSystem,
   setPerioSite,
+  setPerioViewMode,
 } from "../../core/odontogram";
 import { setI18nLanguage, t } from "../../core/i18n/useI18n";
 
@@ -549,5 +553,106 @@ describe("OdontogramShellComponent Task 3: settings modal wiring", () => {
       `input[aria-label="${t("icdas.enable")}"]`,
     ) as HTMLInputElement;
     expect(icdasCheckbox.checked).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4 Task 5: mounting PerioChartComponent + PerioSidebarComponent into
+// the three Phase-4 marker housings (App.tsx 743-755's inline column +
+// PerioSidebar branch, App.tsx 1029's popup). Same DI-fake-lifecycle-only,
+// real-engine-everywhere-else route as the two describe blocks above.
+// ---------------------------------------------------------------------------
+describe("OdontogramShellComponent Phase 4 Task 5: PerioChart/PerioSidebar housings", () => {
+  beforeEach(() => {
+    initOdontogram.mockClear();
+    destroyOdontogram.mockClear();
+    __resetChartStateForTest();
+    setI18nLanguage("en");
+    document.documentElement.classList.remove("dark");
+    closePerioOverlay();
+    setPerioViewMode("toggle");
+    TestBed.configureTestingModule({
+      imports: [OdontogramShellComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        {
+          provide: ODONTOGRAM_ENGINE_LIFECYCLE,
+          useValue: { init: initOdontogram, destroy: destroyOdontogram },
+        },
+      ],
+    });
+  });
+
+  it("toggle mode, Dental Chart view: mounts the inline PerioChart + PerioSidebar, keeps the odontogram column mounted but display:none", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+
+    const toothGridBefore = f.nativeElement.querySelector("#toothGrid");
+    expect(toothGridBefore).not.toBeNull();
+    expect(f.nativeElement.querySelector("#perioInlinePanel")).toBeNull();
+    expect(f.nativeElement.querySelector("#caseMetaPanel")).toBeNull();
+
+    (f.nativeElement.querySelector("#appViewDentalChart") as HTMLButtonElement).click();
+    await f.whenStable();
+
+    // The inline PerioChart housing renders inside .dental-chart-column.
+    const inlinePanel = f.nativeElement.querySelector(".dental-chart-column #perioInlinePanel");
+    expect(inlinePanel).not.toBeNull();
+    expect(f.nativeElement.querySelector(".dental-chart-column #perioInlineGrid")).not.toBeNull();
+
+    // The sidebar mounts in aside.panel, ahead of the (now display:none) odontogram controls.
+    expect(f.nativeElement.querySelector("aside.panel #caseMetaPanel")).not.toBeNull();
+
+    // The odontogram column stays in the DOM — only CSS-hidden, never unmounted
+    // (App.tsx's own "never unmounted, wireControls listeners survive" contract).
+    const chartColumn = f.nativeElement.querySelector(".chart-column") as HTMLElement;
+    expect(chartColumn).not.toBeNull();
+    expect(chartColumn.style.display).toBe("none");
+    expect(f.nativeElement.querySelector("#toothGrid")).toBe(toothGridBefore);
+
+    // No popup dialog while in toggle/inline mode.
+    expect(f.nativeElement.querySelector("#perioOverlay")).toBeNull();
+  });
+
+  it("toggle mode, switching back to Odontogram view unmounts the inline PerioChart + PerioSidebar", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    (f.nativeElement.querySelector("#appViewDentalChart") as HTMLButtonElement).click();
+    await f.whenStable();
+    expect(f.nativeElement.querySelector("#perioInlinePanel")).not.toBeNull();
+
+    (f.nativeElement.querySelector("#appViewOdontogram") as HTMLButtonElement).click();
+    await f.whenStable();
+
+    expect(f.nativeElement.querySelector("#perioInlinePanel")).toBeNull();
+    expect(f.nativeElement.querySelector("#caseMetaPanel")).toBeNull();
+    expect((f.nativeElement.querySelector(".chart-column") as HTMLElement).style.display).not.toBe("none");
+  });
+
+  it("popup mode: openPerioOverlay() (real engine) opens #perioOverlay; the close button calls closePerioOverlay()", async () => {
+    setPerioViewMode("popup");
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    expect(f.nativeElement.querySelector("#perioOverlay")).toBeNull();
+    expect(isPerioOverlayOpen()).toBe(false);
+
+    openPerioOverlay();
+    await f.whenStable();
+
+    const overlay = f.nativeElement.querySelector("#perioOverlay") as HTMLElement;
+    expect(overlay).not.toBeNull();
+    expect(overlay.getAttribute("role")).toBe("dialog");
+    expect(isPerioOverlayOpen()).toBe(true);
+    // The sidebar mounts inside the popup housing too (App.tsx's <PerioSidebar/> is
+    // nested inside <PerioChart>'s own popup panel, not the aside.panel branch).
+    expect(overlay.querySelector("#caseMetaPanel")).not.toBeNull();
+
+    const closeBtn = overlay.querySelector(".perio-overlay-close") as HTMLButtonElement;
+    expect(closeBtn).not.toBeNull();
+    closeBtn.click();
+    await f.whenStable();
+
+    expect(f.nativeElement.querySelector("#perioOverlay")).toBeNull();
+    expect(isPerioOverlayOpen()).toBe(false);
   });
 });

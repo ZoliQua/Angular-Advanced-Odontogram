@@ -21,14 +21,14 @@ const REACT_DEPENDENT = [
   "ds1-confirm-revert.test.tsx", // ported: components/odontogram-shell/ported/ds1-confirm-revert.spec.ts
   "ds1-confirm.test.ts", // ported: components/odontogram-shell/ported/ds1-confirm.spec.ts (its <DualStateConfirm> component block was already ported earlier as dual-state-confirm.component.spec.ts)
   "p4a-case-meta.test.ts", // ported: components/odontogram-shell/ported/p4a-case-meta.spec.ts
-  "p4a-case-panel.test.ts", // phase-4 (PerioChart-adjacent case panel markup)
-  "p4b-classification-ui.test.ts", // phase-4 (renders <App/> together with PerioChart classification UI)
+  "p4a-case-panel.test.ts", // ported: components/odontogram-shell/ported/p4a-case-panel.spec.ts
+  "p4b-classification-ui.test.ts", // ported: components/odontogram-shell/ported/p4b-classification-ui.spec.ts
   "perio-graphic-rows.test.ts", // phase-4 (PerioChart markup)
-  "perio-graphical-presentation.test.ts", // phase-4 (mounts <App, PerioChart> together)
-  "perio-p1-ui.test.ts", // phase-4 (PerioChart markup)
+  "perio-graphical-presentation.test.ts", // ported: components/odontogram-shell/ported/perio-graphical-presentation.spec.ts
+  "perio-p1-ui.test.ts", // ported: components/odontogram-shell/ported/perio-p1-ui.spec.ts
   "perio-p2-grid.test.ts", // phase-4 (PerioChart markup)
   "perio-p2-keyboard.test.ts", // phase-4 (PerioChart markup)
-  "perio-p2-overlay.test.ts", // phase-4 (PerioChart markup)
+  "perio-p2-overlay.test.ts", // ported: components/odontogram-shell/ported/perio-p2-overlay.spec.ts
   "perio-p2b-rows.test.ts", // phase-4 (PerioChart markup)
   "pgb-info-buttons.test.ts", // phase-4 (PerioChart markup)
   "pgb-mm-overlays.test.ts", // phase-4 (PerioChart markup)
@@ -71,7 +71,7 @@ const REACT_DEPENDENT = [
   "summary.test.ts", // ported: components/odontogram-shell/ported/summary.spec.ts
   "ui-ar-rtl.test.tsx", // ported: components/odontogram-shell/ported/ui-ar-rtl.spec.ts
   "ui1-dynamic-scale.test.ts", // phase-4 (PerioChart markup)
-  "ui1-perio-sidebar.test.tsx", // phase-4 (PerioSidebar markup)
+  "ui1-perio-sidebar.test.tsx", // ported: components/perio-sidebar/ported/ui1-perio-sidebar.spec.ts (standalone parts, Task 2) + components/odontogram-shell/ported/ui1-perio-sidebar.spec.ts (App view-gate, Task 5 — corrected assertions, see that file's header staleness note)
   "ui1-row-labels.test.ts", // phase-4 (PerioChart markup)
   "ui1-sidebar-style.test.tsx", // phase-4 (PerioSidebar markup)
   "ui2-index-names.test.ts", // phase-4 (PerioChart + PerioSidebar markup)
