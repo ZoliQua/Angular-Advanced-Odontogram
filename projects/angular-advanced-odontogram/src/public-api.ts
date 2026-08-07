@@ -17,3 +17,4 @@ export * from "./lib/components/settings-modal/settings-modal.component";
 export * from "./lib/components/export-options-modal/export-options-modal.component";
 export * from "./lib/components/odontogram-shell/odontogram-shell.component";
 export * from "./lib/components/perio-sidebar/perio-sidebar.component";
+export * from "./lib/components/perio-chart/perio-chart.component";

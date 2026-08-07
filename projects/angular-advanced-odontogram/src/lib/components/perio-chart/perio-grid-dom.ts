@@ -136,19 +136,26 @@ const FURCATION_ROMAN = ["–", "I", "II", "III", "IV"];
 // SP-perio PG-C Task 3: cejVisibility / rootConcavity cycle-button value
 // order + compact face glyphs (mirrors FURCATION_ROMAN's role). Literal —
 // order matches VALID_CEJ_VISIBILITY / VALID_ROOT_CONCAVITY (odontogram.ts)
-// / LOCAL_VALUE_MAPS (fhir/codesystems.ts).
-const CEJ_VISIBILITY_CYCLE: readonly string[] = ["none", "detectable", "not-detectable"];
+// / LOCAL_VALUE_MAPS (fhir/codesystems.ts). Exported (unlike the TSX, which
+// keeps these module-private since its component body lives in the SAME
+// file) — Phase 4 Task 4's PerioChartComponent needs the exact same cycle
+// order to compute the *next* value in its `onCejVisibility`/etc. handlers,
+// and re-declaring a second literal copy there would risk the two silently
+// drifting out of sync.
+export const CEJ_VISIBILITY_CYCLE: readonly string[] = ["none", "detectable", "not-detectable"];
 const CEJ_VISIBILITY_FACE: Record<string, string> = { none: "–", detectable: "D", "not-detectable": "ND" };
-const ROOT_CONCAVITY_CYCLE: readonly string[] = ["none", "mild", "deep"];
+export const ROOT_CONCAVITY_CYCLE: readonly string[] = ["none", "mild", "deep"];
 const ROOT_CONCAVITY_FACE: Record<string, string> = { none: "–", mild: "Mi", deep: "Dp" };
 
 // SP-perio PG-D Task 4: gingivalThickness (GT) / millerClass cycle-button
 // value order + compact face glyphs — mirrors CEJ_VISIBILITY_CYCLE/
 // ROOT_CONCAVITY_CYCLE above exactly. Order matches VALID_GINGIVAL_THICKNESS
 // / VALID_MILLER_CLASS (odontogram.ts) / LOCAL_VALUE_MAPS (fhir/codesystems.ts).
-const GINGIVAL_THICKNESS_CYCLE: readonly string[] = ["unknown", "thin", "medium", "thick"];
+// Exported for the same PerioChartComponent-handler reason as the two cycles
+// above.
+export const GINGIVAL_THICKNESS_CYCLE: readonly string[] = ["unknown", "thin", "medium", "thick"];
 const GINGIVAL_THICKNESS_FACE: Record<string, string> = { unknown: "–", thin: "Tn", medium: "Md", thick: "Tk" };
-const MILLER_CLASS_CYCLE: readonly string[] = ["none", "i", "ii", "iii", "iv"];
+export const MILLER_CLASS_CYCLE: readonly string[] = ["none", "i", "ii", "iii", "iv"];
 const MILLER_CLASS_FACE: Record<string, string> = { none: "–", i: "I", ii: "II", iii: "III", iv: "IV" };
 
 // PI/GI (Silness-Löe Plaque Index / Löe-Silness Gingival Index) per-surface
