@@ -37,5 +37,6 @@ source-side artifact, not `dist/`).
     npm run test:corpus  # plain Vitest — the framework-free engine + copied React-derived corpus only
     npm run test:ng      # Angular component/service *.spec.ts files, via `ng test` (needed for signal input()/output() support)
     npm run build:styles && npx ng build angular-advanced-odontogram
+    npm run docs         # generate API docs to docs/api/
 
 Design spec: `docs/superpowers/specs/2026-08-06-angular-odontogram-port-design.md`.

@@ -1,0 +1,7 @@
+{
+  "entryPoints": ["projects/angular-advanced-odontogram/src/public-api.ts"],
+  "out": "docs/api",
+  "tsconfig": "projects/angular-advanced-odontogram/tsconfig.lib.json",
+  "name": "Angular Advanced Odontogram",
+  "excludeInternal": true
+}

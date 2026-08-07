@@ -14,7 +14,8 @@
     "test:ng": "ng test angular-advanced-odontogram --watch=false",
     "test:watch": "vitest",
     "parity:capture": "PARITY_CAPTURE=1 vitest run projects/angular-advanced-odontogram/src/lib/core/__tests__/parity/capture.test.ts",
-    "gen:assets": "node scripts/generate-svg-assets.mjs"
+    "gen:assets": "node scripts/generate-svg-assets.mjs",
+    "docs": "typedoc"
   },
   "private": true,
   "dependencies": {
@@ -41,6 +42,7 @@
     "postcss": "^8.5.26",
     "prettier": "^3.8.1",
     "tailwindcss": "^3.4.19",
+    "typedoc": "^0.28.20",
     "typescript": "~5.9.2",
     "vitest": "^4.1.10"
   }
