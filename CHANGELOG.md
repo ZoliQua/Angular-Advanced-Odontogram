@@ -95,3 +95,7 @@ versioning: [SemVer](https://semver.org/).
   `exportPdf` called with all 4 perio options `true` when perio data is
   present) closing the gaps found while adjudicating
   `ui3b-export-options-modal.test.ts` against the existing spec.
+
+---
+
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v0.1.0...HEAD

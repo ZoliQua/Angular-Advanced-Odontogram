@@ -4,7 +4,7 @@
   "lib": {
     "entryFile": "src/public-api.ts"
   },
-  "assets": ["styles.css"],
+  "assets": ["styles.css", "LICENSE"],
   "allowedNonPeerDependencies": [
     "jspdf"
   ]
