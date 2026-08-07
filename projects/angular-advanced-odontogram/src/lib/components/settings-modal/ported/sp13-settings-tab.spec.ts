@@ -17,7 +17,7 @@
 // `change` event on each select calls the matching `on*` handler with the
 // new value (the DOM equivalent of invoking the source's `onChange` prop
 // directly).
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, provideZonelessChangeDetection, signal } from "@angular/core";
 import {
@@ -26,59 +26,7 @@ import {
   type SettingsState,
 } from "../settings-modal.component";
 import { setI18nLanguage } from "../../../core/i18n/useI18n";
-import type { PerioRowId } from "../../../core/odontogram";
-
-const PERIO_ROW_IDS: readonly PerioRowId[] = [
-  "plaque", "bop", "cal", "gm", "pd", "furcation", "mobility", "cej",
-  "rootConcavity", "pi", "gi", "mpi", "mbi", "kg", "gt", "miller",
-];
-
-function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
-  const perioRowVisibility = {} as Record<PerioRowId, boolean>;
-  for (const id of PERIO_ROW_IDS) perioRowVisibility[id] = true;
-
-  return {
-    numbering: "FDI",
-    onNumbering: vi.fn(),
-    language: "en",
-    onLanguage: vi.fn(),
-    isDark: false,
-    onToggleDark: vi.fn(),
-    toothInfo: false,
-    onToothInfo: vi.fn(),
-    secondaryCariesMode: "standard",
-    onSecondaryCariesMode: vi.fn(),
-    icdas: false,
-    onIcdas: vi.fn(),
-    cariesDepth: false,
-    onCariesDepth: vi.fn(),
-    rootCariesMode: "simple",
-    onRootCariesMode: vi.fn(),
-    radiographicDepthMode: "off",
-    onRadiographicDepthMode: vi.fn(),
-    pulpLevel: "aae",
-    onPulpLevel: vi.fn(),
-    wearDetailLevel: "complex",
-    onWearDetailLevel: vi.fn(),
-    discolorationDetailLevel: "complex",
-    onDiscolorationDetailLevel: vi.fn(),
-    surfaceNotation: "full",
-    onSurfaceNotation: vi.fn(),
-    notes: false,
-    onNotes: vi.fn(),
-    showStatusCard: true,
-    onShowStatusCard: vi.fn(),
-    showOrthoCard: true,
-    onShowOrthoCard: vi.fn(),
-    perioViewMode: "toggle",
-    onPerioViewMode: vi.fn(),
-    perioRowVisibility,
-    onPerioRowVisibility: vi.fn(),
-    perioIndexNameMode: "translated",
-    onPerioIndexNameMode: vi.fn(),
-    ...overrides,
-  };
-}
+import { makeSettings } from "../testing/make-settings";
 
 @Component({
   imports: [SettingsModalComponent],

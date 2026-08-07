@@ -46,9 +46,9 @@ import type { PdfExportOptions } from "../../core/perioPdf";
  * "jsPDF-in-jsdom note"). Same pattern as `ODONTOGRAM_ENGINE_LIFECYCLE`
  * (odontogram-shell.component.ts): the default factory wires the real
  * `exportPdf`, and specs override it via `TestBed`'s provider array instead
- * of module-mocking (`vi.mock`/`vi.spyOn` are unavailable for this builder's
- * Vitest integration — see that token's own doc comment for the full
- * rationale).
+ * of module-level mocking/spying (`vi.mock`/`vi.spyOn` are unavailable for
+ * this builder's Vitest integration — see that token's own doc comment for
+ * the full rationale).
  */
 export const EXPORT_PDF_FN = new InjectionToken<(opts: PdfExportOptions) => Promise<void>>(
   "EXPORT_PDF_FN",

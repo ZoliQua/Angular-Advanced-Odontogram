@@ -105,7 +105,7 @@ const RTL_LANGUAGES: ReadonlySet<Language> = new Set(["ar"]);
  * other export of `core/odontogram` real. `vi.spyOn` on the module namespace
  * fails too (its exports are non-configurable). This token is the sanctioned
  * workaround the builder's own error message points at: specs override it
- * via `TestBed`'s provider array instead of module-mocking.
+ * via `TestBed`'s provider array instead of module-level mocking/spying.
  */
 export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
   init: () => Promise<void>;

@@ -37,6 +37,7 @@ import {
   type SettingsState,
 } from "../settings-modal.component";
 import { setI18nLanguage } from "../../../core/i18n/useI18n";
+import { makeSettings as makeBaseSettings } from "../testing/make-settings";
 
 const ALL_ROW_IDS: PerioRowId[] = [
   "plaque", "bop", "cal", "gm", "pd", "furcation", "mobility", "cej",
@@ -50,48 +51,17 @@ afterEach(() => {
   setPerioIndexNameMode("translated");
 });
 
+// Wraps the shared stubbed-fixture base with the 4 fields this file's
+// describe 1 needs wired to the real engine seams instead of stubs — see
+// `testing/make-settings.ts`'s header comment.
 function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
-  return {
-    numbering: "FDI",
-    onNumbering: vi.fn(),
-    language: "en",
-    onLanguage: vi.fn(),
-    isDark: false,
-    onToggleDark: vi.fn(),
-    toothInfo: false,
-    onToothInfo: vi.fn(),
-    secondaryCariesMode: "standard",
-    onSecondaryCariesMode: vi.fn(),
-    icdas: false,
-    onIcdas: vi.fn(),
-    cariesDepth: false,
-    onCariesDepth: vi.fn(),
-    rootCariesMode: "simple",
-    onRootCariesMode: vi.fn(),
-    radiographicDepthMode: "off",
-    onRadiographicDepthMode: vi.fn(),
-    pulpLevel: "aae",
-    onPulpLevel: vi.fn(),
-    wearDetailLevel: "complex",
-    onWearDetailLevel: vi.fn(),
-    discolorationDetailLevel: "complex",
-    onDiscolorationDetailLevel: vi.fn(),
-    surfaceNotation: "full",
-    onSurfaceNotation: vi.fn(),
-    notes: false,
-    onNotes: vi.fn(),
-    showStatusCard: true,
-    onShowStatusCard: vi.fn(),
-    showOrthoCard: true,
-    onShowOrthoCard: vi.fn(),
-    perioViewMode: "toggle",
-    onPerioViewMode: vi.fn(),
+  return makeBaseSettings({
     perioRowVisibility: getPerioRowVisibility(),
     onPerioRowVisibility: (id, v) => setPerioRowVisibility(id, v),
     perioIndexNameMode: getPerioIndexNameMode(),
     onPerioIndexNameMode: (v) => setPerioIndexNameMode(v),
     ...overrides,
-  };
+  });
 }
 
 describe("UI-2 Task 1: module flags (odontogram.ts)", () => {

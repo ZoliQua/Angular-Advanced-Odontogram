@@ -64,6 +64,38 @@ tears everything down and resets module state so re-init is clean. State flows
 out through the `onStateChange(cb)` pub-sub. This contract is what the Angular
 shell must reproduce exactly.
 
+### Known upstream drift
+
+The Phase-1 snapshot of `$ENGINE`
+(`/Users/Zoli/Sites/DentalQuoteCreator/src/modules/odontogram/engine`) is a
+point-in-time copy; the source repo keeps evolving after that copy was taken,
+and the frozen `__tests__/` corpus this port transcribes from does not track
+those later edits. Two drift events were found and verified (3-leg: frozen
+corpus vs. live `$ENGINE` source vs. live `$ENGINE` test) while porting
+Phase 4's periodontal specs — in both cases the port follows the **live**
+`$ENGINE` source/tests, not the frozen corpus text, with the deviation
+documented in the affected spec's own header comment:
+
+1. **`ui1-perio-sidebar.test.tsx` (Task 5, shell view-gate).** The frozen
+   corpus copy asserts the perio-view housing fully unmounts the odontogram
+   controls (`#statusCard`/`#toothSelect` null). The live `App.tsx`
+   (743-756) keeps them mounted with `display:none` instead — unmounting
+   would break `wireControls()`'s one-time listeners on toggle-back. The live
+   `$ENGINE/src/__tests__/ui1-perio-sidebar.test.tsx` asserts the corrected,
+   keep-mounted shape (verified 10/10 green against the read-only $ENGINE
+   checkout). Ported using the corrected assertions.
+2. **`ui3a-central-band.test.ts` (Task 6, PerioChart band labels).** The
+   frozen corpus copy asserts a single `.perio-fullgrid-band-label` element
+   containing both buccal and lingual/palatal text. The live
+   `$ENGINE/src/PerioChart.tsx` (1291-1353) builds two separate label
+   elements instead (one above the band, one below), matching this repo's
+   `perio-grid-dom.ts` exactly; the live test asserts the two-label shape.
+   Ported using the corrected assertions.
+
+A core re-sync decision — whether/how to periodically re-diff this port
+against the live `$ENGINE` source rather than relying on the frozen Phase-1
+corpus — is deferred to Phase 5.
+
 ## 3. Target workspace
 
 Angular CLI workspace (latest stable Angular, v21 line), two projects:
@@ -232,8 +264,19 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
    listener-dispose fix; 4 settings-dependent tests ported to Angular specs
    (`sp13-settings-tab`, `settings-modal-a11y`, `ui2-perio-settings`,
    `sp15-settings`).
-4. **Perio & exports.** PerioChart + PerioSidebar; JSON/FHIR/SVG/PNG/JPG/PDF
-   export-import; FHIR + roundtrip goldens green; `fr`/RTL smoke checks.
+4. **Perio & exports — DELIVERED (2026-08-07).** PerioSidebarComponent
+   (summary/case-meta/classification); framework-free `perio-grid-dom.ts`
+   builders; PerioChartComponent (grid, keyboard, mm/overlay switching)
+   mounted in all three app housings (toggle-mode inline panel, popup
+   overlay, shell pairing with PerioSidebarComponent) via the real
+   `openPerioOverlay()`/`closePerioOverlay()` engine seam; 5 framework-free
+   perio tests re-enabled in `test:corpus`; 26 tests ported from the source
+   corpus to Angular `TestBed` specs (2 sidebar + 3 chart-core + 6 App-level
+   + 15 PerioChart-direct batch); 4 `ExportOptionsModalComponent` coverage
+   additions closing gaps found while adjudicating
+   `ui3b-export-options-modal.test.ts` (see CHANGELOG). JSON/FHIR/SVG/PNG/
+   JPG/PDF export-import and `fr`/RTL smoke checks were already covered by
+   prior phases' shell/export work; no additional scope needed here.
 5. **Release.** Demo polish, README (EN + HU first; remaining 10 languages in a
    follow-up round), API docs via typedoc over the core + public API (same
    tool as the React repo), npm packaging (`ng-packagr` dist), CI,

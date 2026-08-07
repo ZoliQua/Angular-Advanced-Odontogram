@@ -58,3 +58,40 @@ versioning: [SemVer](https://semver.org/).
   `projects/angular-advanced-odontogram/src/lib/components/settings-modal/ported/`:
   `sp13-settings-tab`, `settings-modal-a11y`, `ui2-perio-settings`,
   `sp15-settings`.
+- `PerioSidebarComponent` (`aao-perio-sidebar`): the periodontal-view side
+  panel — case-meta summary, classification badges, and the summary card —
+  ported from `App.tsx`'s `PerioSidebar` mount.
+- Framework-free periodontal-grid DOM builders
+  (`components/perio-chart/perio-grid-dom.ts`): the archless, imperative DOM
+  construction for the periodontal full-grid (rows, band labels, overlays),
+  ported byte-identical from the live `$ENGINE/src/PerioChart.tsx`.
+- `PerioChartComponent` (`aao-perio-chart`): the periodontal chart itself —
+  grid rendering, keyboard navigation, mm/overlay switching — mounted in all
+  three of the app's housings: the toggle-mode inline panel
+  (`.dental-chart-column`, `#perioInlinePanel`), the popup overlay
+  (`#perioOverlay`), and `OdontogramShellComponent`'s `PerioSidebarComponent`
+  pairing, wired to the real `closePerioOverlay()`/`openPerioOverlay()`
+  engine seam.
+- 5 framework-free perio tests re-enabled in the `test:corpus` suite
+  (`perio-p1-core`, `perio-polish-diff`, `pgd-summary`, `pge-summary`,
+  `ui3b-build-perio-svg`), previously excluded pending the Phase-4 port.
+- 26 more tests ported from the source repo's React/Testing-Library corpus to
+  Angular `TestBed` specs: 2 under
+  `components/perio-sidebar/ported/` (`ui1-perio-sidebar`,
+  `ui1-sidebar-style`); 3 under `components/perio-chart/ported/`
+  (`perio-graphic-rows`, `perio-p2-grid`, `perio-p2-keyboard`); 6 under
+  `components/odontogram-shell/ported/` covering the App-level perio
+  integration (`perio-graphical-presentation`, `perio-p2-overlay`,
+  `p4a-case-panel`, `p4b-classification-ui`, `perio-p1-ui`, plus the
+  App-view-gate cases of `ui1-perio-sidebar`); and 15 more under
+  `components/perio-chart/ported/` covering the remaining PerioChart-direct
+  behavior (`perio-p2b-rows`, `pgb-info-buttons`, `pgb-mm-overlays`,
+  `pgb-switcher`, `pgc-cairo`, `pgc-rows`, `pgd-rows`, `pge-rows`,
+  `ui1-dynamic-scale`, `ui1-row-labels`, `ui2-index-names`,
+  `ui2-row-visibility`, `ui3a-central-band`, `ui3a-diamond-tiles`,
+  `ui3b-mpi-implant-gate`).
+- `ExportOptionsModalComponent` coverage additions: 4 new test cases
+  (Cancel-closes-without-export, Escape-closes, backdrop-click-closes, and
+  `exportPdf` called with all 4 perio options `true` when perio data is
+  present) closing the gaps found while adjudicating
+  `ui3b-export-options-modal.test.ts` against the existing spec.
