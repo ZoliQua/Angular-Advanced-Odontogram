@@ -159,4 +159,77 @@ describe("ExportOptionsModalComponent", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith("exportPdf failed", err);
     consoleErrorSpy.mockRestore();
   });
+
+  // Phase 4 Task 6 adjudication: core/__tests__/ui3b-export-options-modal.test.ts
+  // (the frozen React corpus source for this component) was compared
+  // assertion-by-assertion against this file. Most of its coverage is
+  // already subsumed above (defaults/checkbox state -> (a), perio-gate
+  // enable/disable -> (b), forced-off export opts -> (d)). Four assertions
+  // were genuinely UNCOVERED and are ported here verbatim (substance
+  // unchanged, DOM-event mechanics only): Escape/backdrop-close and the
+  // Cancel button (this dialog shares DualStateConfirmComponent's
+  // `dialog-focus.ts` contract per this component's own doc comment, but no
+  // spec anywhere exercises Escape/backdrop/Cancel on THIS component
+  // specifically), and an Export call with perio data PRESENT (so the
+  // checked opts pass through un-forced — every existing Export-path test
+  // exercises the hasPerio=false forced-off branch only).
+  it("(e) Escape closes the dialog", async () => {
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    const dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
+    dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await f.whenStable();
+
+    expect(f.componentInstance.closed).toBe(true);
+  });
+
+  it("(f) backdrop click closes the dialog", async () => {
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    const backdrop = f.nativeElement.querySelector(".odon-confirm-backdrop") as HTMLElement;
+    backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await f.whenStable();
+
+    expect(f.componentInstance.closed).toBe(true);
+  });
+
+  it("(g) Cancel closes without calling exportPdf", async () => {
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    const dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
+    const cancelBtn = Array.from(
+      dialog.querySelectorAll<HTMLButtonElement>(".odon-confirm-btn"),
+    ).find((b) => b.classList.contains("odon-confirm-cancel"))!;
+    cancelBtn.click();
+    await f.whenStable();
+
+    expect(f.componentInstance.closed).toBe(true);
+    expect(exportPdfSpy).not.toHaveBeenCalled();
+  });
+
+  it("(h) export with perio data PRESENT passes the (checked, un-forced) perio opts through as-is", async () => {
+    setPerioSite(11, "MB", { pd: 4 });
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    const dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
+    const exportBtn = Array.from(
+      dialog.querySelectorAll<HTMLButtonElement>(".odon-confirm-btn"),
+    ).find((b) => b.classList.contains("odon-confirm-accept"))!;
+    exportBtn.click();
+
+    expect(exportPdfSpy).toHaveBeenCalledTimes(1);
+    const opts = exportPdfSpy.mock.calls[0][0] as PdfExportOptions;
+    expect(opts.patientData).toBe(true);
+    expect(opts.odontogram).toBe(true);
+    expect(opts.perioStatus).toBe(true);
+    expect(opts.perioDescription).toBe(true);
+  });
 });
