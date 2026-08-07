@@ -60,11 +60,11 @@ versioning: [SemVer](https://semver.org/).
   `sp15-settings`.
 - `PerioSidebarComponent` (`aao-perio-sidebar`): the periodontal-view side
   panel — case-meta summary, classification badges, and the summary card —
-  ported from `App.tsx`'s `PerioSidebar` mount.
+  ported from `PerioSidebar.tsx` (not "App.tsx's PerioSidebar mount").
 - Framework-free periodontal-grid DOM builders
-  (`components/perio-chart/perio-grid-dom.ts`): the archless, imperative DOM
+  (`components/perio-chart/perio-grid-dom.ts`): the framework-free, imperative DOM
   construction for the periodontal full-grid (rows, band labels, overlays),
-  ported byte-identical from the live `$ENGINE/src/PerioChart.tsx`.
+  ported as machine-verified near-verbatim transcription from the live `$ENGINE/src/PerioChart.tsx`.
 - `PerioChartComponent` (`aao-perio-chart`): the periodontal chart itself —
   grid rendering, keyboard navigation, mm/overlay switching — mounted in all
   three of the app's housings: the toggle-mode inline panel

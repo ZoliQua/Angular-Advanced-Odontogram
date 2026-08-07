@@ -66,10 +66,13 @@ import { afterEach, beforeEach } from "vitest";
 import {
   __resetChartStateForTest,
   __setActiveToothForTest,
+  closePerioOverlay,
   setNumberingSystem,
   setPerioIndexNameMode,
+  setPerioOverlayLayer,
   setPerioRowVisibility,
   setPerioViewMode,
+  setReadOnly,
   type PerioRowId,
 } from "../core/odontogram";
 import { setI18nLanguage } from "../core/i18n/useI18n";
@@ -119,6 +122,10 @@ export function resetEngineStateForTest(): void {
   setPerioIndexNameMode("translated");
   // Dark-mode DOM class some shell specs flip on `document.documentElement`.
   document.documentElement.classList.remove("dark");
+  // Perio overlay singletons (session-level, shared across specs).
+  setPerioOverlayLayer("none");
+  closePerioOverlay();
+  setReadOnly(false);
 }
 
 beforeEach(resetEngineStateForTest);

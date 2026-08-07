@@ -11,11 +11,9 @@ import { defineConfig } from "vitest/config";
 //
 // These verbatim `.test.ts(x)` files STAY in this exclusion list
 // PERMANENTLY — they are the frozen React corpus, never executed directly.
-// Task 6 (Phase 2) ported the shell-scoped subset to running Angular specs
-// under projects/.../components/odontogram-shell/ported/*.spec.ts (executed
-// by `npm run test:ng`); the remainder stays excluded pending Phase 3
-// (Settings/ExportOptions modal) or Phase 4 (PerioChart/PerioSidebar).
-// Every entry below is annotated with its disposition.
+// Every entry below is annotated with its disposition (`ported:` or
+// `covered-by:`). The array keeps the frozen React originals excluded from
+// the `test:corpus` run permanently.
 const REACT_DEPENDENT = [
   "App.test.tsx", // ported: components/odontogram-shell/ported/App.spec.ts (settings/numbering-modal subset stays phase-3, noted in that spec's header)
   "ds1-confirm-revert.test.tsx", // ported: components/odontogram-shell/ported/ds1-confirm-revert.spec.ts
