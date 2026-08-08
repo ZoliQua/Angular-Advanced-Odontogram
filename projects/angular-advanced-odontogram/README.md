@@ -1,6 +1,6 @@
 # Angular Advanced Odontogram
 
-Angular port of [react-advanced-odontogram](https://github.com/ZoliQua/react-advanced-odontogram) — feature parity with v2.2.0 (payload version 2.19). JSON and FHIR exports round-trip compatible.
+Angular port of [react-advanced-odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) — feature parity with v2.2.0 (payload version 2.19). JSON and FHIR exports round-trip compatible.
 
 ## Installation
 

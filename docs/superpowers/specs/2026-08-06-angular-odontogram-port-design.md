@@ -92,9 +92,7 @@ documented in the affected spec's own header comment:
    `perio-grid-dom.ts` exactly; the live test asserts the two-label shape.
    Ported using the corrected assertions.
 
-A core re-sync decision — whether/how to periodically re-diff this port
-against the live `$ENGINE` source rather than relying on the frozen Phase-1
-corpus — is deferred to Phase 5.
+The core re-sync decision has been made (owner decision 2026-08-07): 1.0.0 pins v2.2.0; 1.1.0 resync is scheduled to v2.2.1 — see §10's deferred list.
 
 ## 3. Target workspace
 
@@ -309,6 +307,7 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
 
 ## 10. Later / explicitly deferred
 
+- 1.1.0: resync to react-advanced-odontogram v2.2.1 (payload 2.20 — patientDob, individual notes, PDF-dialog DOB/split options, Plan-mode gating, bridge lower-arch fix); closes §2's deferred core re-sync decision (owner decision 2026-08-07: 1.0.0 pins v2.2.0).
 - Remaining 10 README translations (after 1.0.0 content settles).
 - Any shared-core extraction with the React repo (revisit only if dual
   maintenance becomes painful).

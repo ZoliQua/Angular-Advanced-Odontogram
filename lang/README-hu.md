@@ -19,7 +19,7 @@ az 1.1.0-s verzióra van tervezve.
 - [x] 2. fázis — `OdontogramShellComponent` (felső sáv/menük/összegzés/megerősítés) + demó alkalmazás
 - [x] 3. fázis — Beállítások és párbeszédablakok
 - [x] 4. fázis — Parodontális diagram és exportok
-- [ ] 5. fázis — dokumentáció, csomagolás, 1.0.0
+- [x] 5. fázis — dokumentáció, csomagolás, 1.0.0
 
 ## Telepítés
 

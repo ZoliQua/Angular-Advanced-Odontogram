@@ -17,7 +17,7 @@ are planned for 1.1.0.
 - [x] Phase 2 — `OdontogramShellComponent` (topbar/menus/summary/confirm) + demo app
 - [x] Phase 3 — Settings & dialogs
 - [x] Phase 4 — Periodontal chart & exports
-- [ ] Phase 5 — docs, packaging, 1.0.0
+- [x] Phase 5 — docs, packaging, 1.0.0
 
 ## Installation
 
