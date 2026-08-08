@@ -6,6 +6,14 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-08
+
+Full feature parity with `react-advanced-odontogram` v2.2.0 (payload version
+2.19): odontogram editor, dual-state Status/Plan charts, periodontal chart,
+Settings, JSON/FHIR R4/SVG/PNG/JPG/PDF export-import, 12 UI languages incl.
+RTL Arabic. See `docs/superpowers/specs/1.0.0-acceptance.md` for the
+acceptance evidence.
+
 ### Added
 - Angular 21 workspace: `angular-advanced-odontogram` library + `demo` app.
 - Framework-free engine core copied verbatim from react-advanced-odontogram
@@ -95,7 +103,28 @@ versioning: [SemVer](https://semver.org/).
   `exportPdf` called with all 4 perio options `true` when perio data is
   present) closing the gaps found while adjudicating
   `ui3b-export-options-modal.test.ts` against the existing spec.
+- npm packaging: `dist/` ships a package-scoped README + LICENSE (via
+  `ng-package.json` `assets`), `build:demo` script, and a trimmed root
+  `package.json` (dropped the workspace-only `packageManager` pin).
+- typedoc API docs pipeline (`npm run docs`, `typedoc.json`) generating
+  reference docs to `docs/api/` from the core + public API, mirroring the
+  source repo's docs tooling.
+- Full root `README.md` (overview, parity statement, install, usage —
+  `<aao-odontogram-shell>` full inputs/outputs table, `PerioChartComponent`
+  standalone usage, imperative API, testing override points
+  `ODONTOGRAM_ENGINE_LIFECYCLE`/`EXPORT_PDF_FN`, dual-runner dev workflow,
+  credits/license) and its Hungarian translation (`lang/README-hu.md`); the
+  remaining 10 language translations are deferred to a follow-up round.
+- `docs/superpowers/specs/1.0.0-acceptance.md`: the 1.0.0 acceptance
+  evidence sheet mapping every spec-§7 criterion to its run evidence.
+
+### Known drift
+- Pinned to upstream `react-advanced-odontogram` v2.2.0 (payload 2.19). The
+  upstream v2.2.1 resync (payload 2.20 — patientDob + setPatientDob,
+  individual notes, PDF-dialog DOB/split options, Plan-mode gating, bridge
+  lower-arch) is deferred to 1.1.0.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases/tag/v1.0.0

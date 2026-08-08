@@ -244,6 +244,10 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
 - **Acceptance criteria for 1.0.0:** all copied fixtures pass; a JSON payload
   exported from React 2.2.0 imports into Angular and re-exports equal
   (modulo version metadata); and vice versa.
+- **Acceptance evidence:** `docs/superpowers/specs/1.0.0-acceptance.md` maps
+  every criterion above to its concrete run evidence (test names + run
+  counts, `npm pack --dry-run` file list, consumer-resolution proof), cut
+  2026-08-08.
 
 ## 8. Phasing
 
@@ -277,10 +281,14 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
    `ui3b-export-options-modal.test.ts` (see CHANGELOG). JSON/FHIR/SVG/PNG/
    JPG/PDF export-import and `fr`/RTL smoke checks were already covered by
    prior phases' shell/export work; no additional scope needed here.
-5. **Release.** Demo polish, README (EN + HU first; remaining 10 languages in a
-   follow-up round), API docs via typedoc over the core + public API (same
-   tool as the React repo), npm packaging (`ng-packagr` dist), CI,
-   0.x → 1.0.0 when §7 acceptance holds.
+5. **Release — DELIVERED (2026-08-08).** npm packaging (`ng-packagr` dist
+   README/LICENSE, `build:demo` script, trimmed root `package.json`); typedoc
+   API docs pipeline (`npm run docs` → `docs/api/`); full root README (EN)
+   + Hungarian translation (remaining 10 languages deferred to a follow-up
+   round, per §10); 1.0.0 acceptance evidence sheet
+   (`docs/superpowers/specs/1.0.0-acceptance.md`) with every §7 criterion
+   backed by an actual run; version cut 0.1.0 → 1.0.0 (root + library
+   `package.json`, `CHANGELOG.md`). CI was not part of this phase's scope.
 
 ## 9. Risks & mitigations
 
