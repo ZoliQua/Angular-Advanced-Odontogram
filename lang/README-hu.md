@@ -1,195 +1,108 @@
-# Angular Advanced Odontogram
+# 🦷 Angular Advanced Odontogram
 
-*[English](../README.md) | Magyar*
+[![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
+[![Verzió](https://img.shields.io/badge/version-1.0.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Licenc](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
-A [react-advanced-odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) Angular
-portja — egy interaktív, SVG-alapú fogászati odontogram (fogstátusz-térkép) szerkesztő:
-többfelszínű caries- és tömés-jelölés, endodonciai/protetikai/parodontális állapotok,
-FDI/Universal/Palmer számozás, teljes parodontális (perio) diagram, HL7 FHIR R4
-export/import, és ICDAS pontozás.
+[![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
-**Kompatibilitás:** Funkcionálisan egyenértékű a react-advanced-odontogram v2.2.0
-verziójával (2.19-es payload verzió). A JSON és FHIR R4 exportok a React modullal
-kölcsönösen kompatibilisek (round-trip). Az upstream v2.2.1 kiegészítéseinek átvétele
-az 1.1.0-s verzióra van tervezve.
+**📖 Dokumentáció nyelvenként:** 🇬🇧 [English](../README.md) · 🇭🇺 Magyar (ez a fájl)
 
-## Állapot
+Interaktív, SVG-alapú **fogászati odontogram- (fogtérkép-) szerkesztő** **Angular + TypeScript** alapon — teljes **parodontális charting modullal**, többfelszínes caries/restaurációs jelöléssel, endodonciai/protetikai állapotokkal, FDI/Universal/Palmer számozással, **HL7 FHIR R4** exporttal/importtal, opcionális ICDAS-pontozással és 12 nyelvű felülettel.
 
-- [x] 1. fázis — motor mag (framework-független) + zöld teszt-korpusz
-- [x] 2. fázis — `OdontogramShellComponent` (felső sáv/menük/összegzés/megerősítés) + demó alkalmazás
-- [x] 3. fázis — Beállítások és párbeszédablakok
-- [x] 4. fázis — Parodontális diagram és exportok
-- [x] 5. fázis — dokumentáció, csomagolás, 1.0.0
+> **Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) hivatalos Angular portja** (npm: `react-advanced-odontogram`). Az 1.0.0 teljes funkcionális paritásban van a React modul v2.2.0-jával (payload verzió 2.19) — a JSON- és FHIR R4-exportok oda-vissza kompatibilisek a két könyvtár között. A klinikai motor szó szerint közös; csak a komponens-héj Angular-natív.
 
-## Telepítés
+🔗 **Élő demó:** https://angular-advanced-odontogram.vercel.app/ \
+⚛️ **Eredeti React projekt:** https://github.com/ZoliQua/React-Odontogram-Modul
+
+![Odontogram szerkesztő előnézet](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_hu_odontogram.png)
+*Képernyőkép az eredeti React projektből — az Angular port ugyanezt a felületet jeleníti meg.*
+
+---
+
+## 📦 Telepítés
 
 ```bash
 npm install angular-advanced-odontogram
 ```
 
-A könyvtár stílusait még azelőtt le kell fordítani, hogy bármit lefordítanál vagy
-kiszolgálnál, ami a komponenst használja (a demó alkalmazás ezt teszi — lásd
-`projects/demo`):
+**Követelmények:** Angular **21+**; az `exports` mezőt és az ESM-et támogató bundler (az Angular CLI alapból megfelel). A csomag **csak ESM**.
 
-    npm run build:styles && npx ng build angular-advanced-odontogram
+## 🚀 Gyors kezdés
 
-A `npm run build:styles`-nek előbb kell lefutnia — ez állítja elő a
-`projects/angular-advanced-odontogram/styles.css` fájlt a Tailwind forrásból,
-amelyre a demó `angular.json` fájljának `styles` tömbje közvetlenül hivatkozik
-(a forrás oldali artifact, nem a `dist/`-beli). Ha npm-ről telepítetted, helyette
-a lefordított stíluslapot importáld:
+Renderelje az `OdontogramShellComponent`-et, és regisztrálja a stíluslapot **egyszer** (pl. az `angular.json`-ban):
 
-```css
-@import 'angular-advanced-odontogram/styles.css';
+```json
+"styles": [
+  "node_modules/angular-advanced-odontogram/styles.css",
+  "src/styles.css"
+]
 ```
 
-## Használat
-
-### `<aao-odontogram-shell>`
-
-A teljes alkalmazás-váz — felső sáv, fogászati diagram, vezérlőpanel, parodontális
-diagram, beállítások/export/import párbeszédablakok.
-
-```typescript
-import { Component } from '@angular/core';
-import { OdontogramShellComponent } from 'angular-advanced-odontogram';
+```ts
+import { Component } from "@angular/core";
+import { OdontogramShellComponent } from "angular-advanced-odontogram";
 
 @Component({
-  selector: 'app-root',
+  selector: "app-chart",
   imports: [OdontogramShellComponent],
-  template: `<aao-odontogram-shell [enableNotes]="true" />`,
+  template: `<aao-odontogram-shell language="hu" numberingSystem="FDI" [darkMode]="false" />`,
 })
-export class AppComponent {}
+export class ChartComponent {}
 ```
 
-Mind a 18 bemenet opcionális `input()` szignál; mindegyik beépített alapértékre
-esik vissza, ha nincs kötve, tükrözve az eredeti React komponens "uncontrolled"
-alapértékeit.
+Az imperatív állapot-API, az önállóan is használható `PerioChartComponent`, a bemutató túra és minden publikus típus ugyanabból a belépési pontból importálható:
 
-| Bemenet | Típus | Alapérték |
-| --- | --- | --- |
-| `language` | `Language` (`"hu" \| "en" \| "de" \| "es" \| "it" \| "sk" \| "pl" \| "ru" \| "pt-br" \| "zh" \| "ar" \| "fr"`) | vezérlés nélkül — `"en"`-nel indul, követi a felső sáv/Beállítások nyelvválasztóját |
-| `numberingSystem` | `NumberingSystem` (`"FDI" \| "UNIVERSAL" \| "PALMER"`) | `"FDI"` (vezérlés nélkül) |
-| `darkMode` | `boolean` | vezérlés nélkül — `false`-szal indul, hacsak a gazda dokumentumon már nincs `dark` osztály a `<html>`-en |
-| `themeConfig` | `OdontogramThemeConfig` | `undefined` (beépített színpaletta) |
-| `plugins` | `OdontogramPlugin[]` | `[]` |
-| `readOnly` | `boolean` | `false` |
-| `enableNotes` | `boolean` | `false` |
-| `enableIcdas` | `boolean` | `false` |
-| `pulpDetailLevel` | `PulpDetailLevel` (`"simple" \| "aae" \| "latin"`) | `"aae"` |
-| `secondaryCariesMode` | `SecondaryCariesMode` (`"simple" \| "standard" \| "full"`) | `"standard"` |
-| `rootCariesMode` | `RootCariesMode` (`"simple" \| "severity"`) | `"simple"` |
-| `radiographicDepthMode` | `RadiographicDepthMode` (`"off" \| "threeLevel" \| "detailed"`) | `"off"` |
-| `cariesDepthEnabled` | `boolean` | `true` |
-| `wearDetailLevel` | `ToothDetailLevel` (`"simple" \| "complex"`) | `"complex"` |
-| `discolorationDetailLevel` | `ToothDetailLevel` (`"simple" \| "complex"`) | `"complex"` |
-| `surfaceNotation` | `SurfaceNotation` (`"simple" \| "full"`) | `"full"` |
-| `showStatusCard` | `boolean` | `true` |
-| `showOrthoCard` | `boolean` | `true` |
-
-| Kimenet | Payload | Kibocsátva |
-| --- | --- | --- |
-| `languageChange` | `Language` | minden nyelvváltáskor, vezérelt vagy vezérlés nélküli módban egyaránt |
-| `numberingChange` | `NumberingSystem` | minden számozási rendszer -váltáskor, vezérelt vagy vezérlés nélküli módban egyaránt |
-| `darkModeChange` | `boolean` | minden sötét mód -váltáskor, vezérelt vagy vezérlés nélküli módban egyaránt |
-
-A `themeConfig`/`plugins` pontos felépítése és a fenti összes típus a typedoc
-által generált dokumentációban van részletesen leírva — lásd lejjebb az
-[API dokumentáció](#api-docs) szakaszt.
-
-### `PerioChartComponent` önállóan
-
-A parodontális diagram önállóan, a shell-en kívül is beágyazható — akár inline
-(az oldalba ágyazva), akár vezérelt felugró ablakként.
-
-```typescript
-import { PerioChartComponent } from 'angular-advanced-odontogram';
-
-@Component({
-  imports: [PerioChartComponent],
-  // inline, mindig megjelenítve:
-  template: `<aao-perio-chart [inline]="true" />`,
-  // — vagy — vezérelt felugró ablakként:
-  // template: `<aao-perio-chart [open]="isOpen" (closeChart)="isOpen = false" />`,
-})
-export class MyComponent {}
+```ts
+import {
+  OdontogramShellComponent,
+  PerioChartComponent,          // önálló parodontális chart
+  getOdontogramSummary,
+  exportStatus, importStatus,   // JSON állapot-szerializáció / -visszatöltés
+  exportFhir, exportSvg, exportImage,
+  setReadOnly, startIntroTour,
+} from "angular-advanced-odontogram";
 ```
 
-- `open: boolean` (alapérték `false`) — a diagramot modális felugró ablakként jeleníti meg.
-- `inline: boolean` (alapérték `false`) — a diagramot a helyén jeleníti meg, felugró ablak helyett.
-- `(closeChart)` — akkor kerül kibocsátásra, amikor a felugró ablak bezárul (Escape, háttérre kattintás, vagy a bezárás gomb).
+> **SSR:** a komponens csak kliensoldali (mountoláskor a DOM-ot olvassa) — kizárólag böngészőoldalon renderelje.
+> **Az assetek önhordók** — a fog- és ikon-SVG-k a bundle-be épülnek; nincs futásidejű asset-letöltés.
+> **Oldalanként egy példány** ebben a kiadásban (a motor állapota modul-szintű singleton — akárcsak a React eredetiben).
 
-### Imperatív API
+## 🦷 Parodontális charting
 
-A két komponens alatt húzódó motor framework-független, és teljes egészében
-exportálva van az `angular-advanced-odontogram` csomagból. A fő csoportok:
+![Teljes szájra kiterjedő parodontális chart](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_hu_perio.png)
+*Képernyőkép az eredeti React projektből — az Angular port ugyanezt a felületet jeleníti meg.*
 
-- **Export / import** — `exportStatus()`, `exportFhir(options?)`, `exportSvg()`,
-  `exportImage(format)`, `exportPerioImage(format)`, `exportPdf(options)`
-  (az `EXPORT_PDF_FN` tokenen keresztül is injektálható — lásd lejjebb a
-  Tesztelés szakaszt), `importStatus(data)`, `importFhirBundle(input)`,
-  `setImportFormat(format)`.
-- **Diagram mód** — `getChartMode()` / `setChartMode(mode)` (státusz vs. terv).
-- **Perio API** — `getPerioChart()`, `getToothPerio(toothNo)`,
-  `setPerioSite(toothNo, site, patch)`, `getPerioSummary()`,
-  `hasAnyPerioData()`, `getPerioClassification()`,
-  `getPerioViewMode()` / `setPerioViewMode(mode)`,
-  `openPerioOverlay()` / `closePerioOverlay()` / `isPerioOverlayOpen()`,
-  `getPerioRowVisibility()` / `setPerioRowVisibility(id, visible)`,
-  `getPerioIndexNameMode()` / `setPerioIndexNameMode(mode)`,
-  `getPerioOverlayLayer()` / `setPerioOverlayLayer(layer)`.
+Helyenkénti szondázási mélység, ínyszél és szondázási vérzés (+ suppuráció) a hat standard mérési ponton, származtatott CAL-lal, recesszióval és teljes szájra vetített %BOP-pal; grafikus teljes-száj perio chart (CEJ-vonal, mm-es segédrács, tasak-/ínyszél-görbe, anatómiai gyémánt indexcsempék), 2017-es stádium-/fokozatbesorolás és helyenkénti FHIR-export (LOINC parodontális panel `74029-0`). Elérhető `Odontogram | Parodontális státusz` nézetváltóként és önállóan meghívható `PerioChartComponent`-ként.
 
-Minden más exportált függvény, típus és komponens (beállítás-lekérdezők és
--beállítók, a teljes `OdontogramSummary` forma stb.) a generált API
-dokumentációban található meg.
+## ✨ Főbb jellemzők
 
-<a id="api-docs"></a>
+- 🦷 Maradó / tej- / implantátum- / hiányzó fogak; szubsztrátum, restaurációk (korona/inlay/onlay/héj/híd × anyagok), kivehető és implantátum-fogpótlások
+- 🔍 Többfelszínes caries és tömések (ICDAS / CARS súlyosság, gyökér- és radiográfiai caries), endodoncia és AAE pulpadiagnózis, apikális diagnózis, periimplantális státusz, kopás, elszíneződés, fogszabályozás
+- 🩺 Teljes parodontális modul (lásd fent) + 2017-es klasszifikáció
+- 🔗 **HL7 FHIR R4** export/import; JSON export/import migrációkkal — oda-vissza kompatibilis a [`react-advanced-odontogram`](https://github.com/ZoliQua/React-Odontogram-Modul) csomaggal
+- 🖼️ PNG / JPG / SVG chart-export és **PDF-riport** (jsPDF)
+- 🔢 FDI / Universal / Palmer számozás · 🌐 12 nyelvű felület (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, arab RTL) · 🎨 témázás `--odon-*` CSS-változókkal · 🧩 plugin-rendszer · ⌨️ billentyűzetes akadálymentesség
 
-    npm run docs         # API dokumentáció generálása a docs/api/ mappába
+## 📖 Dokumentáció
 
-### Tesztelés
+Az API-referencia TypeDoc-kal generálható — `npm run docs` (kimenet: `docs/api/`). A közös klinikai motor API-ját az eredeti projekt is dokumentálja:
 
-Két DI token létezik kifejezetten azért, hogy a gazda alkalmazások (és a
-könyvtár saját tesztjei) modul-mockolás nélkül, `TestBed`-en keresztül tudják
-helyettesíteni a mellékhatásos motor-belépési pontokat:
+📚 **https://zoliqua.github.io/React-Odontogram-Modul/**
 
-- `ODONTOGRAM_ENGINE_LIFECYCLE` — az `init()`/`destroy()` páros, amit az
-  `OdontogramShellComponent` felcsatoláskor/leválasztáskor hív.
-- `EXPORT_PDF_FN` — a függvény, amit az `ExportOptionsModalComponent` hív a
-  PDF exporthoz (a valódi `exportPdf()` jsPDF/canvas műveleteket végez, amik
-  jsdom alatt nem futnak le).
+Host-alkalmazások teszteléséhez két támogatott dependency-injection felülbírálási pont exportált: `ODONTOGRAM_ENGINE_LIFECYCLE` (motor init/destroy) és `EXPORT_PDF_FN` (PDF-export függvény).
 
-```typescript
-TestBed.configureTestingModule({
-  imports: [OdontogramShellComponent],
-  providers: [
-    { provide: ODONTOGRAM_ENGINE_LIFECYCLE, useValue: { init: initSpy, destroy: destroySpy } },
-  ],
-});
+## 🛠️ Fejlesztés
+
+```bash
+npm install
+npm run gen:assets     # SVG asset-modulok újragenerálása SVG-módosítás után
+npm test               # teljes futtatás: szó szerinti React motor-korpusz (sima Vitest) + Angular specek (ng test)
+npm run build:styles && npx ng build angular-advanced-odontogram   # library build (előbb a stílusok)
+npm run build:demo     # demó alkalmazás
 ```
 
-## Fejlesztés
+## 📄 Licenc és hivatkozás
 
-    npm install
-    npm run gen:assets   # SVG asset modulok újragenerálása egy SVG szerkesztése után
-    npm test             # test:corpus (Vitest mag-teszt-készlet, beleértve a golden parity fixture-öket) + test:ng (Angular specek, ngtsc-fordítva az `ng test`-en keresztül)
-    npm run test:corpus  # tiszta Vitest — csak a framework-független motor + az átemelt React-eredetű korpusz
-    npm run test:ng      # Angular komponens-/szolgáltatás *.spec.ts fájlok, az `ng test`-en keresztül (szükséges a szignál input()/output() támogatásához)
-    npm run build:styles && npx ng build angular-advanced-odontogram
-    npm run docs         # API dokumentáció generálása a docs/api/ mappába
-
-Az `npm test` mindkét futtatót lefuttatja, mert más-más dolgokat fednek le: a
-`test:corpus` egy sima Vitest futás a framework-független motoron és a
-React-eredetű golden/parity fixture-ökön (Angular fordítás nélkül), míg a
-`test:ng` az `ng test`-en keresztül fut, hogy az ngtsc le tudja fordítani a
-szignál `input()`/`output()`-ot használó komponens-speceket — ezeket egy sima
-Vitest futás önmagában nem tudja feldolgozni.
-
-Terv-specifikáció: `docs/superpowers/specs/2026-08-06-angular-odontogram-port-design.md`.
-
-## Köszönet és licenc
-
-A [react-advanced-odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)
-Angular portja, készítette Zoltán Dul ([@ZoliQua](https://github.com/ZoliQua)).
-
-[MIT](../LICENSE) © 2026 Zoltán Dul
+MIT © Dul Zoltán. Ez a könyvtár a [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) portja; ha kutatásban használja, kérjük, az eredeti projektet idézze — lásd a [`CITATION.cff`](https://github.com/ZoliQua/React-Odontogram-Modul/blob/main/CITATION.cff) fájlt és a [Zenodo-rekordot](https://doi.org/10.5281/zenodo.21156787).

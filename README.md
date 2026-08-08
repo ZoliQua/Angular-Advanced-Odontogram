@@ -1,188 +1,108 @@
-# Angular Advanced Odontogram
+# 🦷 Angular Advanced Odontogram
 
-*English | [Magyar](lang/README-hu.md)*
+[![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
+[![Version](https://img.shields.io/badge/version-1.0.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
-Angular port of [react-advanced-odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)
-— an interactive, SVG-based dental odontogram (dental chart) editor: multi-surface
-caries/filling charting, endodontic/prosthetic/periodontal states, FDI/Universal/Palmer
-numbering, a full periodontal (perio) chart, HL7 FHIR R4 export/import, and ICDAS scoring.
+[![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
-**Parity:** Feature parity with react-advanced-odontogram v2.2.0 (payload version 2.19).
-JSON and FHIR R4 exports round-trip with the React module. The upstream v2.2.1 additions
-are planned for 1.1.0.
+**📖 Documentation per language:** 🇬🇧 English (this file) · 🇭🇺 [Magyar](lang/README-hu.md)
 
-## Status
+An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angular + TypeScript** — with a full **periodontal charting module**, multi-surface caries/restorations, endodontic/prosthetic states, FDI/Universal/Palmer numbering, **HL7 FHIR R4** export/import, optional ICDAS scoring, and a 12-language UI.
 
-- [x] Phase 1 — engine core (framework-free) + test corpus green
-- [x] Phase 2 — `OdontogramShellComponent` (topbar/menus/summary/confirm) + demo app
-- [x] Phase 3 — Settings & dialogs
-- [x] Phase 4 — Periodontal chart & exports
-- [x] Phase 5 — docs, packaging, 1.0.0
+> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Version 1.0.0 has full feature parity with the React module v2.2.0 (payload version 2.19) — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim; only the component shell is Angular-native.
 
-## Installation
+🔗 **Live demo:** https://angular-advanced-odontogram.vercel.app/ \
+⚛️ **Original React project:** https://github.com/ZoliQua/React-Odontogram-Modul
+
+![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_odontogram.png)
+*Screenshot from the original React project — the Angular port renders the identical UI.*
+
+---
+
+## 📦 Installation
 
 ```bash
 npm install angular-advanced-odontogram
 ```
 
-Build the library styles before building/serving anything that consumes the
-component (the demo app does this — see `projects/demo`):
+**Requirements:** Angular **21+**; a bundler that supports the `exports` field and ESM (the Angular CLI qualifies out of the box). The package is **ESM-only**.
 
-    npm run build:styles && npx ng build angular-advanced-odontogram
+## 🚀 Quick start
 
-`npm run build:styles` must run first — it emits
-`projects/angular-advanced-odontogram/styles.css` from the Tailwind source,
-which the demo's `angular.json` `styles` array references directly (the
-source-side artifact, not `dist/`). Once installed from npm, import the
-built stylesheet instead:
+Render `OdontogramShellComponent` and register the stylesheet **once** (e.g. in `angular.json`):
 
-```css
-@import 'angular-advanced-odontogram/styles.css';
+```json
+"styles": [
+  "node_modules/angular-advanced-odontogram/styles.css",
+  "src/styles.css"
+]
 ```
 
-## Usage
-
-### `<aao-odontogram-shell>`
-
-The full app shell — topbar, dental chart, controls panel, periodontal chart,
-settings/export/import dialogs.
-
-```typescript
-import { Component } from '@angular/core';
-import { OdontogramShellComponent } from 'angular-advanced-odontogram';
+```ts
+import { Component } from "@angular/core";
+import { OdontogramShellComponent } from "angular-advanced-odontogram";
 
 @Component({
-  selector: 'app-root',
+  selector: "app-chart",
   imports: [OdontogramShellComponent],
-  template: `<aao-odontogram-shell [enableNotes]="true" />`,
+  template: `<aao-odontogram-shell language="en" numberingSystem="FDI" [darkMode]="false" />`,
 })
-export class AppComponent {}
+export class ChartComponent {}
 ```
 
-All 18 inputs are optional signal `input()`s; every one falls back to a
-built-in default when left unbound, mirroring the original React component's
-uncontrolled defaults.
+The imperative state API, the standalone `PerioChartComponent`, the guided tour, and all public types are named exports from the same entry point:
 
-| Input | Type | Default |
-| --- | --- | --- |
-| `language` | `Language` (`"hu" \| "en" \| "de" \| "es" \| "it" \| "sk" \| "pl" \| "ru" \| "pt-br" \| "zh" \| "ar" \| "fr"`) | uncontrolled — starts at `"en"`, tracks the topbar/Settings language picker |
-| `numberingSystem` | `NumberingSystem` (`"FDI" \| "UNIVERSAL" \| "PALMER"`) | `"FDI"` (uncontrolled) |
-| `darkMode` | `boolean` | uncontrolled — starts `false` unless the host document already has a `dark` class on `<html>` |
-| `themeConfig` | `OdontogramThemeConfig` | `undefined` (built-in color palette) |
-| `plugins` | `OdontogramPlugin[]` | `[]` |
-| `readOnly` | `boolean` | `false` |
-| `enableNotes` | `boolean` | `false` |
-| `enableIcdas` | `boolean` | `false` |
-| `pulpDetailLevel` | `PulpDetailLevel` (`"simple" \| "aae" \| "latin"`) | `"aae"` |
-| `secondaryCariesMode` | `SecondaryCariesMode` (`"simple" \| "standard" \| "full"`) | `"standard"` |
-| `rootCariesMode` | `RootCariesMode` (`"simple" \| "severity"`) | `"simple"` |
-| `radiographicDepthMode` | `RadiographicDepthMode` (`"off" \| "threeLevel" \| "detailed"`) | `"off"` |
-| `cariesDepthEnabled` | `boolean` | `true` |
-| `wearDetailLevel` | `ToothDetailLevel` (`"simple" \| "complex"`) | `"complex"` |
-| `discolorationDetailLevel` | `ToothDetailLevel` (`"simple" \| "complex"`) | `"complex"` |
-| `surfaceNotation` | `SurfaceNotation` (`"simple" \| "full"`) | `"full"` |
-| `showStatusCard` | `boolean` | `true` |
-| `showOrthoCard` | `boolean` | `true` |
-
-| Output | Payload | Emitted |
-| --- | --- | --- |
-| `languageChange` | `Language` | on every language change, controlled or uncontrolled |
-| `numberingChange` | `NumberingSystem` | on every numbering-system change, controlled or uncontrolled |
-| `darkModeChange` | `boolean` | on every dark-mode toggle, controlled or uncontrolled |
-
-`themeConfig`/`plugins` shapes and every other type above are documented in
-full via typedoc — see [API docs](#api-docs) below.
-
-### `PerioChartComponent` standalone
-
-The periodontal chart can also be mounted on its own, outside the shell —
-either inline (embedded in the page) or as a controlled popup:
-
-```typescript
-import { PerioChartComponent } from 'angular-advanced-odontogram';
-
-@Component({
-  imports: [PerioChartComponent],
-  // inline, always mounted:
-  template: `<aao-perio-chart [inline]="true" />`,
-  // — or — a controlled popup:
-  // template: `<aao-perio-chart [open]="isOpen" (closeChart)="isOpen = false" />`,
-})
-export class MyComponent {}
+```ts
+import {
+  OdontogramShellComponent,
+  PerioChartComponent,          // standalone periodontal chart
+  getOdontogramSummary,
+  exportStatus, importStatus,   // JSON state serialization / hydration
+  exportFhir, exportSvg, exportImage,
+  setReadOnly, startIntroTour,
+} from "angular-advanced-odontogram";
 ```
 
-- `open: boolean` (default `false`) — shows the chart as a modal overlay.
-- `inline: boolean` (default `false`) — renders the chart in place instead of a popup.
-- `(closeChart)` — emitted when the popup is dismissed (Escape, backdrop click, or the close button).
+> **SSR:** the component is client-only (reads the DOM on mount) — render it browser-side only.
+> **Assets are self-contained** — tooth/icon SVGs are inlined into the bundle; there is no runtime asset fetch to configure.
+> **One instance per page** in this release (engine state is a module-level singleton — same as the React original).
 
-### Imperative API
+## 🦷 Periodontal charting
 
-The engine underneath both components is framework-free and fully exported
-from `angular-advanced-odontogram`. The main groups:
+![Full-mouth periodontal chart](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_perio.png)
+*Screenshot from the original React project — the Angular port renders the identical UI.*
 
-- **Export / import** — `exportStatus()`, `exportFhir(options?)`, `exportSvg()`,
-  `exportImage(format)`, `exportPerioImage(format)`, `exportPdf(options)`
-  (also injectable via the `EXPORT_PDF_FN` token — see Testing below),
-  `importStatus(data)`, `importFhirBundle(input)`, `setImportFormat(format)`.
-- **Chart mode** — `getChartMode()` / `setChartMode(mode)` (status vs. plan).
-- **Perio API** — `getPerioChart()`, `getToothPerio(toothNo)`,
-  `setPerioSite(toothNo, site, patch)`, `getPerioSummary()`,
-  `hasAnyPerioData()`, `getPerioClassification()`,
-  `getPerioViewMode()` / `setPerioViewMode(mode)`,
-  `openPerioOverlay()` / `closePerioOverlay()` / `isPerioOverlayOpen()`,
-  `getPerioRowVisibility()` / `setPerioRowVisibility(id, visible)`,
-  `getPerioIndexNameMode()` / `setPerioIndexNameMode(mode)`,
-  `getPerioOverlayLayer()` / `setPerioOverlayLayer(layer)`.
+Per-site probing depth, gingival margin, bleeding on probing (+ suppuration) at the six standard sites, with derived CAL, recession and whole-mouth %BOP; a graphical full-mouth perio chart (CEJ line, mm guide grid, pocket/margin curve, anatomical diamond index tiles), 2017 staging/grading, and per-site FHIR export (LOINC periodontal panel `74029-0`). Available as an `Odontogram | Periodontal Status` view toggle and as a separately-invocable `PerioChartComponent`.
 
-Every other exported function, type, and component (settings/state getters
-and setters, the full `OdontogramSummary` shape, etc.) is covered in the
-generated API docs.
+## ✨ Highlights
 
-<a id="api-docs"></a>
+- 🦷 Permanent / primary / implant / missing teeth; substrate, restorations (crown/inlay/onlay/veneer/bridge × materials), removable & implant prosthetics
+- 🔍 Multi-surface caries & fillings (ICDAS / CARS severity, root & radiographic caries), endo & AAE pulp diagnosis, apical diagnosis, peri-implant status, wear, discoloration, orthodontics
+- 🩺 Full periodontal module (see above) + 2017 classification
+- 🔗 **HL7 FHIR R4** export/import; JSON export/import with migrations — round-trip compatible with [`react-advanced-odontogram`](https://github.com/ZoliQua/React-Odontogram-Modul)
+- 🖼️ PNG / JPG / SVG chart export and a **PDF report** (jsPDF)
+- 🔢 FDI / Universal / Palmer numbering · 🌐 12 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, Arabic RTL) · 🎨 theming via `--odon-*` CSS variables · 🧩 plugin system · ⌨️ keyboard accessibility
 
-    npm run docs         # generate API docs to docs/api/
+## 📖 Documentation
 
-### Testing
+API reference is generated with TypeDoc — run `npm run docs` (output in `docs/api/`). The shared clinical-engine API is also documented in the original project:
 
-Two DI tokens exist specifically so host apps (and this library's own specs)
-can swap out side-effecting engine seams in `TestBed`, without module mocking:
+📚 **https://zoliqua.github.io/React-Odontogram-Modul/**
 
-- `ODONTOGRAM_ENGINE_LIFECYCLE` — the `init()`/`destroy()` pair
-  `OdontogramShellComponent` calls on mount/unmount.
-- `EXPORT_PDF_FN` — the function `ExportOptionsModalComponent` calls for the
-  PDF export (real `exportPdf()` does jsPDF/canvas work that doesn't run
-  under jsdom).
+For host-app testing, two supported dependency-injection override points are exported: `ODONTOGRAM_ENGINE_LIFECYCLE` (engine init/destroy) and `EXPORT_PDF_FN` (PDF export function).
 
-```typescript
-TestBed.configureTestingModule({
-  imports: [OdontogramShellComponent],
-  providers: [
-    { provide: ODONTOGRAM_ENGINE_LIFECYCLE, useValue: { init: initSpy, destroy: destroySpy } },
-  ],
-});
+## 🛠️ Development
+
+```bash
+npm install
+npm run gen:assets     # regenerate SVG asset modules after editing an SVG
+npm test               # full suite: verbatim React engine corpus (plain Vitest) + Angular specs (ng test)
+npm run build:styles && npx ng build angular-advanced-odontogram   # library build (styles first)
+npm run build:demo     # demo app
 ```
 
-## Development
+## 📄 License & citation
 
-    npm install
-    npm run gen:assets   # regenerate SVG asset modules after editing an SVG
-    npm test             # test:corpus (Vitest core suite, incl. golden parity fixtures) + test:ng (Angular specs, ngtsc-compiled via `ng test`)
-    npm run test:corpus  # plain Vitest — the framework-free engine + copied React-derived corpus only
-    npm run test:ng      # Angular component/service *.spec.ts files, via `ng test` (needed for signal input()/output() support)
-    npm run build:styles && npx ng build angular-advanced-odontogram
-    npm run docs         # generate API docs to docs/api/
-
-`npm test` runs both runners because they cover different things: `test:corpus`
-is a plain Vitest run over the framework-free engine and the React-derived
-golden/parity fixtures (no Angular compilation involved), while `test:ng`
-runs through `ng test` so ngtsc can compile the signal `input()`/`output()`
-component specs — a plain Vitest run can't process those on its own.
-
-Design spec: `docs/superpowers/specs/2026-08-06-angular-odontogram-port-design.md`.
-
-## Credits & License
-
-Angular port of [react-advanced-odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)
-by Zoltán Dul ([@ZoliQua](https://github.com/ZoliQua)).
-
-[MIT](LICENSE) © 2026 Zoltán Dul
+MIT © Zoltán Dul. This library is a port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul); if you use it in research, please cite the original project — see its [`CITATION.cff`](https://github.com/ZoliQua/React-Odontogram-Modul/blob/main/CITATION.cff) and the [Zenodo record](https://doi.org/10.5281/zenodo.21156787).
