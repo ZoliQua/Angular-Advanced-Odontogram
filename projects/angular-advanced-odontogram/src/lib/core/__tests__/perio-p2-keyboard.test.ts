@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // Periodontal-arc sub-project P2, Task 3: keyboard auto-advance + navigation
@@ -18,7 +18,6 @@ import {
   setNumberingSystem,
   getToothPerio,
   getToothCal,
-  setPerioSite,
   setReadOnly,
   nextPerioCell,
   prevPerioCell,

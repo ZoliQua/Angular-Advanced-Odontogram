@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -59,13 +59,21 @@ vi.mock('../odontogram', () => ({
   exportPdf: vi.fn().mockResolvedValue(undefined),
   getOdontogramSummary: vi.fn().mockReturnValue({
     overview: '', permanentList: null, missingList: null,
-    sections: [], implants: null, periodontalTitle: '', periodontalText: '',
+    sections: [], implants: null, toothTable: { columns: [], rows: [], legend: "" }, periodontalHasFindings: false, periodontalTitle: '', periodontalText: '',
   }),
   onStateChange: vi.fn().mockReturnValue(() => {}),
   openPerioOverlay: vi.fn(),
   closePerioOverlay: vi.fn(),
   isPerioOverlayOpen: vi.fn().mockReturnValue(false),
   getPerioViewMode: vi.fn().mockReturnValue('toggle'),
+    getFillingDefectEnabled: vi.fn().mockReturnValue(true),
+    setFillingDefectEnabled: vi.fn(),
+    getFillingComplexity: vi.fn().mockReturnValue("complex"),
+    setFillingComplexity: vi.fn(),
+    getFissureSealingEnabled: vi.fn().mockReturnValue(true),
+    setFissureSealingEnabled: vi.fn(),
+    getFillingMaterialAvailability: vi.fn().mockReturnValue({ amalgam: true, composite: true, gic: true, temporary: true }),
+    setFillingMaterialAvailability: vi.fn(),
   setPerioViewMode: vi.fn(),
   getPerioRowVisibility: vi.fn().mockReturnValue({
     plaque: true, bop: true, cal: true, gm: true, pd: true, furcation: true,
@@ -75,6 +83,8 @@ vi.mock('../odontogram', () => ({
   setPerioRowVisibility: vi.fn(),
   getPerioIndexNameMode: vi.fn().mockReturnValue('translated'),
   setPerioIndexNameMode: vi.fn(),
+  getPdfSettings: vi.fn().mockReturnValue({ defaultName: "John Doe", defaultDob: "1980-01-01", showAge: true, dateFormat: "iso", colorTheme: "blue", showBone: true, showHealthyPulp: true, toothSpacing: "wide", border: false, borderThickness: "medium", borderColor: "#000000", toothNumberSize: "normal", includeOdontogramText: true, includeOdontogramTable: true, perioToothSpacing: "wide", perioShowEmptyRows: true, perioLabelPlacement: "center", perioFontSize: "normal", includePerioTable: true, includePerioAbbrev: true, showDisclaimer: true, disclaimerText: "", summaryGrouping: "jaw", showGenerator: true }),
+  setPdfSettings: vi.fn(),
   isDualStateConfirmPending: vi.fn().mockReturnValue(false),
   acceptDualStateConfirm: vi.fn(),
   cancelDualStateConfirm: vi.fn(),
@@ -253,17 +263,18 @@ describe('App.tsx', () => {
 
     it('renders every tab and switches between them', () => {
       render(<App language="en" />);
-      openModal();
-      // SP15 Task 4 (B2): the standalone "Secondary caries" tab was merged
-      // into "Caries" (its CARS control now lives there); "Panels" (B1) is
-      // the new tab inserted after "General".
-      const tabNames = ['General', 'Panels', 'Caries', 'Pulp', 'Notes'];
+      const dialog = openModal();
+      // Round 2 restructure: Panels→Odontogram, Periodontal→Periodontal Chart
+      // (moved up), PDF Settings→Export Settings; Pulp+Notes folded into Tooth
+      // details; new Fillings tab. Scope tab lookups to the settings dialog —
+      // "Odontogram" also names the top-of-page view-toggle tab.
+      const tabNames = ['General', 'Odontogram', 'Periodontal Chart', 'Tooth details', 'Caries', 'Fillings', 'Export Settings'];
       for (const name of tabNames) {
-        const tab = screen.getByRole('tab', { name });
+        const tab = within(dialog).getByRole('tab', { name });
         fireEvent.click(tab);
         expect(tab).toHaveAttribute('aria-selected', 'true');
         // The active panel has content
-        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
+        expect(within(dialog).getByRole('tabpanel')).toBeInTheDocument();
       }
     });
 
@@ -301,16 +312,18 @@ describe('App.tsx', () => {
     it('changing pulp detail level calls setPulpDetailLevel', () => {
       render(<App language="en" />);
       openModal();
-      fireEvent.click(screen.getByRole('tab', { name: 'Pulp' }));
+      // Round 2: the Pulp-detail control moved to the "Tooth details" tab.
+      fireEvent.click(screen.getByRole('tab', { name: 'Tooth details' }));
       const select = screen.getByLabelText(/Pulp detail/i) as HTMLSelectElement;
       fireEvent.change(select, { target: { value: 'latin' } });
       expect(setPulpDetailLevel).toHaveBeenCalledWith('latin');
     });
 
-    it('toggling notes on the Notes tab calls setNotesEnabled', () => {
+    it('toggling notes on the Tooth details tab calls setNotesEnabled', () => {
       render(<App language="en" />);
       openModal();
-      fireEvent.click(screen.getByRole('tab', { name: 'Notes' }));
+      // Round 2: the Notes toggle moved to the "Tooth details" tab.
+      fireEvent.click(screen.getByRole('tab', { name: 'Tooth details' }));
       const panel = screen.getByRole('tabpanel');
       const toggle = within(panel).getByLabelText('Notes') as HTMLInputElement;
       fireEvent.click(toggle);

@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP16 Task 2: position-aware surface notation (letters + captions) +
@@ -30,7 +30,6 @@ import {
   surfaceLetter,
   surfaceLabelKey,
   isUpperTooth,
-  isAnteriorTooth,
   setSurfaceNotation,
   getSurfaceNotation,
   subcariesLettersForTooth,
@@ -254,6 +253,17 @@ describe("setSurfaceNotation live-refreshes the whole-mouth summary + tooltips (
     try {
       setSurfaceNotation("simple");
       expect(fired).toBe(true);
+    } finally {
+      unsub();
+    }
+  });
+
+  it("does NOT fire notifyStateChange when the notation is already the same (idempotent)", () => {
+    let fired = false;
+    const unsub = onStateChange(() => { fired = true; });
+    try {
+      setSurfaceNotation("full");
+      expect(fired).toBe(false);
     } finally {
       unsub();
     }

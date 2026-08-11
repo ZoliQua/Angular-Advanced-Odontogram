@@ -47,14 +47,32 @@ framework-free.**
 | Assets | `assets/teeth-svgs/`, `assets/icon-svgs/` | — | n/a | copy + codegen (§5) |
 | Tests | `src/__tests__/` — 152 entries incl. golden `parity/` fixtures | — | mixed | core tests copied; `.tsx` tests re-written (§7) |
 
-¹ Two permitted edits: (1) the `?raw` SVG import block at the top of
-`odontogram.ts` (and the icon `?raw` imports currently in `App.tsx`) is
-replaced by imports from generated TS asset modules (§5); (2) `i18n/useI18n.ts`
-is copied WITH its framework-free i18n bus (`t`, `getI18nLanguage`,
-`setI18nLanguage`, `onI18nChange`) byte-identical, but with the React-only
-`useI18n()` hook and its `react` import removed — the hook's role moves to
-the Phase-2 `I18nService`. Everything else in core files is byte-identical to
-the React repo.
+¹ Five sanctioned deviations (re-applied fresh on every core re-sync,
+including the 1.1.0/v2.4.0 resync — Phase 6 Task 1, 2026-08-11): (1) the
+`?raw` SVG import block at the top of `odontogram.ts` (and the icon `?raw`
+imports currently in `App.tsx`) is replaced by imports from generated TS
+asset modules (§5); (2) the copied test-infra `core/__tests__/parity/capture.ts`
+has its `src/assets/…`/`src/__tests__/…` path anchors re-pointed at
+`assets/…`/`__tests__/…` (the frozen corpus assumes the React repo's
+`src/`-rooted layout; this package's `core/` is already the root); (3)
+`i18n/useI18n.ts` is copied WITH its framework-free i18n bus (`t`,
+`getI18nLanguage`, `setI18nLanguage`, `onI18nChange`) byte-identical, but with
+the React-only `useI18n()` hook and its `react` import removed — the hook's
+role moves to the Phase-2 `I18nService`; (4) **branding** (owner decision,
+2026-08-11): every language's `"app.title"` value in `i18n/translations.ts` is
+overwritten from `"React Advanced Odontogram"` to `"Angular Advanced
+Odontogram"` (12 languages, `app.title` only — no other string touched); (5)
+**branding, PDF footer** (controller-ruled extension of the same owner
+decision, 2026-08-18): in `odontogram.ts`'s `exportPdf()` footer assembly, the
+hardcoded `app: "React Advanced Odontogram"` string passed to
+`t("pdf.generatedWith", …)` becomes `app: "Angular Advanced Odontogram"`, and
+the adjacent `repoUrl: "https://github.com/ZoliQua/React-Odontogram-Modul"`
+becomes `repoUrl: "https://github.com/ZoliQua/Angular-Advanced-Odontogram"`
+— two literal-string edits only (~line 8217-8218); the file's line-1
+`// Part of React Advanced Odontogram - …` header comment is untouched, and
+stays untouched on every future resync (it documents provenance, not branding
+shown to end users). Everything else in core files is byte-identical to the
+React repo.
 
 **How the shell and engine couple:** the shell renders a static DOM skeleton
 with fixed ids (`#toothGrid`, `#cariesChecks`, `#modsChecks`,
@@ -92,7 +110,13 @@ documented in the affected spec's own header comment:
    `perio-grid-dom.ts` exactly; the live test asserts the two-label shape.
    Ported using the corrected assertions.
 
-The core re-sync decision has been made (owner decision 2026-08-07): 1.0.0 pins v2.2.0; 1.1.0 resync is scheduled to v2.2.1 — see §10's deferred list.
+The core re-sync decision has been made (owner decision 2026-08-07): 1.0.0
+pins v2.2.0. **Parity target updated (owner decision 2026-08-11): 1.1.0
+resyncs to v2.4.0** (`$ENGINE` HEAD `f9b45fc`, superseding the originally
+scheduled v2.2.1 target — the source repo moved further before this resync
+landed). Payload stays 2.20-compatible; FHIR/roundtrip/SVG-fingerprint
+goldens were regenerated upstream and re-copied verbatim (Phase 6 Task 1,
+2026-08-11) — see §10's deferred list.
 
 ## 3. Target workspace
 

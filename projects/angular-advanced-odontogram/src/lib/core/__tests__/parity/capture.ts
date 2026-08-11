@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // ONE-TIME capture of the pre-rewrite engine's behavior into frozen golden fixtures.
@@ -11,14 +11,12 @@ import { __renderActiveLayers } from "../../odontogram";
 import { buildFhirBundle } from "../../fhir/toFhir";
 import { parseFhirBundle } from "../../fhir/fromFhir";
 
-// NOTE: resolved via process.cwd() (the workspace root, since `npm run
+// NOTE: resolved via process.cwd() (the engine package root, since `npm run
 // parity:capture` always runs from there), not import.meta.url — under this
 // repo's vitest jsdom environment, import.meta.url for non-entry modules
 // resolves to a fake http://localhost:3000/... origin rather than a real
-// file:// path, which breaks fileURLToPath-based asset resolution. Anchored
-// explicitly at lib/core/ (this package's root in the Angular workspace
-// layout), since process.cwd() here is the monorepo root, not the package.
-const root = resolve(process.cwd(), "projects/angular-advanced-odontogram/src/lib/core");
+// file:// path, which breaks fileURLToPath-based asset resolution.
+const root = process.cwd();
 const svgText = (name: string) => readFileSync(resolve(root, "assets/teeth-svgs", `${name}.svg`), "utf8");
 const write = (name: string, data: unknown) => writeFileSync(resolve(root, "__tests__/parity", name), JSON.stringify(data, null, 2) + "\n");
 
@@ -43,6 +41,6 @@ export function runCapture() {
   const roundtrip = payloadCases().map(p => ({ name: p.name, parsed: parseFhirBundle(buildFhirBundle(p.payload)) }));
   write("roundtrip-golden.json", roundtrip);
 
-  // eslint-disable-next-line no-console
+   
   console.log(`captured ${svg.length} svg fingerprints, ${fhir.length} fhir bundles, ${roundtrip.length} round-trips`);
 }

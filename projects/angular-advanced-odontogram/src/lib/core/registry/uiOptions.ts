@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { AXES } from "./axes";
@@ -8,11 +8,11 @@ import type { UiOptCtx } from "./types";
 export type RegistryFlags = Record<string, boolean>;
 
 /**
- * First consumer of `ClinicalAxis.flag` (SP4 Task 5). An axis with no `flag`
- * is always active; an axis carrying a `flag` is active only when that flag is
- * set in `flags`. Currently gates `pulpLatin` (`flag: "latinPulpDetail"`),
- * which is satisfied iff the pulp-detail setting is "latin". This governs UI
- * authoring only — a stored value still serializes / round-trips regardless.
+ * Resolves `ClinicalAxis.flag`. An axis with no `flag` is always active; an axis
+ * carrying a `flag` is active only when that flag is set in `flags`. Currently
+ * gates `pulpLatin` (`flag: "latinPulpDetail"`), satisfied iff the pulp-detail
+ * setting is "latin". This governs UI authoring only — a stored value still
+ * serializes / round-trips regardless.
  */
 export function isAxisFlagSatisfied(axisId: string, flags: RegistryFlags = {}): boolean {
   const ax = AXES.find(a => a.id === axisId);

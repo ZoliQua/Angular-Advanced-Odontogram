@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP7 Task 4: merged #pulpEndoSelect (root/periodontium/endo-pulp
@@ -107,6 +107,50 @@ describe("SP7 Task 4: merged pulp/endo selector", () => {
     expect(pulpEndoDisplayValue({ endo: "none", pulpDx: "necrosis", pulpLatin: "none" })).toBe("necrosis");
     setPulpDetailLevel("simple");
     expect(pulpEndoDisplayValue({ endo: "none", pulpDx: "reversible-pulpitis", pulpLatin: "none" })).toBe("irreversible-pulpitis");
+  });
+
+  // 2.2.1 Plan-mode: the pulp/endo picker becomes an ENDO-TREATMENT-only
+  // selector (omitPulpDx=true) — the vital-pulp DIAGNOSIS optgroup is dropped
+  // and a standalone "none" (no endo planned) is offered instead.
+  describe("2.2.1 Plan-mode (omitPulpDx)", () => {
+    it("omits the vital-pulp diagnosis group, leaving one treated group + a standalone 'none'", () => {
+      const sel = mountPulpEndoSelect();
+      buildPulpEndoSelect(sel, /* isMilktooth */ false, "none", /* omitPulpDx */ true);
+
+      const groups = document.querySelectorAll("#pulpEndoSelect optgroup");
+      expect(groups.length).toBe(1); // treated only — no vital-pulp group
+      // A standalone "none" option is a DIRECT child of the select (not in the group).
+      const directNone = Array.from(sel.children).some(
+        (c) => c.tagName === "OPTION" && (c as HTMLOptionElement).value === "none",
+      );
+      expect(directNone).toBe(true);
+      // The treated group still excludes "none".
+      const treatedValues = Array.from(groups[0].children).map((o) => (o as HTMLOptionElement).value);
+      expect(treatedValues).not.toContain("none");
+      expect(treatedValues).toContain("endo-filling");
+    });
+
+    it("collapses a non-endo (pulp-diagnosis) state to 'none' so a plan never shows a diagnosis", () => {
+      const sel = mountPulpEndoSelect();
+      const state = { endo: "none", pulpDx: "necrosis", pulpLatin: "none" };
+      buildPulpEndoSelect(sel, false, pulpEndoDisplayValue(state), true);
+      expect(sel.value).toBe("none");
+    });
+
+    it("keeps an existing endo treatment value selected", () => {
+      const sel = mountPulpEndoSelect();
+      const state = { endo: "endo-filling", pulpDx: "normal", pulpLatin: "none" };
+      buildPulpEndoSelect(sel, false, pulpEndoDisplayValue(state), true);
+      expect(sel.value).toBe("endo-filling");
+    });
+
+    it("selecting 'none' clears the endo treatment and leaves the pulp diagnosis untouched", () => {
+      const state: Record<string, unknown> = { endo: "endo-filling", pulpDx: "irreversible-pulpitis", pulpLatin: "none" };
+      pulpEndoOnSelect(state, "none");
+      expect(state.endo).toBe("none");
+      // pulp diagnosis is Plan-hidden but not mutated by the clear
+      expect(state.pulpDx).toBe("irreversible-pulpitis");
+    });
   });
 
   it("milktooth-gated endo options are excluded from the treated optgroup for a milk tooth", () => {

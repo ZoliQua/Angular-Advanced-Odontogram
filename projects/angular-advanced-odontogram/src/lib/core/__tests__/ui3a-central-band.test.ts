@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // UI-3a Task 2: restructure `buildArch` into buccal-graphic-top -> central
@@ -137,14 +137,18 @@ describe("UI-3a Task 2: central index band DOM order", () => {
 });
 
 describe("UI-3a Task 2: band-orientation legend", () => {
-  it("renders a band label with resolved perio.band.* i18n text", () => {
+  it("renders two centered band labels (buccal above the band, lingual/palatal below) with resolved perio.band.* i18n text", () => {
     openGrid();
     const arch = upperArch();
-    const bandLabel = arch.querySelector(".perio-fullgrid-band-label") as HTMLElement;
-    expect(bandLabel).toBeTruthy();
-    expect(bandLabel.getAttribute("aria-label")).toBe(t("perio.band.title"));
-    expect(bandLabel.textContent).toContain(t("perio.band.buccal"));
-    expect(bandLabel.textContent).toContain(t("perio.band.lingual"));
+    // Two separate, centered legend rows now: buccal at the top of the central
+    // index band, lingual/palatal at the bottom (adjacent to the palatal graphic).
+    const bandLabels = arch.querySelectorAll(".perio-fullgrid-band-label");
+    expect(bandLabels.length).toBe(2);
+    const [topLabel, bottomLabel] = Array.from(bandLabels) as HTMLElement[];
+    expect(topLabel.getAttribute("aria-label")).toBe(t("perio.band.title"));
+    expect(topLabel.textContent).toContain(t("perio.band.buccal"));
+    expect(topLabel.textContent).not.toContain(t("perio.band.lingual"));
+    expect(bottomLabel.textContent).toContain(t("perio.band.lingual"));
   });
 
   it("the band label's row-label cell is empty (chrome only, no info button, never counted as a data row)", () => {

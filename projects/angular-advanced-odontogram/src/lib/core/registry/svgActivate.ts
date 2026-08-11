@@ -1,11 +1,10 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 /**
- * Registry catalog coding data (SP2 Stage 3b). Generic AXES-driven pass that
- * replaces the render's 13 scattered boolean-flag layer toggles + the `mods`
- * set toggle with one order-independent activation pass, byte-identical to
- * today's render (enforced by `src/__tests__/parity.test.ts`).
+ * Generic AXES-driven activation pass: applies the boolean-flag layer toggles and
+ * the `mods` set toggle in one order-independent sweep (enforced by
+ * `src/__tests__/parity.test.ts`).
  */
 import { AXES } from "./axes";
 import type { FlagCtx } from "./types";

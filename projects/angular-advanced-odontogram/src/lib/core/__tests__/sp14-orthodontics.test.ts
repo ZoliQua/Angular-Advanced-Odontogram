@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -24,7 +24,7 @@ describe("SP14 Task 1: ortho axes + round-trip", () => {
   it("export stamps 2.10 + round-trips all four (JSON)", () => {
     __setToothStateForTest(11, { toothSelection:"tooth-base", orthoAppliance:"bracket", orthoDrift:"mesial", orthoVertical:"extrusion", orthoRotation:true });
     const p = __collectExportPayloadForTest();
-    expect(p.version).toBe("2.19");
+    expect(p.version).toBe("2.20");
     expect(p.teeth[11]).toMatchObject({ orthoAppliance:"bracket", orthoDrift:"mesial", orthoVertical:"extrusion", orthoRotation:true });
   });
   it("hydrate reads back; unknown→none/false; legacy→none/false", () => {

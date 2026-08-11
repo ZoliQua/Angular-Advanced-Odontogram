@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 /**
@@ -51,14 +51,15 @@ const ARCHES: readonly (readonly number[])[] = [UPPER_ARCH, LOWER_ARCH];
  *  for an UPPER-arch tile. */
 export const SADDLE_Y_FRACTION = 0.72;
 /**
- * Vertical center of the saddle bar for a LOWER-arch tile. Lower-arch tiles
- * are rendered rotated 180°, so the naive mirror (`1 - SADDLE_Y_FRACTION` =
- * 0.28) did not match the connector artwork. Recon measured the connector art
- * at ~0.81 from the tile top in the un-rotated template, which lands at
- * ~0.19 after the 180° lower-arch rotation. This is a visual estimate and may
- * need one more nudge.
+ * Vertical center of the saddle bar for a LOWER-arch tile. Lower-arch tiles are
+ * rendered rotated 180°, so the anatomically-correct position is the TRUE
+ * mirror of the upper value about the tile mid-line: `1 - SADDLE_Y_FRACTION`.
+ * Anchoring the lower fraction to the proven upper value via the geometric
+ * mirror keeps both arches consistent by construction. Still a visual quantity
+ * — verify on a real render and nudge this single number if the lower saddle
+ * needs it.
  */
-export const SADDLE_Y_FRACTION_LOWER = 0.19;
+export const SADDLE_Y_FRACTION_LOWER = 1 - SADDLE_Y_FRACTION;
 /** Thickness of the saddle bar, as a fraction of tile height. */
 export const SADDLE_THICKNESS = 0.09;
 /** How far the bar overlaps into each adjacent tile, as a fraction of tile width. */

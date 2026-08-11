@@ -48,6 +48,7 @@ body{
 }
 .brand{display:flex; gap:12px; align-items:center}
 .dot{width:10px;height:10px;border-radius:999px;background:var(--accent2); box-shadow:0 0 0 6px rgba(18,185,129,.12);}
+.brand-logo{height:44px; width:auto; display:block; flex:0 0 auto;}
 .title{font-weight:700; letter-spacing:.2px}
 .subtitle{font-size:12px; color:var(--muted); margin-top:2px}
 .topbar-actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
@@ -271,6 +272,15 @@ select:focus{
   padding:10px;
   position:relative;
 }
+/* Round 2 (Stage 3): on-screen tooth spacing — inter-tooth gap in the live grid
+   (distinct from the PDF/export spacing). "normal" keeps the default 4px gap. */
+.tooth-grid[data-screen-spacing="wide"]{ gap:12px }
+.tooth-grid[data-screen-spacing="close"]{ gap:0 }
+/* On-screen tooth-number size. "normal" (the default) is larger than the base
+   11px; "small" restores the old size, "xlarge" is larger still. */
+.tooth-grid[data-tooth-num="normal"] .tooth-label-cell{ font-size:14px }
+.tooth-grid[data-tooth-num="small"] .tooth-label-cell{ font-size:11px }
+.tooth-grid[data-tooth-num="xlarge"] .tooth-label-cell{ font-size:18px }
 /* Engine-owned multi-tooth bridge-span overlay. Absolutely positioned so it does
    not consume a grid cell; sits above the tiles but never intercepts pointer
    events (per-tooth clicks stay on the tiles below). */
@@ -316,20 +326,24 @@ select:focus{
 .tooth-tile:active{transform: scale(.99)}
 
 /* ── Selection animation ─────────────────────── */
+/* Round 2 (Stage 5): the selection COLOUR (--odon-select-rgb, "r,g,b") and the
+   border STYLE (--odon-select-border-style) are user-adjustable — set on
+   #toothGrid by App from Settings → Tooth details. The var() fallbacks keep the
+   original blue / dashed look when unset. */
 @keyframes odon-dash-pulse{
-  0%, 100%{ border-color: rgba(59,123,255,.5); }
-  50%{ border-color: rgba(59,123,255,.9); }
+  0%, 100%{ border-color: rgba(var(--odon-select-rgb, 59,123,255),.5); }
+  50%{ border-color: rgba(var(--odon-select-rgb, 59,123,255),.9); }
 }
 @keyframes odon-glow-pulse{
-  0%, 100%{ filter: drop-shadow(0 0 3px rgba(59,123,255,.2)); }
-  50%{ filter: drop-shadow(0 0 7px rgba(59,123,255,.45)); }
+  0%, 100%{ filter: drop-shadow(0 0 3px rgba(var(--odon-select-rgb, 59,123,255),.2)); }
+  50%{ filter: drop-shadow(0 0 7px rgba(var(--odon-select-rgb, 59,123,255),.45)); }
 }
 .tooth-tile::after{
   content: "";
   position: absolute;
   inset: -2px;
   border-radius: 15px;
-  border: 2px dashed transparent;
+  border: 2px var(--odon-select-border-style, dashed) transparent;
   pointer-events: none;
   transition: border-color .25s ease;
 }
@@ -337,16 +351,16 @@ select:focus{
   transition: filter .25s ease;
 }
 .tooth-tile.active{
-  border-color: rgba(59,123,255,.7);
-  background: rgba(59,123,255,.06);
+  border-color: rgba(var(--odon-select-rgb, 59,123,255),.7);
+  background: rgba(var(--odon-select-rgb, 59,123,255),.06);
   transition: border-color .2s ease, background .2s ease;
 }
 .tooth-tile.active::after{
-  border-color: rgba(59,123,255,.55);
+  border-color: rgba(var(--odon-select-rgb, 59,123,255),.55);
   animation: odon-dash-pulse 1.6s ease-in-out infinite;
 }
 .tooth-tile.active .tooth-svg svg{
-  filter: drop-shadow(0 0 4px rgba(59,123,255,.3));
+  filter: drop-shadow(0 0 4px rgba(var(--odon-select-rgb, 59,123,255),.3));
   animation: odon-glow-pulse 2.5s ease-in-out infinite;
 }
 
@@ -634,6 +648,8 @@ select:focus{
    defect (`none` renders as a neutral affordance). */
 .surf-defect{position:absolute; top:5px; left:5px; display:none; align-items:center; justify-content:center; padding:2px; cursor:pointer; border-radius:4px}
 .surface-cross .surface-cell:has(input[type="checkbox"]:checked) .surf-defect{display:flex}
+/* Round 2 (Stage 6): hide the filling-defect indicator when the feature is off. */
+#fillingSurfaceChecks.defect-disabled .surf-defect{display:none !important}
 .surf-defect:hover{background:rgba(0,0,0,.06)}
 .surf-defect i{display:block; width:9px; height:9px; border-radius:50%; background:rgba(46,49,146,.25)}
 .surf-defect.has-defect{border:2px solid #2e3192; padding:1px}
@@ -1184,6 +1200,24 @@ select:focus{
 .tooth-info-line{margin:6px 0 0; font-size:13px; line-height:1.5}
 .tooth-info-heading{font-weight:700}
 .tooth-info-empty{color:var(--muted); font-style:italic}
+/* 2.2.3 (round 2): grouped dentition table in the tooth-info panel. Tooth
+   numbers are coloured by status: content = bold accent, problem = bold-italic
+   red, empty = muted. Mirrors the PDF report's dentition table. */
+.tooth-info-table-wrap{margin:0 0 8px; overflow-x:auto}
+.tooth-info-table{border-collapse:collapse; width:100%; font-size:12px; line-height:1.4; color:var(--text)}
+.tooth-info-table th,.tooth-info-table td{border:1px solid var(--line); padding:3px 6px; text-align:left; vertical-align:top}
+.tooth-info-table thead th{background:rgba(59,123,255,.12); color:var(--text); font-weight:700; font-size:11px; white-space:nowrap}
+.tooth-info-table tbody th{background:rgba(59,123,255,.08); color:var(--text); font-weight:700; white-space:nowrap}
+.tooth-info-table tbody tr:nth-child(even) td{background:rgba(127,127,127,.08)}
+.tooth-cell{white-space:nowrap}
+.tooth-cell-content{font-weight:700; color:var(--accent)}
+/* Problem red — a lighter tone in dark mode so it stays legible on the dark bg. */
+.tooth-cell-problem{font-weight:700; font-style:italic; color:#c62f2f}
+.dark .tooth-cell-problem{color:#ff8080}
+.tooth-cell-empty{color:var(--muted)}
+.tooth-info-table-legend{margin:4px 0 0; font-size:11px; font-style:italic; color:var(--muted); line-height:1.4}
+.tooth-info-notes{margin:6px 0 0; font-size:13px; line-height:1.5}
+.tooth-info-note-item{margin:2px 0 0 12px}
 /* R2-B Task 2: "What changes" box — a tinted panel that visually separates
    the status->plan diff from the descriptive summary sections above it.
    Reuses the same accent-blue "plan" visual language as .plan-badge/
@@ -1265,6 +1299,8 @@ select:focus{
   border-color: rgba(59,123,255,.35);
   color: var(--text);
 }
+.odon-settings-tab.is-disabled{ opacity: .45; cursor: not-allowed; }
+.odon-settings-tab.is-disabled:hover{ background: transparent; color: var(--muted); }
 .odon-settings-tab:focus-visible{
   outline: none; box-shadow: 0 0 0 3px rgba(59,123,255,.30);
 }
@@ -1307,6 +1343,36 @@ select:focus{
   font-size: 13px; font-family: inherit;
 }
 .odon-settings-select:focus-visible{
+  outline: none; box-shadow: 0 0 0 3px rgba(59,123,255,.30); border-color: rgba(59,123,255,.5);
+}
+.odon-settings-select:disabled{ opacity: .5; cursor: not-allowed; }
+/* Round 2 (Stage 7): intro note at the top of the Export Settings tab. */
+.odon-settings-note{
+  margin: 0 0 10px; padding: 8px 12px; border-radius: 10px;
+  background: rgba(59,123,255,.10); color: var(--text);
+  font-size: 12px; line-height: 1.45;
+}
+.odon-settings-input{
+  min-width: 150px;
+  padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--panel, #fff); color: var(--text);
+  font-size: 13px; font-family: inherit;
+}
+.odon-settings-input[type="color"]{ min-width: 52px; width: 52px; padding: 2px; height: 32px; cursor: pointer; }
+.odon-settings-input:disabled{ opacity: .5; cursor: not-allowed; }
+.odon-settings-input:focus-visible{
+  outline: none; box-shadow: 0 0 0 3px rgba(59,123,255,.30); border-color: rgba(59,123,255,.5);
+}
+.odon-settings-textarea{
+  min-width: 240px; max-width: 100%; width: 240px; resize: vertical;
+  padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--panel, #fff); color: var(--text);
+  font-size: 12px; font-family: inherit; line-height: 1.4;
+}
+.odon-settings-textarea:disabled{ opacity: .5; cursor: not-allowed; }
+.odon-settings-textarea:focus-visible{
   outline: none; box-shadow: 0 0 0 3px rgba(59,123,255,.30); border-color: rgba(59,123,255,.5);
 }
 .odon-settings-switch{
@@ -1869,7 +1935,7 @@ select:focus{
    (never a data row, never gated by row visibility) marking which edge of
    the band is buccal vs. lingual/palatal. */
 .perio-fullgrid-band-label{
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: center;
   gap: 8px;
   padding: 4px 10px;
   font-size: 13px; font-weight: 700; letter-spacing: .01em;
@@ -1881,9 +1947,6 @@ select:focus{
 .perio-fullgrid-band-label-buccal,
 .perio-fullgrid-band-label-lingual{
   white-space: nowrap;
-}
-.perio-fullgrid-band-label-lingual{
-  margin-inline-start: auto;
 }
 .perio-fullgrid-cell{
   display: flex; align-items: center; justify-content: center;
@@ -2037,6 +2100,32 @@ select:focus{
 .dark .perio-fullgrid-plaque[data-present="1"]{
   background: var(--accent, #4d8bff); border-color: var(--accent, #4d8bff);
 }
+
+/* 2.2.3 (round 2): faint surface-letter watermark (M/D/B/L) behind each
+   plaque/PI/GI/mPI/mBI marker square — `isolation:isolate` + a `z-index:-1`
+   ::before keeps the letter above the button's own background but behind its
+   content (the plaque dot / grade face). */
+.perio-fullgrid-plaque,
+.perio-fullgrid-pi, .perio-fullgrid-gi, .perio-fullgrid-mpi, .perio-fullgrid-mbi{
+  position: relative; isolation: isolate;
+}
+.perio-fullgrid-plaque[data-surface-letter]::before,
+.perio-fullgrid-pi[data-surface-letter]::before,
+.perio-fullgrid-gi[data-surface-letter]::before,
+.perio-fullgrid-mpi[data-surface-letter]::before,
+.perio-fullgrid-mbi[data-surface-letter]::before{
+  content: attr(data-surface-letter);
+  position: absolute; inset: 0; z-index: -1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; line-height: 1;
+  color: rgba(100,116,139,.42); pointer-events: none;
+}
+.perio-fullgrid-plaque[data-present="1"][data-surface-letter]::before{ color: rgba(255,255,255,.7); }
+.dark .perio-fullgrid-plaque[data-surface-letter]::before,
+.dark .perio-fullgrid-pi[data-surface-letter]::before,
+.dark .perio-fullgrid-gi[data-surface-letter]::before,
+.dark .perio-fullgrid-mpi[data-surface-letter]::before,
+.dark .perio-fullgrid-mbi[data-surface-letter]::before{ color: rgba(148,163,184,.5); }
 
 /* SP-perio PG-C Task 3 / PG-D Task 4: CEJ-visibility, root-concavity,
    gingival-thickness (GT) and Miller-class cycle controls — one compact

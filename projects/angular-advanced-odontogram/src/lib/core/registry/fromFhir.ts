@@ -1,16 +1,17 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import type { OdontogramExportPayload, ToothRecord } from "../fhir/types";
 import { localCode, ensureTooth } from "../fhir/primitives";
 import { AXES } from "./axes";
 import type { ClinicalAxis } from "./types";
+import { deciduousToFdi } from "../fhir/iso3950";
 
 // Reverse lookup: finding code -> axis.
 const BY_FINDING: Record<string, ClinicalAxis> = {};
 for (const a of AXES) BY_FINDING[a.finding.local] = a;
 
-/** Registry-driven inverse of buildFhirBundle. Byte-identical to the legacy parseFhirBundle. */
+/** Registry-driven inverse of buildFhirBundleFromRegistry: parse a FHIR bundle into an export payload. */
 export function parseFhirBundleFromRegistry(bundle: unknown): OdontogramExportPayload {
   const teeth: Record<string, ToothRecord> = {};
   const globals: Record<string, boolean> = {};
@@ -29,7 +30,8 @@ export function parseFhirBundleFromRegistry(bundle: unknown): OdontogramExportPa
 
       const findingCode = localCode(res.code);
       if (!findingCode) continue;
-      const toothId = res.bodySite?.coding?.find((c) => typeof c.code === "string")?.code;
+      const rawToothCode = res.bodySite?.coding?.find((c) => typeof c.code === "string")?.code;
+      const toothId = rawToothCode ? (deciduousToFdi(rawToothCode) ?? rawToothCode) : undefined;
 
       if (findingCode === "edentulous") { globals.edentulous = res.valueBoolean === true; continue; }
       if (!toothId) continue;
@@ -49,18 +51,16 @@ export function parseFhirBundleFromRegistry(bundle: unknown): OdontogramExportPa
         if (val !== undefined) { (rec.customStates ??= {})[id] = val; }
         continue;
       }
-      // SP6 Task 1: recurrent caries severity now rides on the `caries` set's
-      // components (parsed into `cariesSeverity` below) for NATIVE (>=2.4)
-      // bundles, so the emit side (registry/fhir.ts) no longer produces a
-      // `secondary-caries` Observation. But a legacy SP5/v1.17.0-era bundle
-      // still carries it as a standalone per-surface Observation (CARS score),
-      // separate from the `caries` set's `valueInteger` (ICDAS depth) — so this
-      // reader must stay to avoid silently dropping the recurrent-caries score
-      // on import (FIX 1, final review). It's parsed into the legacy
-      // `rec.secondaryCaries` map, exactly as SP5 did; `hydrateState`'s existing
-      // migration merge (odontogram.ts) folds it into the unified
-      // `cariesSeverity`, preferring it over the `caries` component's ICDAS
-      // depth on a recurrent (caried + filled) surface.
+      // Recurrent-caries severity rides on the `caries` set's components (parsed
+      // into `cariesSeverity` below) for native (>=2.4) bundles, so the emit side
+      // (registry/fhir.ts) no longer produces a `secondary-caries` Observation. A
+      // legacy bundle still carries it as a standalone per-surface Observation
+      // (CARS score), separate from the `caries` set's `valueInteger` (ICDAS
+      // depth) — so this reader must stay to avoid silently dropping the
+      // recurrent-caries score on import. It's parsed into the legacy
+      // `rec.secondaryCaries` map; `hydrateState`'s migration merge (odontogram.ts)
+      // folds it into the unified `cariesSeverity`, preferring it over the `caries`
+      // component's ICDAS depth on a recurrent (caried + filled) surface.
       if (findingCode === "secondary-caries") {
         const vals: Record<string, number> = {};
         for (const c of res.component ?? []) {
@@ -104,8 +104,8 @@ export function parseFhirBundleFromRegistry(bundle: unknown): OdontogramExportPa
         const vals = (res.component ?? []).map((c) => localCode(c.code)).filter((x): x is string => !!x);
         if (vals.length) (rec as Record<string, unknown>)[axis.field] = vals;
         if (axis.field === "caries") {
-          // SP6 Task 1: the caries components' `valueInteger` is the unified
-          // per-surface `cariesSeverity` (was `cariesDepths` in SP5).
+          // The caries components' `valueInteger` is the unified per-surface
+          // `cariesSeverity`.
           const severity: Record<string, number> = {};
           for (const c of res.component ?? []) {
             const code = localCode(c.code);
@@ -126,15 +126,14 @@ export function parseFhirBundleFromRegistry(bundle: unknown): OdontogramExportPa
       }
     }
   }
-  // FIX 1 (final review): reconcile a legacy bundle's ambiguous `cariesSeverity`
-  // guess (populated above straight off the `caries` component's `valueInteger`
-  // — correct for a NATIVE >=2.4 bundle, but actually the SP5 ICDAS depth on a
-  // legacy bundle) against an explicit `secondary-caries` CARS reading on the
-  // same surface. A native bundle never emits `secondary-caries` (see
-  // registry/fhir.ts), so `rec.secondaryCaries` is only ever populated here for
-  // a legacy import — this is a no-op for every native round-trip. Where both
-  // exist, drop the ambiguous guess for that surface so `hydrateState`'s
-  // existing raw-source priority (odontogram.ts, ~3466-3471: no explicit
+  // Reconcile a legacy bundle's ambiguous `cariesSeverity` guess (populated above
+  // straight off the `caries` component's `valueInteger` — correct for a native
+  // >=2.4 bundle, but actually the ICDAS depth on a legacy bundle) against an
+  // explicit `secondary-caries` CARS reading on the same surface. A native bundle
+  // never emits `secondary-caries` (see registry/fhir.ts), so `rec.secondaryCaries`
+  // is only ever populated here for a legacy import — this is a no-op for every
+  // native round-trip. Where both exist, drop the ambiguous guess for that surface
+  // so `hydrateState`'s raw-source priority (odontogram.ts: no explicit
   // `cariesSeverity` -> prefer `secondaryCaries` over `cariesDepths` on a
   // filled/recurrent surface) resolves it correctly to the CARS score, not the
   // ICDAS depth.
@@ -143,5 +142,5 @@ export function parseFhirBundleFromRegistry(bundle: unknown): OdontogramExportPa
     for (const surf of Object.keys(rec.secondaryCaries)) delete rec.cariesSeverity[surf];
     if (Object.keys(rec.cariesSeverity).length === 0) delete rec.cariesSeverity;
   }
-  return { version: "2.19", globals, teeth };
+  return { version: "2.20", globals, teeth };
 }

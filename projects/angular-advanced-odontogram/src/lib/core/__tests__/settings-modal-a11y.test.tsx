@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // FIX 2 (a11y): the settings-modal tablist uses a roving tabindex, so without
@@ -22,6 +22,22 @@ const settings: SettingsState = {
   onToggleDark: vi.fn(),
   toothInfo: false,
   onToothInfo: vi.fn(),
+    fillingDefectEnabled: true, onFillingDefectEnabled: vi.fn(),
+    fillingComplexity: "complex", onFillingComplexity: vi.fn(),
+    fillingMaterials: { amalgam: true, composite: true, gic: true, temporary: true }, onFillingMaterial: vi.fn(),
+    fissureSealingEnabled: true, onFissureSealingEnabled: vi.fn(),
+    selectionColor: "#3b7bff", onSelectionColor: vi.fn(),
+    selectionBorderStyle: "dashed", onSelectionBorderStyle: vi.fn(),
+    perioChartAvailable: true, onPerioChartAvailable: vi.fn(),
+    planModeAvailable: true, onPlanModeAvailable: vi.fn(),
+    screenToothSpacing: "normal", onScreenToothSpacing: vi.fn(),
+    screenToothNumberSize: "normal", onScreenToothNumberSize: vi.fn(),
+    exportPng: true, onExportPng: vi.fn(),
+    exportJpg: true, onExportJpg: vi.fn(),
+    exportSvg: true, onExportSvg: vi.fn(),
+    exportPdf: true, onExportPdf: vi.fn(),
+    importStatus: true, onImportStatus: vi.fn(),
+    importFhir: true, onImportFhir: vi.fn(),
   secondaryCariesMode: "standard",
   onSecondaryCariesMode: vi.fn(),
   icdas: false,
@@ -56,6 +72,8 @@ const settings: SettingsState = {
   onPerioRowVisibility: vi.fn(),
   perioIndexNameMode: "translated",
   onPerioIndexNameMode: vi.fn(),
+  pdfSettings: { defaultName: "John Doe", defaultDob: "1980-01-01", showAge: true, dateFormat: "iso", colorTheme: "blue", showBone: true, showHealthyPulp: true, toothSpacing: "wide", border: false, borderThickness: "medium", borderColor: "#000000", toothNumberSize: "normal", includeOdontogramText: true, includeOdontogramTable: true, perioToothSpacing: "wide", perioShowEmptyRows: true, perioLabelPlacement: "center", perioFontSize: "normal", includePerioTable: true, includePerioAbbrev: true, showDisclaimer: true, disclaimerText: "", summaryGrouping: "jaw", showGenerator: true },
+  onPdfSettings: vi.fn(),
 };
 
 const renderModal = () =>

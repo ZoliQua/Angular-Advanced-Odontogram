@@ -6,6 +6,7 @@
   },
   "assets": ["styles.css", "LICENSE"],
   "allowedNonPeerDependencies": [
-    "jspdf"
+    "jspdf",
+    "dompurify"
   ]
 }

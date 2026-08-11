@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP-perio P1 Task 1: the 6-site periodontal data core (pd/gm/bop/sup per
@@ -231,7 +231,7 @@ describe("payload round-trip (version 2.12)", () => {
     setPerioSite(16, "B", { pd: 6 });
 
     const payload = __collectExportPayloadForTest();
-    expect(payload.version).toBe("2.19");
+    expect(payload.version).toBe("2.20");
     expect(payload.teeth["16"].perio).toEqual({
       pd: { MB: 5, B: 6 }, gm: { MB: 1 }, bop: ["MB"], sup: [],
     });

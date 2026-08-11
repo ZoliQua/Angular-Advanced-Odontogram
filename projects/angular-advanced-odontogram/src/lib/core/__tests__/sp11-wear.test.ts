@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { describe, it, expect } from "vitest";
@@ -49,7 +49,7 @@ describe("SP11: wear enums replace bruxism booleans", () => {
     expect(__getToothStateForTest(12)!.wearEdge).toBe("erosion"); // modern wins
     __setToothStateForTest(13, { toothSelection: "tooth-base", wearEdge: "erosion", wearCervical: "abfraction" });
     const payload = __collectExportPayloadForTest();
-    expect(payload.version).toBe("2.19");
+    expect(payload.version).toBe("2.20");
     const parsed = parseFhirBundle(buildFhirBundle(payload));
     expect(parsed.teeth["13"].wearEdge).toBe("erosion");
     expect(parsed.teeth["13"].wearCervical).toBe("abfraction");

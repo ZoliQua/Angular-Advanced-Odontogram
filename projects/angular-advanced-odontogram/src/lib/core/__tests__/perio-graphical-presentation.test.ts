@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // Periodontal-arc "Dental Chart" graphical redesign, Task 1: PRESENTATION only.
@@ -27,7 +27,6 @@ import App, { PerioChart } from "../App";
 import {
   getPerioViewMode,
   setPerioViewMode,
-  openPerioOverlay,
   closePerioOverlay,
   isPerioOverlayOpen,
 } from "../odontogram";
@@ -85,7 +84,7 @@ vi.mock("../odontogram", async () => {
     exportPdf: vi.fn().mockResolvedValue(undefined),
     getOdontogramSummary: vi.fn().mockReturnValue({
       overview: "", permanentList: null, missingList: null,
-      sections: [], implants: null, periodontalTitle: "", periodontalText: "",
+      sections: [], implants: null, toothTable: { columns: [], rows: [], legend: "" }, periodontalHasFindings: false, periodontalTitle: "", periodontalText: "",
     }),
     exportFhir: vi.fn(),
     exportImage: vi.fn(),
@@ -97,11 +96,21 @@ vi.mock("../odontogram", async () => {
     closePerioOverlay: actual.closePerioOverlay,
     isPerioOverlayOpen: actual.isPerioOverlayOpen,
     getPerioViewMode: actual.getPerioViewMode,
+    getFillingDefectEnabled: actual.getFillingDefectEnabled,
+    setFillingDefectEnabled: actual.setFillingDefectEnabled,
+    getFillingComplexity: actual.getFillingComplexity,
+    setFillingComplexity: actual.setFillingComplexity,
+    getFissureSealingEnabled: actual.getFissureSealingEnabled,
+    setFissureSealingEnabled: actual.setFissureSealingEnabled,
+    getFillingMaterialAvailability: actual.getFillingMaterialAvailability,
+    setFillingMaterialAvailability: actual.setFillingMaterialAvailability,
     setPerioViewMode: actual.setPerioViewMode,
     getPerioRowVisibility: actual.getPerioRowVisibility,
     setPerioRowVisibility: actual.setPerioRowVisibility,
     getPerioIndexNameMode: actual.getPerioIndexNameMode,
     setPerioIndexNameMode: actual.setPerioIndexNameMode,
+    getPdfSettings: actual.getPdfSettings,
+    setPdfSettings: actual.setPdfSettings,
     // PG-B Task 2: PerioChart now reads/sets the overlay-layer flag — forward
     // the real implementations so its switcher/overlay effects work here.
     getPerioOverlayLayer: actual.getPerioOverlayLayer,

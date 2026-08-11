@@ -127,7 +127,9 @@ describe("ExportOptionsModalComponent", () => {
     expect(exportPdfSpy).toHaveBeenCalledTimes(1);
     const opts = exportPdfSpy.mock.calls[0][0] as PdfExportOptions;
     expect(opts.patientData).toBe(true);
-    expect(opts.odontogram).toBe(true);
+    expect(opts.odontogramChart).toBe(true); // v2.4.0 resync (Task 1): field split, see component's onExport() note
+    expect(opts.odontogramDescription).toBe(true);
+    expect(opts.individualNotes).toBe(true);
     expect(opts.perioStatus).toBe(false);
     expect(opts.perioDescription).toBe(false);
   });
@@ -228,7 +230,9 @@ describe("ExportOptionsModalComponent", () => {
     expect(exportPdfSpy).toHaveBeenCalledTimes(1);
     const opts = exportPdfSpy.mock.calls[0][0] as PdfExportOptions;
     expect(opts.patientData).toBe(true);
-    expect(opts.odontogram).toBe(true);
+    expect(opts.odontogramChart).toBe(true); // v2.4.0 resync (Task 1): field split, see component's onExport() note
+    expect(opts.odontogramDescription).toBe(true);
+    expect(opts.individualNotes).toBe(true);
     expect(opts.perioStatus).toBe(true);
     expect(opts.perioDescription).toBe(true);
   });

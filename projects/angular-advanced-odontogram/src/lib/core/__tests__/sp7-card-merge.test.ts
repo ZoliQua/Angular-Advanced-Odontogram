@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP7 Task 5: merge the "Root" (#endoSection) and "Periodontium and
@@ -65,13 +65,21 @@ vi.mock("../odontogram", async () => {
     exportPdf: vi.fn().mockResolvedValue(undefined),
     getOdontogramSummary: vi.fn().mockReturnValue({
       overview: "", permanentList: null, missingList: null,
-      sections: [], implants: null, periodontalTitle: "", periodontalText: "",
+      sections: [], implants: null, toothTable: { columns: [], rows: [], legend: "" }, periodontalHasFindings: false, periodontalTitle: "", periodontalText: "",
     }),
     onStateChange: vi.fn().mockReturnValue(() => {}),
     openPerioOverlay: vi.fn(),
     closePerioOverlay: vi.fn(),
     isPerioOverlayOpen: vi.fn().mockReturnValue(false),
     getPerioViewMode: vi.fn().mockReturnValue("toggle"),
+    getFillingDefectEnabled: vi.fn().mockReturnValue(true),
+    setFillingDefectEnabled: vi.fn(),
+    getFillingComplexity: vi.fn().mockReturnValue("complex"),
+    setFillingComplexity: vi.fn(),
+    getFissureSealingEnabled: vi.fn().mockReturnValue(true),
+    setFissureSealingEnabled: vi.fn(),
+    getFillingMaterialAvailability: vi.fn().mockReturnValue({ amalgam: true, composite: true, gic: true, temporary: true }),
+    setFillingMaterialAvailability: vi.fn(),
     setPerioViewMode: vi.fn(),
     getPerioRowVisibility: vi.fn().mockReturnValue({
       plaque: true, bop: true, cal: true, gm: true, pd: true, furcation: true,
@@ -81,6 +89,8 @@ vi.mock("../odontogram", async () => {
     setPerioRowVisibility: vi.fn(),
     getPerioIndexNameMode: vi.fn().mockReturnValue("translated"),
     setPerioIndexNameMode: vi.fn(),
+    getPdfSettings: vi.fn().mockReturnValue({ defaultName: "John Doe", defaultDob: "1980-01-01", showAge: true, dateFormat: "iso", colorTheme: "blue", showBone: true, showHealthyPulp: true, toothSpacing: "wide", border: false, borderThickness: "medium", borderColor: "#000000", toothNumberSize: "normal", includeOdontogramText: true, includeOdontogramTable: true, perioToothSpacing: "wide", perioShowEmptyRows: true, perioLabelPlacement: "center", perioFontSize: "normal", includePerioTable: true, includePerioAbbrev: true, showDisclaimer: true, disclaimerText: "", summaryGrouping: "jaw", showGenerator: true }),
+    setPdfSettings: vi.fn(),
     isDualStateConfirmPending: vi.fn().mockReturnValue(false),
     acceptDualStateConfirm: vi.fn(),
     cancelDualStateConfirm: vi.fn(),

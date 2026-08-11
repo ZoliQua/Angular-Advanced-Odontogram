@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP17 Task 1: three tracked follow-up fixes.
@@ -38,7 +38,7 @@ import {
   __setToothStateForTest,
 } from "../odontogram";
 import { setI18nLanguage, t } from "../i18n/useI18n";
-import { SADDLE_Y_FRACTION_LOWER } from "../bridgeOverlay";
+import { SADDLE_Y_FRACTION_LOWER, SADDLE_Y_FRACTION } from "../bridgeOverlay";
 
 setI18nLanguage("en");
 
@@ -54,6 +54,17 @@ describe("Fix #1: setPulpDetailLevel live-refresh", () => {
       setPulpDetailLevel("latin");
       expect(fired).toBe(true);
       expect(getPulpDetailLevel()).toBe("latin");
+    } finally {
+      unsub();
+    }
+  });
+
+  it("does NOT fire notifyStateChange when the level is already the same (idempotent)", () => {
+    let fired = false;
+    const unsub = onStateChange(() => { fired = true; });
+    try {
+      setPulpDetailLevel("aae");
+      expect(fired).toBe(false);
     } finally {
       unsub();
     }
@@ -108,7 +119,10 @@ describe("Fix #2: crown-leakage summary line gated on restorationType crown/brid
 });
 
 describe("Fix #3: lower-arch bridge saddle Y fraction", () => {
-  it("SADDLE_Y_FRACTION_LOWER is the recon-measured 0.19, not the old mirrored 0.28", () => {
-    expect(SADDLE_Y_FRACTION_LOWER).toBe(0.19);
+  // 2.2.1: the recon-measured 0.19 sat too high on the lower abutment vs the
+  // well-fitting upper saddle, so the lower fraction is re-anchored to the TRUE
+  // geometric mirror of the proven upper value (`1 - SADDLE_Y_FRACTION`).
+  it("SADDLE_Y_FRACTION_LOWER mirrors the upper fraction (1 - SADDLE_Y_FRACTION)", () => {
+    expect(SADDLE_Y_FRACTION_LOWER).toBe(1 - SADDLE_Y_FRACTION);
   });
 });

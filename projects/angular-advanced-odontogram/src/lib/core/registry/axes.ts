@@ -1,12 +1,11 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 /**
- * Registry catalog coding data (SP2 Stage 0). One `ClinicalAxis` per
- * `FIELD_MAPPINGS` row (`src/fhir/fieldMappings.ts`), with finding codes and
- * value codings transcribed from `LOCAL_VALUE_MAPS` (`src/fhir/codesystems.ts`).
- * Enforced verbatim by `src/__tests__/parity.test.ts` ("registry catalog
- * matches today's tables"). No SNOMED/ICD codes populated (SP2 keeps them empty).
+ * One `ClinicalAxis` per `FIELD_MAPPINGS` row (`src/fhir/fieldMappings.ts`), with
+ * finding codes and value codings drawn from `LOCAL_VALUE_MAPS`
+ * (`src/fhir/codesystems.ts`). `src/__tests__/parity.test.ts` enforces that this
+ * catalog matches the field/value tables verbatim.
  */
 import type { ClinicalAxis } from "./types";
 import { LOCAL_VALUE_MAPS } from "../fhir/codesystems";
@@ -14,9 +13,9 @@ import { LOCAL_VALUE_MAPS } from "../fhir/codesystems";
 const valuesFrom = (group: string) =>
   Object.values(LOCAL_VALUE_MAPS[group]).map(e => ({ id: e.code, coding: { local: e.code, display: e.display } }));
 
-/** Attach `svgLayer` (render metadata) to values whose activation is a clean id
- *  (or fixed id set) in today's render (`odontogram.ts`). Values not present in
- *  `layers` are returned unchanged (no `svgLayer`). */
+/** Attach `svgLayer` render metadata to values whose activation is a clean id
+ *  (or fixed id set) in `odontogram.ts`. Values absent from `layers` are returned
+ *  unchanged (no `svgLayer`). */
 const withSvgLayer = (
   values: ReturnType<typeof valuesFrom>,
   layers: Record<string, string | string[]>,
@@ -150,25 +149,16 @@ export const AXES: ClinicalAxis[] = [
   { id: "missingClosed", field: "missingClosed", kind: "boolean",
     finding: { local: "missing-gap-closed", display: "Closed gap (missing tooth)" },
     svgLayer: "missing-closed", appliesWhen: (c) => c.isNone },
-  // SP3b Task 6: crown-marginal-leakage toggle (spec §3.4). The SVG artwork has
-  // shipped a dormant `crown-leakage` layer since v2.5.0 (never toggled — see
-  // src/__tests__/svg-assets.test.ts), but no clinical axis or UI control ever
-  // activated it until now.
+  // Crown marginal-leakage toggle. Activates the `crown-leakage` SVG artwork
+  // layer (see src/__tests__/svg-assets.test.ts).
   { id: "crownLeakage", field: "crownLeakage", kind: "boolean",
     finding: { local: "crown-leakage", display: "Crown marginal leakage" },
     svgLayer: "crown-leakage",
     appliesWhen: (c, s) => s.restorationType === "crown" || s.restorationType === "bridge" },
 
-  // SP4 Task 1: pulp/apical/resorption diagnosis axes (additive scaffolding —
-  // registry/FHIR/i18n only; render + migration + retirement of the legacy
-  // booleans land in later SP4 tasks). `resorptionType` below was wired up
-  // (render + migration; replaced the retired `rootResorption` boolean) in
-  // SP4 Task 2. `pulpDx` below was wired up (render + migration; replaced
-  // the retired `pulpInflam` boolean) in SP4 Task 3 — its render is bespoke
+  // Pulp/apical/resorption diagnosis axes. `pulpDx` render is bespoke
   // (milktooth/permanent split in odontogram.ts), so unlike `resorptionType`
-  // it deliberately carries no `svgLayer` metadata here (mirrors the retired
-  // `pulpInflam` axis, which never had one either).
-  // See docs/superpowers/specs/2026-07-13-odontogram-sp4-endo-pulp-diagnosis-design.md.
+  // below it deliberately carries no `svgLayer` metadata here.
   { id: "pulpDx", field: "pulpDx", kind: "enum", valueGroup: "pulpDx",
     skipValue: "normal", finding: { local: "pulp-diagnosis", display: "Pulp diagnosis (AAE)" },
     values: valuesFrom("pulpDx") },
@@ -183,16 +173,14 @@ export const AXES: ClinicalAxis[] = [
     skipValue: "none", finding: { local: "root-resorption-type", display: "Root resorption type" },
     values: valuesFrom("resorptionType"),
     // Both `internal` and `external-cervical` render the single `endo-resorption`
-    // layer (visually identical; only the data distinguishes them). This axis-
-    // level svgLayer/appliesWhen is metadata only (kept for the clear-set +
+    // layer (visually identical; only the data distinguishes them). The axis-level
+    // svgLayer/appliesWhen is metadata only (kept for the clear-set and
     // svg-layers.test.ts coverage) — `applyFlagLayers` only auto-activates
     // boolean-kind axes, so the actual activation is explicit in
-    // applyStateToSvgSingle (odontogram.ts), byte-identical to the retired
-    // `rootResorption:true` boolean render (SP4 Task 2).
+    // applyStateToSvgSingle (odontogram.ts).
     svgLayer: "endo-resorption", appliesWhen: (c) => c.toothPresent },
 
-  // SP11 Task 1: bruxismWear/bruxismNeckWear (booleans) retired in favor of the
-  // wearEdge/wearCervical type enums (mirrors resorptionType above).
+  // Incisal/occlusal + cervical wear type enums (mirror resorptionType above).
   { id: "wearEdge", field: "wearEdge", kind: "enum", valueGroup: "wearEdge",
     skipValue: "none", finding: { local: "tooth-wear-edge", display: "Incisal/occlusal wear" },
     values: valuesFrom("wearEdge"),
@@ -205,20 +193,17 @@ export const AXES: ClinicalAxis[] = [
     values: valuesFrom("wearCervical"),
     svgLayer: "tooth-bruxism-neck-wear", appliesWhen: (c) => c.bruxismAllowed },
 
-  // SP12 Task 1: discoloration foundation (registry/FHIR/i18n only; render lands
-  // in a later SP12 task).
   { id: "discoloration", field: "discoloration", kind: "enum", valueGroup: "discoloration",
     skipValue: "none", finding: { local: "tooth-discoloration", display: "Tooth discoloration" },
     // No svgLayer: activation is explicit in applyStateToSvgSingle — it tints the
     // crown path's .style.fill (no layer toggle), so there is no layer to declare.
     values: valuesFrom("discoloration") },
 
-  // SP14 Task 1: orthodontic axes foundation (registry/FHIR/i18n only; render
-  // lands in SP14 Task 2). The 3 enum axes mirror wearEdge: svgLayer is metadata
-  // only (activation stays explicit in applyStateToSvgSingle/applyFlagLayers only
-  // auto-activates boolean-kind axes). `orthoRotation` (boolean) deliberately
-  // omits svgLayer, mirroring pulpDx, so applyFlagLayers never auto-activates it
-  // — it will be rendered explicitly in Task 2.
+  // The 3 enum ortho axes mirror wearEdge: svgLayer is metadata only (activation
+  // stays explicit in applyStateToSvgSingle; applyFlagLayers only auto-activates
+  // boolean-kind axes). `orthoRotation` (boolean) deliberately omits svgLayer,
+  // mirroring pulpDx, so applyFlagLayers never auto-activates it — it is rendered
+  // explicitly in applyStateToSvgSingle.
   { id: "orthoAppliance", field: "orthoAppliance", kind: "enum", valueGroup: "orthoAppliance",
     skipValue: "none", finding: { local: "tooth-ortho-appliance", display: "Orthodontic appliance" },
     values: valuesFrom("orthoAppliance"),
@@ -234,24 +219,18 @@ export const AXES: ClinicalAxis[] = [
   { id: "orthoRotation", field: "orthoRotation", kind: "boolean",
     finding: { local: "tooth-ortho-rotation", display: "Tooth rotation" } },
 
-  // SP5 Task 1: caries fields foundation (additive scaffolding — registry/FHIR/i18n
-  // only; render + migration land in later SP5 tasks). `rootCaries` is a normal enum
-  // axis. `secondaryCaries` (per-surface CARS 0-6) and `radiographicDepth`
-  // (per-surface none/E1/E2/D1/D2/D3) are scalar-map fields handled the same way
-  // `cariesDepths` is — special-cased outside AXES/FIELD_MAPPINGS entirely (see
-  // registry/fhir.ts + registry/fromFhir.ts) — so they deliberately have no row here.
+  // `rootCaries` is a normal enum axis. `secondaryCaries` (per-surface CARS 0-6)
+  // and `radiographicDepth` (per-surface none/E1/E2/D1/D2/D3) are scalar-map fields
+  // special-cased outside AXES/FIELD_MAPPINGS entirely (see registry/fhir.ts and
+  // registry/fromFhir.ts), so they deliberately have no row here.
   { id: "rootCaries", field: "rootCaries", kind: "enum", valueGroup: "rootCaries",
     skipValue: "none", finding: { local: "root-caries", display: "Root caries" },
     values: valuesFrom("rootCaries"),
     svgLayer: "caries-root", appliesWhen: (c) => c.toothPresent },
 
-  // SP8 Task 1: peri-implantitis foundation (registry/FHIR/i18n only; SVG layer +
-  // render + migration land in later SP8 tasks).
-  // SP-perio PG-C Task 2: two per-tooth categorical DATA axes (data + registry +
-  // FHIR + payload only; the Dental Chart rows/UI are PG-C Task 3). No svgLayer:
-  // neither renders on the odontogram, so SVG-fingerprint parity is byte-identical
-  // (mirrors the periImplant/discoloration foundation axes — declarative FHIR via
-  // FIELD_MAPPINGS, no render metadata here).
+  // `cejVisibility` and `rootConcavity` are per-tooth categorical data axes. No
+  // svgLayer: neither renders on the odontogram (SVG-fingerprint parity), and both
+  // serialize declaratively via FIELD_MAPPINGS.
   { id: "cejVisibility", field: "cejVisibility", kind: "enum", valueGroup: "cejVisibility",
     skipValue: "none", finding: { local: "cej-visibility", display: "CEJ visibility" },
     values: valuesFrom("cejVisibility") },
@@ -259,11 +238,9 @@ export const AXES: ClinicalAxis[] = [
     skipValue: "none", finding: { local: "root-concavity", display: "Root concavity" },
     values: valuesFrom("rootConcavity") },
 
-  // SP-perio PG-D Task 3: gingival thickness (GT) + Miller recession class —
-  // two per-tooth categorical DATA axes (data + registry + FHIR + payload
-  // only; the Dental Chart rows/UI land in later PG-D tasks). No svgLayer:
-  // neither renders on the odontogram, so SVG-fingerprint parity is
-  // byte-identical (mirrors the cejVisibility/rootConcavity axes above).
+  // Gingival thickness (GT) + Miller recession class — two per-tooth categorical
+  // data axes. No svgLayer: neither renders on the odontogram (SVG-fingerprint
+  // parity), mirroring the cejVisibility/rootConcavity axes above.
   { id: "gingivalThickness", field: "gingivalThickness", kind: "enum", valueGroup: "gingivalThickness",
     skipValue: "unknown", finding: { local: "gingival-thickness", display: "Gingival thickness" },
     values: valuesFrom("gingivalThickness") },

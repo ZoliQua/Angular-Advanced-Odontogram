@@ -42,5 +42,11 @@ import { mkdirSync } from "node:fs";
 mkdirSync(resolve(core, "generated"), { recursive: true });
 emit("teeth-svgs", "teeth-svgs.ts", toothExport);
 const noSel = readFileSync(resolve(core, "assets/icon-svgs/icon_no_selection.svg"), "utf8");
+// react-module-logo.png -> brandLogoUrl: a PNG (not SVG markup), so it is
+// base64-encoded into a data: URI rather than URI-component-encoded like the
+// SVG-sourced iconNoSelectionUrl above. Shell-only asset (App.tsx), emitted
+// here so it ships through the same bundler-agnostic generated-module path.
+const logoBase64 = readFileSync(resolve(core, "assets/react-module-logo.png")).toString("base64");
 emit("icon-svgs", "icon-svgs.ts", iconExport,
-  `export const iconNoSelectionUrl = "data:image/svg+xml," + encodeURIComponent(${JSON.stringify(noSel)});\n`);
+  `export const iconNoSelectionUrl = "data:image/svg+xml," + encodeURIComponent(${JSON.stringify(noSel)});\n` +
+  `export const brandLogoUrl = "data:image/png;base64,${logoBase64}";\n`);

@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP4 Task 5: the diagnosis-authoring UI (3-level pulp control + practical-Latin
@@ -187,7 +187,7 @@ describe("SP4 Task 6: combined legacy migration (pulpInflam + rootResorption + i
     expect(s).not.toHaveProperty("rootResorption");
 
     const payload = __collectExportPayloadForTest();
-    expect(payload.version).toBe("2.19");
+    expect(payload.version).toBe("2.20");
     const tooth14 = payload.teeth[14];
     expect(tooth14).not.toHaveProperty("pulpInflam");
     expect(tooth14).not.toHaveProperty("rootResorption");

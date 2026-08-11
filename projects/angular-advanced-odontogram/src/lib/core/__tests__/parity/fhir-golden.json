@@ -156,10 +156,10 @@
               "coding": [
                 {
                   "system": "urn:iso:std:iso:3950",
-                  "code": "14"
+                  "code": "54"
                 }
               ],
-              "text": "Tooth 14"
+              "text": "Tooth 54"
             },
             "valueCodeableConcept": {
               "coding": [
@@ -822,6 +822,11 @@
                       "system": "https://github.com/ZoliQua/React-Odontogram-Modul/fhir/CodeSystem/odontogram",
                       "code": "caries-occlusal",
                       "display": "Occlusal caries"
+                    },
+                    {
+                      "system": "https://www.icdas.org",
+                      "code": "ICDAS-4",
+                      "display": "ICDAS 4 — Underlying dark shadow from dentine"
                     }
                   ],
                   "text": "Occlusal caries"

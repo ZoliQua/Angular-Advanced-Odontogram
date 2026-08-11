@@ -1,30 +1,26 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 //
-// Periodontal-arc "Dental Chart" graphical redesign, Task 2: the tooth-row
-// graphic — draws the perio arch by REUSING the existing `tooth-base`
-// artwork (the same 4 templates the odontogram grid already loads), instead
-// of drawing new art. Read-only: this module only ever fetches template SVG
-// TEXT and parses it into its OWN, brand-new DOM (via `DOMParser`, same
-// technique `odontogram.ts`'s `loadSvg`/`__renderActiveLayers` already use)
-// — it never touches the live odontogram's `toothSvgRoot` tiles, so the
-// existing SVG-fingerprint/FHIR/round-trip goldens are unaffected by this
-// module's existence (parity-safe by construction).
+// Periodontal tooth-row graphic — draws the perio arch by REUSING the existing
+// `tooth-base` artwork (the same 4 templates the odontogram grid loads),
+// instead of drawing new art. Read-only: this module only fetches template SVG
+// text and parses it into its OWN, brand-new DOM (via `DOMParser`, the same
+// technique `odontogram.ts`'s `loadSvg` uses) — it never touches the live
+// odontogram's tiles, so the existing SVG-fingerprint/FHIR/round-trip goldens
+// are unaffected (parity-safe by construction).
 //
-// Two layers, deliberately split for testability (mirrors this repo's
-// existing `__renderActiveLayers`-style pattern of a pure/sync core plus a
-// thin async loader):
-//   - `loadTemplateCache()` — the REAL app's async entry point: fetches +
-//     parses each of the 4 templates ONCE (never re-fetched per tooth) and
-//     memoizes the resulting `Document`s.
-//   - `getToothBaseGroupFromCache()` / `buildBuccalArchSvg()` / `buildPalatalArchSvg()` — pure, sync,
-//     operate on an already-built `TemplateDocCache`. Tests build their own
-//     cache directly from the SVG asset text (`readFileSync` + `DOMParser`,
-//     exactly like `parity.test.ts`'s `svgText()` helper) — no `fetch()`
-//     needed, so these are fast and deterministic in vitest/jsdom.
+// Two layers, deliberately split for testability (a pure/sync core plus a thin
+// async loader):
+//   - `loadTemplateCache()` — the async entry point: parses each of the 4
+//     templates ONCE (never re-parsed per tooth) and memoizes the resulting
+//     `Document`s.
+//   - `getToothBaseGroupFromCache()` / `buildBuccalArchSvg()` /
+//     `buildPalatalArchSvg()` — pure, sync, operate on an already-built
+//     `TemplateDocCache`. Tests build their own cache directly from the SVG
+//     asset text (`readFileSync` + `DOMParser`), so they are fast and
+//     deterministic in vitest/jsdom.
 //
-// NO per-tooth pointer handlers here — this is read-only chart artwork (the
-// interactive odontogram tiles remain the only clickable tooth surfaces).
+// No per-tooth pointer handlers here — this is read-only chart artwork.
 import { TEMPLATES, TOOTH_TEMPLATE } from "./odontogram";
 
 export type TemplateNo = 11 | 13 | 14 | 16;
@@ -63,7 +59,7 @@ export const EXCLUDED_TOOTH_BASE_IDS: readonly string[] = [
  *   16: raw 39.9, viewBox h 70.9 -> 31.0
  * Row-baseline alignment only needs these to be mutually consistent across
  * templates (they are, within ~1 unit) — visual placement should still be
- * confirmed in a browser (see task-2-report.md).
+ * confirmed in a browser.
  */
 export const CEJ_Y: Record<TemplateNo, number> = {
   11: 32.2,
@@ -93,7 +89,7 @@ export const CEJ_Y: Record<TemplateNo, number> = {
  *   16: platform raw 36.6, viewBox h 70.9 -> 34.3
  * As with CEJ_Y, row-baseline alignment only needs these mutually consistent
  * (they place every implant platform on ROW_BASELINE_Y); exact anatomical
- * placement should still be confirmed in a browser (see task-3-implant-report.md).
+ * placement should still be confirmed in a browser.
  */
 export const IMPLANT_CEJ_Y: Record<TemplateNo, number> = {
   11: 33.0,
@@ -101,6 +97,15 @@ export const IMPLANT_CEJ_Y: Record<TemplateNo, number> = {
   14: 34.6,
   16: 34.3,
 };
+
+/** Per-template baseline anchor for a MILKTOOTH (deciduous) rendering — the
+ *  `#milktooth-base` layer's CEJ-equivalent. A permanent position marked as a
+ *  milk tooth in the odontogram must render the deciduous artwork here too.
+ *  Approximated as the natural `CEJ_Y` (the milk crown's neck sits in roughly
+ *  the same cervical band); a milk tooth in a permanent perio column is an edge
+ *  case, so exact per-template measurement is deferred — visual placement should
+ *  be confirmed in a browser, same caveat as CEJ_Y / IMPLANT_CEJ_Y. */
+export const MILKTOOTH_CEJ_Y: Record<TemplateNo, number> = { ...CEJ_Y };
 
 /** Predicate telling the arch builders whether a given tooth is an implant on
  *  the active chart, so its graphic uses the implant fixture artwork
@@ -111,23 +116,33 @@ export const IMPLANT_CEJ_Y: Record<TemplateNo, number> = {
  *  template cache. Defaults to "no implants" for every existing caller/test. */
 export type IsImplantFn = (toothNo: number) => boolean;
 
+/** The artwork kind for one perio-chart tooth, resolved from the active
+ *  odontogram chart (injected, like {@link IsImplantFn}, so this module stays
+ *  DOM/state-free). `missing` → no crown is drawn (its column stays reserved so
+ *  the number rows still align); `milktooth` → deciduous artwork; `implant` →
+ *  fixture body; `normal` → the natural tooth. */
+export type PerioArtworkKind = "missing" | "milktooth" | "implant" | "normal";
+export type ToothKindFn = (toothNo: number) => PerioArtworkKind;
+
 /** The baseline anchor a tooth's graphic aligns on: the implant platform anchor
- *  for an implant, else the natural CEJ. */
-function anchorFor(tplNo: TemplateNo, implant: boolean): number {
-  return implant ? IMPLANT_CEJ_Y[tplNo] : CEJ_Y[tplNo];
+ *  for an implant, the milk-tooth anchor for a deciduous rendering, else the
+ *  natural CEJ. */
+function anchorFor(tplNo: TemplateNo, kind: PerioArtworkKind): number {
+  if (kind === "implant") return IMPLANT_CEJ_Y[tplNo];
+  if (kind === "milktooth") return MILKTOOTH_CEJ_Y[tplNo];
+  return CEJ_Y[tplNo];
 }
 
 /** Canine (FDI position 3) root-elongation factor — position 3 renders
  *  `scale(1, CANINE_ROOT_SCALE)` anchored at `CEJ_Y`, so the CEJ itself
  *  (the transform's fixed point) never moves — only the crown/root
- *  proportions around it change. `K > 1` per the task brief; the exact
- *  value is a first-pass aesthetic choice (canines have a visibly longer
- *  root than incisors) — confirm/tune in a browser. */
+ *  proportions around it change. `K > 1`; the exact value is a first-pass
+ *  aesthetic choice (canines have a visibly longer root than incisors) —
+ *  confirm/tune in a browser. */
 const CANINE_ROOT_SCALE = 1.3;
 
 /** Lateral incisor (FDI position 2) width factor — narrower than the
- *  central incisor sharing the same tpl-11 template, per the task brief's
- *  exact value. */
+ *  central incisor sharing the same tpl-11 template. */
 const LATERAL_INCISOR_WIDTH_SCALE = 0.8;
 
 export type TemplateDocCache = Map<TemplateNo, Document>;
@@ -196,9 +211,9 @@ function collectReferencedGradientIds(root: Element): Set<string> {
  *  out of the template's `<defs>` into a fresh `<defs>` — WITHOUT this, a
  *  cloned tooth-base path with `fill="url(#linear-gradient-...)"` resolves
  *  against nothing once moved into a different document/subtree and renders
- *  solid black (the gotcha called out in the task brief). Returns `null`
- *  when nothing is referenced (true for all 4 current templates' flat-fill
- *  `#tooth-base` — this is then a documented no-op, not a bug). */
+ *  solid black. Returns `null` when nothing is referenced (true for all 4
+ *  current templates' flat-fill `#tooth-base` — then a documented no-op, not
+ *  a bug). */
 function cloneReferencedDefs(doc: Document, referencedIds: Set<string>): SVGDefsElement | null {
   if (referencedIds.size === 0) return null;
   const defs = document.createElementNS(SVG_NS, "defs") as unknown as SVGDefsElement;
@@ -218,12 +233,11 @@ function cloneReferencedDefs(doc: Document, referencedIds: Set<string>): SVGDefs
 
 /** Remove any descendant (or self) whose id is in `EXCLUDED_TOOTH_BASE_IDS`
  *  — belt-and-braces: `#tooth-base` is a single leaf `<path>` in all 4
- *  current templates (so this is currently a no-op), but the brief
- *  describes it as a "group", and a future template revision could nest
- *  excluded layers under it — this keeps the exclusion guarantee robust to
- *  that. */
-function stripExcludedLayers(root: Element): void {
-  const excluded = new Set(EXCLUDED_TOOTH_BASE_IDS);
+ *  current templates (so this is currently a no-op), but a future template
+ *  revision could nest excluded layers under it — this keeps the exclusion
+ *  guarantee robust to that. */
+function stripExcludedLayers(root: Element, ids: readonly string[] = EXCLUDED_TOOTH_BASE_IDS): void {
+  const excluded = new Set(ids);
   if (excluded.has(root.getAttribute("id") || "")) {
     root.remove();
     return;
@@ -240,26 +254,23 @@ function stripExcludedLayers(root: Element): void {
  * that tooth's `#tooth-base` (+ any gradients it references), oriented
  * (horizontal mirror only) and size-transformed for its FDI position.
  *
- * Orientation: `TOOTH_TEMPLATE.get(toothNo)` gives `{tpl, rot, mirror}`.
- * This deliberately reads only `tpl`/`mirror` and IGNORES `rot` — using the
- * odontogram's own per-tooth `.rot` (0 for the upper-arch-mapped entries,
- * 180 for the lower-arch-mapped entries in the SAME `tpl`) would make the
- * upper and lower halves of one perio row end up with OPPOSITE vertical
- * orientation (since a 180 rotation flips both axes) — wrong for a perio
+ * Orientation: `TOOTH_TEMPLATE.get(toothNo)` gives `{tpl, rot, mirror}`. This
+ * reads only `tpl`/`mirror` and IGNORES `rot` — using the odontogram's own
+ * per-tooth `.rot` (0 for upper-mapped, 180 for lower-mapped entries in the
+ * SAME `tpl`) would give the upper and lower halves of one perio row OPPOSITE
+ * vertical orientation (a 180° rotation flips both axes) — wrong for a perio
  * chart, which wants every tooth crown-up, uniformly, in both arches.
  *
- * Every template's raw/un-rotated artwork is actually root-up / crown-down
- * (verified from 11.svg's own geometry — see the comment at
- * `odontogram.ts` ~line 1839: "the crown/incisal edge sits at LARGER y ...
- * and the root/apex at SMALLER y" for the un-rotated template). So getting
- * a uniformly crown-up row does still need a vertical flip — just ONE
- * fixed, uniform flip applied to every tooth alike (never the per-tooth
- * conditional `.rot`), which is what step 1 below is.
+ * Every template's raw/un-rotated artwork is root-up / crown-down (the crown/
+ * incisal edge sits at LARGER y, the root/apex at SMALLER y). So a uniformly
+ * crown-up row still needs a vertical flip — just ONE fixed, uniform flip
+ * applied to every tooth alike (never the per-tooth conditional `.rot`), which
+ * is what step 1 below is.
  */
 export function getToothBaseGroupFromCache(
   cache: TemplateDocCache,
   toothNo: number,
-  opts: { implant?: boolean } = {},
+  opts: { implant?: boolean; milktooth?: boolean } = {},
 ): SVGGElement {
   const map = TOOTH_TEMPLATE.get(toothNo);
   if (!map) throw new Error(`perioGraphic: no TOOTH_TEMPLATE entry for tooth ${toothNo}`);
@@ -277,22 +288,31 @@ export function getToothBaseGroupFromCache(
   // flip, horizontal mirror, per-position size, baseline align) is identical for
   // both — only the source layer id and the baseline anchor differ.
   const implant = opts.implant === true;
-  const layerId = implant ? "implant-base" : "tooth-base";
+  // A milk tooth only exists in the primary positions (1–5, templates 11/13/14);
+  // molar templates carry no `#milktooth-base`. If a milktooth is requested on a
+  // template that lacks it (malformed/imported state on a molar), fall back to
+  // the natural tooth artwork rather than throwing — robustness over a crash.
+  const milktooth = opts.milktooth === true && !implant && !!doc.querySelector("#milktooth-base");
+  const kind: PerioArtworkKind = implant ? "implant" : milktooth ? "milktooth" : "normal";
+  const layerId = implant ? "implant-base" : milktooth ? "milktooth-base" : "tooth-base";
   const baseLayer = doc.querySelector(`#${layerId}`);
   if (!baseLayer) throw new Error(`perioGraphic: #${layerId} not found in template ${tplNo}`);
   const baseClone = baseLayer.cloneNode(true) as SVGElement;
-  stripExcludedLayers(baseClone);
+  // Never strip the layer we are extracting (milktooth-base is itself in the
+  // exclusion list, since it must be stripped OUT of a natural tooth-base clone).
+  stripExcludedLayers(baseClone, EXCLUDED_TOOTH_BASE_IDS.filter((id) => id !== layerId));
 
   const referenced = collectReferencedGradientIds(baseClone);
   const defsClone = cloneReferencedDefs(doc, referenced);
 
   const { w, h } = viewBoxOf(doc);
-  const cejY = anchorFor(tplNo, implant);
+  const cejY = anchorFor(tplNo, kind);
 
   const outer = document.createElementNS(SVG_NS, "g") as unknown as SVGGElement;
   outer.setAttribute("data-tooth", String(toothNo));
   outer.setAttribute("data-tpl", String(tplNo));
   if (implant) outer.setAttribute("data-implant", "1");
+  if (milktooth) outer.setAttribute("data-milktooth", "1");
 
   if (defsClone) outer.appendChild(defsClone);
 
@@ -343,17 +363,17 @@ function fmt(n: number): string {
 /** Row-local y-coordinate the shared CEJ baseline is placed at, for every
  *  tooth in a buccal row (arbitrary but fixed — just needs to leave enough
  *  margin above for the tallest crown and below for the longest root; see
- *  `bandViewBox`'s viewBox sizing). Exported so the T3 curve overlay
- *  (`PerioChart`) uses the SAME baseline the arch teeth are laid out on. */
+ *  `bandViewBox`'s viewBox sizing). Exported so the curve overlay uses the SAME
+ *  baseline the arch teeth are laid out on. */
 export const ROW_BASELINE_Y = 40;
 
-/** mm -> pixel (row-local unit) scale for the T3 curve overlay: how far one
+/** mm -> pixel (row-local unit) scale for the curve overlay: how far one
  *  millimetre of probing depth / gingival recession moves the curve away from
  *  the CEJ baseline. Chosen so a clinically deep pocket (~10 mm) plus its
  *  recession still lands within the drawn root region below `ROW_BASELINE_Y`
  *  (roots reach row-y ~79, canines ~90) rather than overshooting into the
  *  mirrored palatal band. Named constant, not a magic literal — visual scale
- *  is confirmed in a browser (see task-3-report.md). */
+ *  is confirmed in a browser. */
 export const PERIO_MM_PX = 3;
 
 /** How many 1-mm guide lines the background mm grid draws below the CEJ
@@ -369,57 +389,48 @@ export const PERIO_MM_GRID_MAX = 15;
 const MM_LABEL_X = 2;
 
 /** Fixed horizontal footprint (template viewBox width + gap) reused as the
- *  per-tooth cursor advance — approximate, uniform spacing (this task draws
- *  the row graphic only; T3/T4 own the curve overlay / number-row layout
- *  that would react to real per-tooth widths). Tightened from 4 to 2 so the
- *  teeth sit denser (T1 polish). */
+ *  per-tooth cursor advance — approximate, uniform spacing. */
 export const TOOTH_GAP = 2;
 
 /** Display magnification (px per row-local viewBox unit) the perio chart
- *  renders the teeth at. The arch <svg> itself carries NO intrinsic pixel
- *  size (it fills its container via CSS `width:100%`, see `buildBandSvg`);
- *  the number-row grid columns are widened by this factor
- *  (`applyArchColumns` in `PerioChart.tsx`), and since the SVG fills the
- *  cell those columns span, every viewBox unit ends up rendered at
- *  `PERIO_DISPLAY_SCALE` px — so the teeth read larger while the columns stay
- *  locked to them (one shared `archToothLayout`, never two divergent
- *  geometries). `> 1` bumps the base scale so the teeth read larger (T1
- *  polish); visual size is confirmed in a browser (see task-1-report.md).
+ *  renders the teeth at. The arch <svg> carries NO intrinsic pixel size (it
+ *  fills its container via CSS `width:100%`, see `buildBandSvg`); the
+ *  number-row grid columns are widened by this factor (`applyArchColumns` in
+ *  `PerioChart.tsx`), and since the SVG fills the cell those columns span,
+ *  every viewBox unit ends up rendered at this scale — so the teeth read larger
+ *  while the columns stay locked to them (one shared `archToothLayout`).
  *
- *  UI-1 Task 3b (dynamic fill-scale): `applyArchColumns` no longer uses this
- *  FIXED value at runtime — it now computes a per-render `fillScale` via
- *  {@link computeFillScale} so the chart fills the available container width
- *  instead of leaving empty space on a wide screen. This constant is kept as
- *  the historical reference/floor value (`MIN_FILL_SCALE` below is set equal
- *  to it, so a narrow container reproduces the exact pre-Task-3b layout) —
- *  still exported since other modules/tests reference it as "the base display
- *  scale", never delete. */
+ *  `applyArchColumns` no longer uses this FIXED value at runtime — it computes
+ *  a per-render `fillScale` via {@link computeFillScale} so the chart fills the
+ *  available container width instead of leaving empty space on a wide screen.
+ *  This constant remains the reference/floor value (`MIN_FILL_SCALE` below is
+ *  set equal to it, so a narrow container reproduces the fixed layout) and is
+ *  still exported for modules/tests that reference it as the base display
+ *  scale. */
 export const PERIO_DISPLAY_SCALE = 1.5;
 
-/** Floor for the dynamic fill-scale (UI-1 Task 3b) — below this the teeth
- *  would read uncomfortably small, so a narrow container instead relies on
+/** Floor for the dynamic fill-scale — below this the teeth would read
+ *  uncomfortably small, so a narrow container instead relies on
  *  `.perio-fullgrid-scroll`'s horizontal scrollbar rather than shrinking
- *  further. Equal to the legacy `PERIO_DISPLAY_SCALE` so a narrow/unmeasured
- *  container (including jsdom, which reports `clientWidth === 0`) renders
- *  identically to the pre-Task-3b fixed layout. */
+ *  further. Equal to `PERIO_DISPLAY_SCALE` so a narrow/unmeasured container
+ *  (including jsdom, which reports `clientWidth === 0`) renders with the fixed
+ *  layout. */
 export const MIN_FILL_SCALE = PERIO_DISPLAY_SCALE;
 
-/** Ceiling for the dynamic fill-scale (UI-1 Task 3b) — caps how large the
- *  teeth/number cells grow on an ultra-wide monitor so they don't become
- *  absurdly oversized. */
+/** Ceiling for the dynamic fill-scale — caps how large the teeth/number cells
+ *  grow on an ultra-wide monitor so they don't become absurdly oversized. */
 export const MAX_FILL_SCALE = 2.6;
 
 /**
- * Pure scale-fitting math for the dynamic fill-scale (UI-1 Task 3b, no DOM):
- * given the pixel width available for an arch's tooth columns and the summed
- * base-scale (1x) footprint of that arch's teeth (`ArchLayout.totalWidth`),
- * return the per-tooth column multiplier that makes the columns fill
- * `available`, clamped to `[MIN_FILL_SCALE, MAX_FILL_SCALE]`. Guards against
- * a non-finite/non-positive `baseCols` (empty arch, or the template cache not
- * loaded yet) and a non-finite/negative `available` (unmeasured or
- * over-subtracted container width) by falling back to the floor — the same
- * value the chart always used before this task, so "can't measure" degrades
- * to the historical fixed layout rather than a broken one.
+ * Pure scale-fitting math for the dynamic fill-scale (no DOM): given the pixel
+ * width available for an arch's tooth columns and the summed base-scale (1x)
+ * footprint of that arch's teeth (`ArchLayout.totalWidth`), return the
+ * per-tooth column multiplier that makes the columns fill `available`, clamped
+ * to `[MIN_FILL_SCALE, MAX_FILL_SCALE]`. Guards a non-finite/non-positive
+ * `baseCols` (empty arch, or the template cache not loaded yet) and a
+ * non-finite/negative `available` (unmeasured or over-subtracted container
+ * width) by falling back to the floor, so "can't measure" degrades to the
+ * fixed layout rather than a broken one.
  */
 export function computeFillScale(available: number, baseCols: number): number {
   if (!Number.isFinite(available) || !Number.isFinite(baseCols) || baseCols <= 0) {
@@ -441,9 +452,8 @@ export interface ArchToothLayout {
 
 /** The full geometric layout of one arch row — the SINGLE source of truth for
  *  where each tooth sits and where the shared CEJ baseline / palatal mirror
- *  axis are. `buildBuccalRowGroup` (the T2 arch artwork) AND the T3 curve
- *  overlay both derive their positions from this, so the curve can never drift
- *  out of alignment with the teeth. */
+ *  axis are. The arch artwork AND the curve overlay both derive their positions
+ *  from this, so the curve can never drift out of alignment with the teeth. */
 export interface ArchLayout {
   /** Shared CEJ baseline (buccal-row coordinate space). */
   cejY: number;
@@ -460,7 +470,11 @@ export interface ArchLayout {
  * hard-coded spacing). Skips any tooth without a `TOOTH_TEMPLATE`/cache entry,
  * exactly like the row builder does.
  */
-export function archToothLayout(cache: TemplateDocCache, teeth: readonly number[]): ArchLayout {
+export function archToothLayout(
+  cache: TemplateDocCache,
+  teeth: readonly number[],
+  gap: number = TOOTH_GAP,
+): ArchLayout {
   const out: ArchToothLayout[] = [];
   let cursorX = 0;
   for (const toothNo of teeth) {
@@ -471,7 +485,7 @@ export function archToothLayout(cache: TemplateDocCache, teeth: readonly number[
     if (!doc) continue;
     const { w } = viewBoxOf(doc);
     out.push({ toothNo, x: cursorX, width: w });
-    cursorX += w + TOOTH_GAP;
+    cursorX += w + gap;
   }
   return { cejY: ROW_BASELINE_Y, totalWidth: cursorX, teeth: out };
 }
@@ -486,18 +500,26 @@ function buildBuccalRowGroup(
   cache: TemplateDocCache,
   teeth: readonly number[],
   isImplant: IsImplantFn = () => false,
+  gap: number = TOOTH_GAP,
+  kindFn?: ToothKindFn,
 ): { group: SVGGElement; width: number } {
   const row = document.createElementNS(SVG_NS, "g") as unknown as SVGGElement;
   row.setAttribute("class", "perio-tooth-row-buccal");
-  const layout = archToothLayout(cache, teeth);
+  const layout = archToothLayout(cache, teeth, gap);
   for (const { toothNo, x } of layout.teeth) {
+    // Resolve the artwork kind. A `kindFn` (active-chart aware) supersedes the
+    // implant-only predicate, so the graphic tracks the odontogram: missing →
+    // draw nothing (column stays reserved by the layout above, keeping the
+    // number rows aligned), milktooth → deciduous artwork, implant → fixture body.
+    const kind: PerioArtworkKind = kindFn ? kindFn(toothNo) : (isImplant(toothNo) ? "implant" : "normal");
+    if (kind === "missing") continue;
     const tplNo = TOOTH_TEMPLATE.get(toothNo)!.tpl as TemplateNo;
-    const implant = isImplant(toothNo);
-    const toothGroup = getToothBaseGroupFromCache(cache, toothNo, { implant });
-    // Align each tooth's baseline anchor (natural CEJ, or the implant platform
-    // for an implant) onto the SAME shared ROW_BASELINE_Y, so an implant's
-    // neck sits on the CEJ line right alongside its natural neighbours.
-    const translateY = ROW_BASELINE_Y - anchorFor(tplNo, implant);
+    const toothGroup = getToothBaseGroupFromCache(cache, toothNo, {
+      implant: kind === "implant",
+      milktooth: kind === "milktooth",
+    });
+    // Align each tooth's baseline anchor onto the SAME shared ROW_BASELINE_Y.
+    const translateY = ROW_BASELINE_Y - anchorFor(tplNo, kind);
     toothGroup.setAttribute("transform", `translate(${fmt(x)} ${fmt(translateY)})`);
     row.appendChild(toothGroup);
   }
@@ -506,47 +528,32 @@ function buildBuccalRowGroup(
 
 /** Vertical padding (row-local units) added above/below a band's own content
  *  in its viewBox, so the deepest crown/root tips (the elongated canine root)
- *  are never clipped. Shared by both `bandViewBox` (the current per-band
- *  builders) and its retired predecessor. */
+ *  are never clipped. */
 const ARCH_VIEWBOX_PAD = 14;
 
 // ---------------------------------------------------------------------------
-// UI-3a Task 2: the legacy composite single-SVG builder (`buildArchGraphic`,
-// its `archOrientTransform` per-arch-conditional orientation, and the
-// `isUpperArch` helper it used) has been REMOVED — `buildBuccalArchSvg`/
-// `buildPalatalArchSvg` below are now the ONLY arch-artwork API, each
-// uniformly oriented across BOTH arches (buccal always crown-down, palatal
-// always crown-up — the #1 fix over the old per-arch-conditional flip) and
-// each mounted into its OWN grid cell by `PerioChart.tsx` (`buildArch`),
-// with the central perio index band (Plaque/PI/GI/mPI/mBI) between them.
-// `buildArchGraphic`'s old direct callers (perio-graphic-toothrow.test.ts,
-// perio-polish-layout/-mmgrid/-implant.test.ts, pgb-*/pgc-*/pgd-*/pge-*
-// integration tests) were migrated to `buildBuccalArchSvg`/
-// `buildPalatalArchSvg` in this task — there is only ONE arch-geometry API
-// now, never two parallel ones.
+// `buildBuccalArchSvg`/`buildPalatalArchSvg` are the arch-artwork API — one
+// per aspect, each uniformly oriented across BOTH arches (buccal always
+// crown-down, palatal always crown-up) and each mounted into its own grid cell
+// by `PerioChart.tsx`, with the central perio index band (Plaque/PI/GI/mPI/mBI)
+// between them.
 //
 // Both builders share `buildBuccalRowGroup` (the per-tooth CEJ-aligned row
-// cursor walk) and `archToothLayout` — so the buccal and palatal SVGs'
-// per-tooth x-columns are identical to each other AND to the teeth/curve/
-// overlay/mm-grid/number-grid columns everywhere else in the chart (one
-// shared layout, never a divergent geometry).
+// cursor walk) and `archToothLayout`, so the buccal and palatal SVGs' per-tooth
+// x-columns are identical to each other AND to the teeth/curve/overlay/mm-grid/
+// number-grid columns everywhere else in the chart (one shared layout).
 // ---------------------------------------------------------------------------
 
 /**
  * Half-height (row-local units) reserved above/below the shared CEJ baseline
- * for ONE independently-viewBoxed band's own content — TIGHTENED (UI-3a
- * Task 2) from T1's placeholder value of 60, which reused the budget the old
- * COMBINED two-band SVG needed to keep its stacked buccal + palatal rows from
- * overlapping — a concern that no longer applies now that each band renders in
- * its OWN grid cell/SVG (T2). The real
- * worst-case single-band content span is the position-3 canine's
- * `CANINE_ROOT_SCALE`-elongated root: `CANINE_ROOT_SCALE * (tpl-13 root
- * length)` = `1.3 * (71.0 - CEJ_Y[13])` = `1.3 * 38.6` ≈ 50.2 — comfortably
- * bigger than the tallest crown (`max(CEJ_Y)` ≈ 32.4) and the mm-grid's
- * 15-line reach (`PERIO_MM_GRID_MAX * PERIO_MM_PX` = 45), so a single
- * symmetric half-span safely bounds either band (buccal-flipped or palatal
- * raw — the two are mirror images of one another about `ROW_BASELINE_Y`)
- * without clipping. Rounded up slightly for a small margin of safety.
+ * for ONE independently-viewBoxed band's own content. The worst-case
+ * single-band content span is the position-3 canine's `CANINE_ROOT_SCALE`-
+ * elongated root: `CANINE_ROOT_SCALE * (tpl-13 root length)` = `1.3 * (71.0 -
+ * CEJ_Y[13])` = `1.3 * 38.6` ≈ 50.2 — comfortably bigger than the tallest
+ * crown (`max(CEJ_Y)` ≈ 32.4) and the mm-grid's 15-line reach
+ * (`PERIO_MM_GRID_MAX * PERIO_MM_PX` = 45), so a single symmetric half-span
+ * safely bounds either band (buccal-flipped or palatal raw — mirror images
+ * about `ROW_BASELINE_Y`) without clipping. Rounded up slightly for margin.
  */
 const BAND_CONTENT_HALF_SPAN = 51;
 
@@ -578,21 +585,21 @@ function buildBandSvg(className: string, row: SVGGElement, width: number): SVGSV
 
 /**
  * Build the BUCCAL-aspect arch as a standalone `<svg>`, oriented crown-DOWN
- * for BOTH arches (uniform — see the section doc comment above): the row
- * builder's raw output is crown-up (per `getToothBaseGroupFromCache`'s own
- * uniform per-tooth flip), so this applies ONE unconditional vertical flip
- * about the CEJ baseline (`matrix(1 0 0 -1 0 2*ROW_BASELINE_Y)` — the exact
- * transform the retired legacy builder used ONLY for the upper arch, now
- * applied to every arch alike) — the baseline itself is the transform's
- * fixed point, so it never moves. Own mm-grid, counter-flipped (`flip:
- * true`) so its numeric labels read upright inside this net-flipped row.
+ * for BOTH arches: the row builder's raw output is crown-up (per
+ * `getToothBaseGroupFromCache`'s uniform per-tooth flip), so this applies ONE
+ * unconditional vertical flip about the CEJ baseline (`matrix(1 0 0 -1 0
+ * 2*ROW_BASELINE_Y)`) — the baseline itself is the transform's fixed point, so
+ * it never moves. Own mm-grid, counter-flipped (`flip: true`) so its numeric
+ * labels read upright inside this net-flipped row.
  */
 export function buildBuccalArchSvg(
   cache: TemplateDocCache,
   teeth: readonly number[],
   isImplant: IsImplantFn = () => false,
+  gap: number = TOOTH_GAP,
+  kindFn?: ToothKindFn,
 ): SVGSVGElement {
-  const { group: row, width } = buildBuccalRowGroup(cache, teeth, isImplant);
+  const { group: row, width } = buildBuccalRowGroup(cache, teeth, isImplant, gap, kindFn);
   row.setAttribute("class", "perio-tooth-row-buccal");
   row.setAttribute("transform", `matrix(1 0 0 -1 0 ${fmt(2 * ROW_BASELINE_Y)})`);
   row.insertBefore(
@@ -618,8 +625,10 @@ export function buildPalatalArchSvg(
   cache: TemplateDocCache,
   teeth: readonly number[],
   isImplant: IsImplantFn = () => false,
+  gap: number = TOOTH_GAP,
+  kindFn?: ToothKindFn,
 ): SVGSVGElement {
-  const { group: row, width } = buildBuccalRowGroup(cache, teeth, isImplant);
+  const { group: row, width } = buildBuccalRowGroup(cache, teeth, isImplant, gap, kindFn);
   row.setAttribute("class", "perio-tooth-row-palatal-inner");
   row.insertBefore(
     buildMmGridLayer({ cejY: ROW_BASELINE_Y, mmPx: PERIO_MM_PX, width, flip: false }),
@@ -629,7 +638,7 @@ export function buildPalatalArchSvg(
 }
 
 // ---------------------------------------------------------------------------
-// T3: the curve overlay (CEJ + gingival margin + pocket base + filled band).
+// The curve overlay (CEJ + gingival margin + pocket base + filled band).
 // ---------------------------------------------------------------------------
 
 /** A single ordered site's PD/GM reading for the curve. `pd` absent/undefined
@@ -669,10 +678,9 @@ export interface PerioCurveResult {
  *                                        margin (gm<0) lifts it above the CEJ.
  *   pocketY = marginY + pd*mmPx       → a deeper pocket dips the pocket line
  *                                        FURTHER from the CEJ toward the root.
- * The palatal row reuses this same buccal-space result; since UI-3a the
- * palatal band renders in its OWN independent SVG (crown-up, identity
- * transform — no net mirror), so "toward the root" stays anatomically
- * consistent on both rows.
+ * The palatal row reuses this same buccal-space result; its band renders in an
+ * independent SVG (crown-up, identity transform — no net mirror), so "toward
+ * the root" stays anatomically consistent on both rows.
  *
  * An uncharted site (`pd` undefined/null) yields `null` at that index in BOTH
  * arrays, so the caller can break the polyline/band there (line gaps).
@@ -779,7 +787,7 @@ export function buildPerioCurveLayer(
 }
 
 // ---------------------------------------------------------------------------
-// Perio polish T2: the background millimetre guide grid.
+// The background millimetre guide grid.
 // ---------------------------------------------------------------------------
 
 /**
@@ -795,7 +803,7 @@ export function buildPerioCurveLayer(
  * `cejY`), so a line at "n mm from the CEJ" lands EXACTLY where an n-mm (gm=0)
  * pocket's curve point lands (`perioCurve` → `pocketY = cejY + n*mmPx`). The
  * caller appends it INTO the SAME oriented/mirrored row group as the teeth
- * (`.perio-tooth-row-buccal` / `.perio-tooth-row-palatal-inner`), so the T1
+ * (`.perio-tooth-row-buccal` / `.perio-tooth-row-palatal-inner`), so the
  * per-arch flip carries the grid along with the teeth — the mm lines stay on the
  * ROOT side of the CEJ (away from the occlusal mid-line) on both arches.
  *
@@ -856,18 +864,17 @@ export function buildMmGridLayer(opts: {
 }
 
 // ---------------------------------------------------------------------------
-// PG-B Task 2: the discrete-highlight overlay layers (BOP / plaque / >=5mm /
-// >=6mm). Display-only marks drawn OVER the arch, in the SAME row-local
-// coordinate space (and via the SAME `archToothLayout` site x-positions +
-// `PERIO_MM_PX`) the teeth + curve ride — so a mark lands on exactly the site
-// it describes, on both arches, after the T1 occlusal-to-occlusal flip.
+// The discrete-highlight overlay layers (BOP / plaque / >=5mm / >=6mm).
+// Display-only marks drawn OVER the arch, in the SAME row-local coordinate
+// space (and via the SAME `archToothLayout` site x-positions + `PERIO_MM_PX`)
+// the teeth + curve ride — so a mark lands on exactly the site it describes, on
+// both arches, after the per-arch flip.
 //
 // The pure geometry (`perioOverlayMarks`/`perioPlaqueMarks`) turns per-site /
 // per-tooth-surface readings into positioned marks; the pure DOM builder
 // (`buildPerioOverlayLayer`) renders them into an aria-hidden `<g>`. Both are
-// DOM-free logic tested in isolation (mirrors `perioCurve`/
-// `buildPerioCurveLayer`); `PerioChart.drawArchOverlay` wires them to the live
-// perio data + appends the result into the oriented row groups.
+// DOM-free logic tested in isolation; `PerioChart.drawArchOverlay` wires them
+// to the live perio data + appends the result into the oriented row groups.
 // ---------------------------------------------------------------------------
 
 /** A single positioned overlay mark (row-local coordinate space). `kind`
@@ -889,10 +896,10 @@ export interface PerioOverlaySite {
   gm?: number | null;
   bop?: boolean;
   /** Clinical attachment level (= pd + gm), as returned by `getToothCal`. Only
-   *  populated/consumed by the PG-B Task 3 CAL heat overlay; every other
-   *  discrete overlay (bop/pd5/pd6) ignores it. Kept on this shared shape
-   *  (rather than a parallel interface) since it reuses the exact same x/pd/gm
-   *  fields `collectOverlayInput` already builds. */
+   *  populated/consumed by the CAL heat overlay; every other discrete overlay
+   *  (bop/pd5/pd6) ignores it. Kept on this shared shape (rather than a parallel
+   *  interface) since it reuses the exact same x/pd/gm fields
+   *  `collectOverlayInput` already builds. */
   cal?: number | null;
 }
 
@@ -933,13 +940,12 @@ export function perioOverlayMarks(
 }
 
 // ---------------------------------------------------------------------------
-// PG-B Task 3: the continuous mm heat overlays (PD / CAL / GR). Unlike T2's
-// discrete threshold marks (bop/pd5/pd6, each a fixed pass/fail highlight),
-// these heat-colour EVERY charted site by how deep its reading is, via a
-// small pure value->bucket ramp (unit-testable in isolation, mirroring
-// `perioOverlayMarks`'s pure-geometry shape). Bucket names double as the mark
-// `kind` (prefixed "heat-"), so `buildPerioOverlayLayer` needs no changes —
-// it already classes/sizes a circle purely from `mark.kind`.
+// The continuous mm heat overlays (PD / CAL / GR). Unlike the discrete
+// threshold marks (bop/pd5/pd6, each a fixed pass/fail highlight), these
+// heat-colour EVERY charted site by how deep its reading is, via a small pure
+// value->bucket ramp. Bucket names double as the mark `kind` (prefixed
+// "heat-"), so `buildPerioOverlayLayer` classes/sizes a circle purely from
+// `mark.kind`.
 // ---------------------------------------------------------------------------
 
 /** Severity bucket for a continuous mm heat overlay — shallow/moderate/deep,
@@ -949,9 +955,9 @@ export type MmHeatBucket = "shallow" | "moderate" | "deep";
 /**
  * Pure ramp for a probing-style distance in mm — PD (raw probing depth) or
  * CAL (`pd + gm`, i.e. attachment loss from the CEJ). Thresholds mirror the
- * existing T2 pd5/pd6 discrete-overlay thresholds (>=4mm starts to matter
- * clinically, >=6mm is a deep/severe pocket), so the new heat scale and the
- * old discrete >=5mm/>=6mm highlights read consistently side by side.
+ * pd5/pd6 discrete-overlay thresholds (>=4mm starts to matter clinically,
+ * >=6mm is a deep/severe pocket), so the heat scale and the discrete
+ * >=5mm/>=6mm highlights read consistently side by side.
  */
 export function pdCalHeatBucket(mm: number): MmHeatBucket {
   if (mm >= 6) return "deep";
@@ -1056,16 +1062,15 @@ export function perioPlaqueMarks(
 }
 
 // ---------------------------------------------------------------------------
-// SP-perio PG-C Task 1: the Cairo (2011) recession-TYPE overlay. Unlike every
-// overlay above (one mark per PROBING SITE or per O'Leary SURFACE), Cairo's
-// RT is a single, per-TOOTH derived classification (see
-// `getToothRecessionType` in odontogram.ts) — the caller collects one RT
-// per tooth (not per site) and passes it in here, mirroring the shape
-// `perioPlaqueMarks` already uses for its own whole-tooth index. RT is
-// specifically a BUCCAL-recession classification (it reads `perio.gm.get
-// ("B")`), so — unlike plaque, which splits across both rows — a mark is
-// only ever placed on the BUCCAL aspect, at the tooth's cervical/CEJ point
-// (the same point the buccal margin sits at when gm=0).
+// The Cairo (2011) recession-TYPE overlay. Unlike every overlay above (one
+// mark per PROBING SITE or per O'Leary SURFACE), Cairo's RT is a single,
+// per-TOOTH derived classification (see `getToothRecessionType` in
+// odontogram.ts) — the caller collects one RT per tooth (not per site) and
+// passes it in here, mirroring the shape `perioPlaqueMarks` uses for its own
+// whole-tooth index. RT is specifically a BUCCAL-recession classification (it
+// reads `perio.gm.get("B")`), so — unlike plaque, which splits across both
+// rows — a mark is only ever placed on the BUCCAL aspect, at the tooth's
+// cervical/CEJ point (the same point the buccal margin sits at when gm=0).
 // ---------------------------------------------------------------------------
 
 /** One tooth's Cairo-overlay input for {@link perioCairoMarks}: its row-local
@@ -1095,15 +1100,15 @@ export function perioCairoMarks(
 }
 
 // ---------------------------------------------------------------------------
-// SP-perio PG-D Task 4: the PI/GI graded-index overlays + the KG
-// keratinized-gingiva-width overlay. PI/GI (Silness-Löe Plaque Index /
-// Löe-Silness Gingival Index, 0-3 per O'Leary surface) mirror
-// `perioPlaqueMarks`' whole-tooth-surface shape (mesial/buccal/distal on the
-// buccal aspect, lingual on the palatal aspect) but heat-bucket the grade
-// instead of marking bare presence — reusing the SAME shallow/moderate/deep
-// heat vocabulary the mm ramps use, so `buildPerioOverlayLayer` needs no new
-// mark kinds. KG (a single per-tooth BUCCAL mm scalar) mirrors
-// `perioCairoMarks`' one-mark-per-tooth, buccal-only shape.
+// The PI/GI graded-index overlays + the KG keratinized-gingiva-width overlay.
+// PI/GI (Silness-Löe Plaque Index / Löe-Silness Gingival Index, 0-3 per
+// O'Leary surface) mirror `perioPlaqueMarks`' whole-tooth-surface shape
+// (mesial/buccal/distal on the buccal aspect, lingual on the palatal aspect)
+// but heat-bucket the grade instead of marking bare presence — reusing the
+// same shallow/moderate/deep heat vocabulary the mm ramps use, so
+// `buildPerioOverlayLayer` needs no new mark kinds. KG (a single per-tooth
+// BUCCAL mm scalar) mirrors `perioCairoMarks`' one-mark-per-tooth, buccal-only
+// shape.
 // ---------------------------------------------------------------------------
 
 /** One tooth's graded-index input (PI/GI) for {@link perioGradeMarks}: its

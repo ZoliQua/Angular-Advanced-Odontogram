@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP3a Task 4 + SP3b Task 3: explicit new-behavior / migration assertions for the
@@ -170,7 +170,7 @@ describe("restoration behavior: Task 4 — crownMaterial/bridgeUnit retirement +
     expect(pontic).not.toHaveProperty("bridgeUnit");
 
     const payload = __collectExportPayloadForTest();
-    expect(payload.version).toBe("2.19");
+    expect(payload.version).toBe("2.20");
     for (const tooth of Object.values(payload.teeth) as Record<string, unknown>[]) {
       expect(tooth).not.toHaveProperty("crownMaterial");
       expect(tooth).not.toHaveProperty("bridgeUnit");

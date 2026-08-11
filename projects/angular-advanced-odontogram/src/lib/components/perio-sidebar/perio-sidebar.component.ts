@@ -108,6 +108,9 @@ const EMPTY_CASE_META: CaseMetaData = {
   gradeOverride: null,
   extentOverride: null,
   patientName: null,
+  // v2.4.0 resync (Task 1): CaseMeta gained patientDob — mechanical default
+  // to keep this literal compiling; UI wiring for the field is Task 2-4's.
+  patientDob: null,
   examDate: null,
 };
 

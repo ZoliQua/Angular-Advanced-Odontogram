@@ -1,7 +1,7 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
-/** Registry type definitions for the clinical-axis engine (SP2). Types only. */
+/** Registry type definitions for the clinical-axis engine. Types only. */
 
 export type AxisKind = "enum" | "boolean" | "set" | "surfaceSet" | "restoration" | "derived" | "global";
 
@@ -12,11 +12,11 @@ export interface UiOptCtx { isMilktooth?: boolean }
 export interface ConceptRef {
   local: string;                 // LOCAL_SYSTEM code — always present, round-trip key
   display: string;               // language-neutral English display
-  snomed?: string;               // SNOMED CT id (unused in SP2)
-  icd?: { system: string; code: string }[]; // system-agnostic (unused in SP2)
+  snomed?: string;               // SNOMED CT id (optional)
+  icd?: { system: string; code: string }[]; // ICD codes, system-agnostic (optional)
 }
 
-/** One allowed value of an axis. svgLayer/ui are added in later stages. */
+/** One allowed value of an axis. */
 export interface AxisValue {
   id: string;                    // engine value id (e.g. "metal", "caries-occlusal")
   coding: ConceptRef;            // additive codings for this value
@@ -31,7 +31,7 @@ export interface FlagCtx {
   fissureAllowed: boolean; contactAllowed: boolean; bruxismAllowed: boolean; extractionPlanAllowed: boolean;
 }
 
-/** One chartable tooth axis. Resolver fields are optional here (filled per stage). */
+/** One chartable tooth axis. */
 export interface ClinicalAxis {
   id: string;                    // axis id (e.g. "crownMaterial")
   field: string;                 // ToothRecord field name this axis reads/writes
@@ -44,10 +44,10 @@ export interface ClinicalAxis {
   flag?: string;                 // feature-flag gate (e.g. "icdasEnabled")
   svgLayer?: string;                                    // boolean axis: the layer it toggles
   appliesWhen?: (ctx: FlagCtx, state: any) => boolean;  // boolean axis: gating predicate
-  uiOptions?: { value: string; labelKey: string; when?: (ctx: UiOptCtx) => boolean }[]; // curated UI option list (added incrementally per axis)
+  uiOptions?: { value: string; labelKey: string; when?: (ctx: UiOptCtx) => boolean }[]; // curated UI option list
 }
 
-/** Per-tooth rendering context (static tables; populated in later stages). */
+/** Per-tooth rendering context. */
 export interface ToothContext {
   fdi: number;
   template: 11 | 13 | 14 | 16;
@@ -60,6 +60,5 @@ export interface ToothContext {
   milktoothAllowed: boolean;
 }
 
-/** Placeholder for the eventual axis-keyed state; SP2 keeps the current container.
- *  Kept as a nominal type so later stages can tighten it. */
+/** Loosely-typed axis-keyed tooth state container. */
 export type ToothState = Record<string, unknown>;

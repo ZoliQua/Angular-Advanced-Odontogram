@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP-perio P2b Task 2: furcation involvement (Glickman I-IV, per entrance).
@@ -160,7 +160,7 @@ describe("payload round-trip (version 2.16)", () => {
     setFurcation(16, "buccal", 4);
 
     const payload = __collectExportPayloadForTest();
-    expect(payload.version).toBe("2.19");
+    expect(payload.version).toBe("2.20");
     expect(payload.teeth["16"].furcation).toEqual({ mesial: 2, buccal: 4 });
     expect(payload.teeth["11"].furcation).toBeUndefined();
     expect(Object.prototype.hasOwnProperty.call(payload.teeth["11"], "furcation")).toBe(false);

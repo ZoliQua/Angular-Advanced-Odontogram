@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // Deterministic parity matrix: every enum value / surface / boolean in isolation,
@@ -253,7 +253,31 @@ export function svgCases() {
   for (const rtc of rootCariesParityCases()) {
     cases.push({ toothNo: 11, view: "front", template: "11", state: rtc.state });
   }
+  // Appended last (keeps existing fixture indices stable) — recurrent caries: a
+  // surface that is BOTH filled AND carious renders `subcaries-{surface}`
+  // (CARS-scored from cariesSeverity), not the primary `caries-{surface}`. This
+  // filled+severity combo isn't exercised by the plain caries or plain filling
+  // cases in the main loop.
+  for (const rec of recurrentCariesParityCases()) {
+    cases.push({ toothNo: 11, view: "front", template: "11", state: rec.state });
+  }
   return cases;
+}
+
+/** Recurrent-caries (filled + carious + CARS severity) parity cases, per
+ *  surface. See the appended-block comment in the matrix builder. */
+function recurrentCariesParityCases(): { label: string; state: Record<string, unknown> }[] {
+  return Array.from(VALID_FILLING_SURFACES).map((s) => ({
+    label: `recurrent-${s}`,
+    state: {
+      toothSelection: "tooth-base",
+      caries: [`caries-${s}`],
+      fillingMaterial: "amalgam",
+      fillingSurfaces: [s],
+      fillingSurfaceMaterials: { [s]: "amalgam" },
+      cariesSeverity: { [s]: 4 },
+    },
+  }));
 }
 
 export function payloadCases() {

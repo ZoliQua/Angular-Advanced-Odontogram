@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 /**
@@ -63,7 +63,7 @@ export const FIELD_MAPPINGS: FieldMapping[] = [
   { field: "missingClosed", kind: "boolean", findingCode: "missing-gap-closed", findingDisplay: "Closed gap (missing tooth)" },
   { field: "crownLeakage", kind: "boolean", findingCode: "crown-leakage", findingDisplay: "Crown marginal leakage" },
 
-  // SP4 Task 1: pulp/apical/resorption diagnosis axes (additive; see axes.ts).
+  // Pulp/apical/resorption diagnosis axes (see axes.ts).
   { field: "pulpDx", kind: "enum", valueGroup: "pulpDx", skipValue: "normal", findingCode: "pulp-diagnosis", findingDisplay: "Pulp diagnosis (AAE)" },
   { field: "pulpLatin", kind: "enum", valueGroup: "pulpLatin", skipValue: "none", findingCode: "pulp-diagnosis-latin", findingDisplay: "Pulp diagnosis (Latin, practical)" },
   { field: "apicalDx", kind: "enum", valueGroup: "apicalDx", skipValue: "normal", findingCode: "apical-diagnosis", findingDisplay: "Apical diagnosis (AAE)" },
@@ -72,29 +72,27 @@ export const FIELD_MAPPINGS: FieldMapping[] = [
   { field: "wearCervical", kind: "enum", valueGroup: "wearCervical", skipValue: "none", findingCode: "tooth-wear-cervical", findingDisplay: "Cervical wear" },
   { field: "discoloration", kind: "enum", valueGroup: "discoloration", skipValue: "none", findingCode: "tooth-discoloration", findingDisplay: "Tooth discoloration" },
 
-  // SP14 Task 1: orthodontic axes foundation (additive; see axes.ts).
+  // Orthodontic axes (see axes.ts).
   { field: "orthoAppliance", kind: "enum", valueGroup: "orthoAppliance", skipValue: "none", findingCode: "tooth-ortho-appliance", findingDisplay: "Orthodontic appliance" },
   { field: "orthoDrift", kind: "enum", valueGroup: "orthoDrift", skipValue: "none", findingCode: "tooth-ortho-drift", findingDisplay: "Orthodontic drift" },
   { field: "orthoVertical", kind: "enum", valueGroup: "orthoVertical", skipValue: "none", findingCode: "tooth-ortho-vertical", findingDisplay: "Vertical malposition" },
   { field: "orthoRotation", kind: "boolean", findingCode: "tooth-ortho-rotation", findingDisplay: "Tooth rotation" },
 
-  // SP5 Task 1: caries fields foundation (additive; see axes.ts). `secondaryCaries`/
-  // `radiographicDepth` are per-surface scalar maps, special-cased outside this table
-  // exactly like `cariesDepths` — no row here for them by design.
+  // Caries fields (see axes.ts). `secondaryCaries`/`radiographicDepth` are
+  // per-surface scalar maps, special-cased outside this table exactly like
+  // `cariesDepths` — no row here for them by design.
   { field: "rootCaries", kind: "enum", valueGroup: "rootCaries", skipValue: "none", findingCode: "root-caries", findingDisplay: "Root caries" },
 
-  // SP8 Task 1: peri-implantitis foundation (additive; see axes.ts).
+  // Peri-implantitis (see axes.ts).
   { field: "periImplant", kind: "enum", valueGroup: "periImplant", skipValue: "none", findingCode: "peri-implant-status", findingDisplay: "Peri-implant status" },
 
-  // SP-perio PG-C Task 2: cejVisibility + rootConcavity data axes (additive; see
-  // axes.ts). Declarative enum path — a set tooth emits the axis coding, a `none`
-  // tooth emits none.
+  // cejVisibility + rootConcavity data axes (see axes.ts). Declarative enum path
+  // — a set tooth emits the axis coding, a `none` tooth emits none.
   { field: "cejVisibility", kind: "enum", valueGroup: "cejVisibility", skipValue: "none", findingCode: "cej-visibility", findingDisplay: "CEJ visibility" },
   { field: "rootConcavity", kind: "enum", valueGroup: "rootConcavity", skipValue: "none", findingCode: "root-concavity", findingDisplay: "Root concavity" },
 
-  // SP-perio PG-D Task 3: gingivalThickness + millerClass data axes (additive;
-  // see axes.ts). Declarative enum path — a set tooth emits the axis coding,
-  // a skip-value tooth emits none.
+  // gingivalThickness + millerClass data axes (see axes.ts). Declarative enum
+  // path — a set tooth emits the axis coding, a skip-value tooth emits none.
   { field: "gingivalThickness", kind: "enum", valueGroup: "gingivalThickness", skipValue: "unknown", findingCode: "gingival-thickness", findingDisplay: "Gingival thickness" },
   { field: "millerClass", kind: "enum", valueGroup: "millerClass", skipValue: "none", findingCode: "miller-recession-class", findingDisplay: "Miller recession class" },
 ];

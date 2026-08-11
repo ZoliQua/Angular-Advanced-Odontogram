@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 /**
@@ -24,11 +24,10 @@ export const FDI_SYSTEM = "urn:iso:std:iso:3950";
 export const SNOMED_SYSTEM = "http://snomed.info/sct";
 
 /**
- * ICD-10 (WHO) system URL, per HL7's registered identifier for it. SP-perio
- * P4b Task 3: the engine's first ICD-coded resource (the periodontitis/
- * gingivitis Condition, K05.*) uses this system. BNO-10 (the Hungarian
- * national ICD-10 clinical modification) mirrors the WHO K05.* codes
- * 1:1 for this code range, so no separate BNO coding is emitted.
+ * ICD-10 (WHO) system URL, per HL7's registered identifier for it. Used by the
+ * periodontitis/gingivitis Condition (K05.*). BNO-10 (the Hungarian national
+ * ICD-10 clinical modification) mirrors the WHO K05.* codes 1:1 for this code
+ * range, so no separate BNO coding is emitted.
  */
 export const ICD10_SYSTEM = "http://hl7.org/fhir/sid/icd-10";
 
@@ -38,6 +37,17 @@ export const ICD10_SYSTEM = "http://hl7.org/fhir/sid/icd-10";
  * caries component's `valueInteger`; this URL identifies the scoring system.
  */
 export const ICDAS_SYSTEM = "https://www.icdas.org";
+
+/** Standard ICDAS II code descriptions, keyed by the 0-6 score. */
+export const ICDAS_DISPLAYS: Record<number, string> = {
+  0: "ICDAS 0 — Sound tooth surface",
+  1: "ICDAS 1 — First visual change in enamel",
+  2: "ICDAS 2 — Distinct visual change in enamel",
+  3: "ICDAS 3 — Localized enamel breakdown",
+  4: "ICDAS 4 — Underlying dark shadow from dentine",
+  5: "ICDAS 5 — Distinct cavity with visible dentine",
+  6: "ICDAS 6 — Extensive distinct cavity with visible dentine",
+};
 
 /** A single coded value: required local code, optional verified SNOMED code. */
 export interface CodeEntry {
@@ -141,16 +151,15 @@ export const LOCAL_VALUE_MAPS: Record<string, Record<string, CodeEntry>> = {
     "telescope": { code: "telescope", display: "Telescopic crown" },
     "temporary": { code: "temporary", display: "Temporary" },
   },
-  // SP4 Task 1: pulp/apical/resorption diagnosis axes (additive; not yet
-  // rendered). See docs/superpowers/specs/2026-07-13-odontogram-sp4-endo-pulp-diagnosis-design.md.
+  // Pulp/apical/resorption diagnosis axes.
   pulpDx: {
     "normal": { code: "normal", display: "Normal pulp" },
     "reversible-pulpitis": { code: "reversible-pulpitis", display: "Reversible pulpitis" },
     "irreversible-pulpitis": { code: "irreversible-pulpitis", display: "Irreversible pulpitis" },
     "necrosis": { code: "necrosis", display: "Pulp necrosis" },
   },
-  // Practical clinical Latin pulp subtypes (spec §3.2); `display` is the Latin
-  // label itself (language-neutral, identical across UI languages).
+  // Practical clinical Latin pulp subtypes; `display` is the Latin label itself
+  // (language-neutral, identical across UI languages).
   pulpLatin: {
     "none": { code: "none", display: "No Latin pulp subtype" },
     "pulpa-sana": { code: "pulpa-sana", display: "Pulpa sana" },
@@ -195,8 +204,7 @@ export const LOCAL_VALUE_MAPS: Record<string, Record<string, CodeEntry>> = {
     "extrinsic": { code: "extrinsic", display: "Extrinsic staining" },
     "other": { code: "other", display: "Other / unknown discoloration" },
   },
-  // SP14 Task 1: orthodontic axes foundation (registry/FHIR/i18n only; render
-  // lands in SP14 Task 2). `orthoRotation` is a boolean axis (no value map).
+  // Orthodontic axes. `orthoRotation` is a boolean axis (no value map).
   orthoAppliance: {
     "none": { code: "none", display: "No orthodontic appliance" },
     "bracket": { code: "bracket", display: "Fixed bracket" },
@@ -212,20 +220,19 @@ export const LOCAL_VALUE_MAPS: Record<string, Record<string, CodeEntry>> = {
     "extrusion": { code: "extrusion", display: "Extrusion" },
     "intrusion": { code: "intrusion", display: "Intrusion" },
   },
-  // SP5 Task 1: caries fields foundation (additive; not yet rendered). `rootCaries`
-  // is a normal enum axis (registered in axes.ts/fieldMappings.ts). `secondaryCaries`
-  // (CARS 0-6) and `radiographicDepth` are per-surface scalar maps handled the same
-  // way `cariesDepths` is (special-cased outside AXES) — `secondaryCaries` has no
-  // value-map group (a raw integer score, like ICDAS), `radiographicDepth` does.
+  // `rootCaries` is a normal enum axis (registered in axes.ts/fieldMappings.ts).
+  // `secondaryCaries` (CARS 0-6) and `radiographicDepth` are per-surface scalar
+  // maps handled the same way `cariesDepths` is (special-cased outside AXES) —
+  // `secondaryCaries` has no value-map group (a raw integer score, like ICDAS),
+  // `radiographicDepth` does.
   rootCaries: {
     "none": { code: "none", display: "No root caries" },
     "active": { code: "active", display: "Active root caries" },
     "arrested": { code: "arrested", display: "Arrested root caries" },
     "active-cavitated": { code: "active-cavitated", display: "Active cavitated root caries" },
   },
-  // SP-perio PG-C Task 2: two per-tooth categorical DATA axes (registry/FHIR/
-  // payload only; the Dental Chart rows/UI land in PG-C Task 3). NO svgLayer —
-  // neither renders. Local codes only (no verified SNOMED/LOINC).
+  // Two per-tooth categorical DATA axes. NO svgLayer — neither renders. Local
+  // codes only (no verified SNOMED/LOINC).
   cejVisibility: {
     "none": { code: "none", display: "CEJ visibility not assessed" },
     "detectable": { code: "detectable", display: "CEJ detectable" },
@@ -236,9 +243,8 @@ export const LOCAL_VALUE_MAPS: Record<string, Record<string, CodeEntry>> = {
     "mild": { code: "mild", display: "Mild root concavity" },
     "deep": { code: "deep", display: "Deep root concavity" },
   },
-  // SP-perio PG-D Task 3: two per-tooth categorical DATA axes (registry/FHIR/
-  // payload only; the Dental Chart rows/UI land in later PG-D tasks). NO
-  // svgLayer — neither renders. Local codes only (no verified SNOMED/LOINC).
+  // Two per-tooth categorical DATA axes. NO svgLayer — neither renders. Local
+  // codes only (no verified SNOMED/LOINC).
   gingivalThickness: {
     "unknown": { code: "unknown", display: "Gingival thickness not assessed" },
     "thin": { code: "thin", display: "Thin gingival phenotype" },

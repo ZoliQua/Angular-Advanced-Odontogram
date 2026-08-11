@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP5 final-review fixes (data integrity + summary visibility).
@@ -48,7 +48,7 @@ describe("FIX 1: legacy caries∩filling severity inference is version-gated", (
   it("export -> reimport is IDEMPOTENT: no severity is injected on the round-trip", () => {
     __setToothStateForTest(16, { ...cariedAndFilled }, "2.4");
     const payload = __collectExportPayloadForTest();
-    expect(payload.version).toBe("2.19");
+    expect(payload.version).toBe("2.20");
     const raw16 = payload.teeth[16];
     // Serialized empty map is {} — not a stored severity.
     expect(raw16.cariesSeverity).toEqual({});

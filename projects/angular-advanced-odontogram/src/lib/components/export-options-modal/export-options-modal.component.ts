@@ -266,7 +266,13 @@ export class ExportOptionsModalComponent {
     setPatientName(v.trim() === "" ? null : v);
     const opts: PdfExportOptions = {
       patientData: this.patientData(),
-      odontogram: this.odontogram(),
+      // v2.4.0 resync (Task 1): PdfExportOptions' single `odontogram` flag
+      // split into odontogramChart/odontogramDescription/individualNotes.
+      // Mechanical stopgap — this modal's single checkbox still drives all
+      // three until Task 2/4 gives them independent UI.
+      odontogramChart: this.odontogram(),
+      odontogramDescription: this.odontogram(),
+      individualNotes: this.odontogram(),
       perioStatus: this.perioStatus() && this.hasPerio(),
       perioDescription: this.perioDescription() && this.hasPerio(),
     };

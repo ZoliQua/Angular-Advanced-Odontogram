@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -145,6 +145,6 @@ describe("P4b Task 2: per-field override + final classification", () => {
 
   it("payload version bumped to 2.18", () => {
     const p = __collectExportPayloadForTest();
-    expect(p.version).toBe("2.19");
+    expect(p.version).toBe("2.20");
   });
 });

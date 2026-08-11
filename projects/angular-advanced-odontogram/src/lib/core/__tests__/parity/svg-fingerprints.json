@@ -44224,6 +44224,16 @@
         "cls": ""
       },
       {
+        "id": "fissure-sealing",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "fissure-sealing-occlusal",
+        "opacity": "",
+        "cls": ""
+      },
+      {
         "id": "restorations",
         "opacity": "",
         "cls": ""
@@ -83525,6 +83535,16 @@
         "cls": ""
       },
       {
+        "id": "fissure-sealing",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "fissure-sealing-occlusal",
+        "opacity": "",
+        "cls": ""
+      },
+      {
         "id": "restorations",
         "opacity": "",
         "cls": ""
@@ -115301,6 +115321,791 @@
       },
       {
         "id": "amalgam",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "composite",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gic",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "temporary",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "defect",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "contact-point",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "restorations",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "ortho",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "arrows",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "specials",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "plan",
+        "opacity": "",
+        "cls": ""
+      }
+    ]
+  },
+  {
+    "i": 782,
+    "template": "11",
+    "toothNo": 11,
+    "view": "front",
+    "state": {
+      "toothSelection": "tooth-base",
+      "caries": [
+        "caries-buccal"
+      ],
+      "fillingMaterial": "amalgam",
+      "fillingSurfaces": [
+        "buccal"
+      ],
+      "fillingSurfaceMaterials": {
+        "buccal": "amalgam"
+      },
+      "cariesSeverity": {
+        "buccal": 4
+      }
+    },
+    "layers": [
+      {
+        "id": "base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "bone-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gum-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "mods",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-variants",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base-beauty",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-healthy-pulp",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "endos",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "surfaces",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries-buccal",
+        "opacity": "0.72",
+        "cls": ""
+      },
+      {
+        "id": "caries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "fillings",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "amalgam",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "filling-amalgam-buccal",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "composite",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gic",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "temporary",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "defect",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "contact-point",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "restorations",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "ortho",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "arrows",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "specials",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "plan",
+        "opacity": "",
+        "cls": ""
+      }
+    ]
+  },
+  {
+    "i": 783,
+    "template": "11",
+    "toothNo": 11,
+    "view": "front",
+    "state": {
+      "toothSelection": "tooth-base",
+      "caries": [
+        "caries-lingual"
+      ],
+      "fillingMaterial": "amalgam",
+      "fillingSurfaces": [
+        "lingual"
+      ],
+      "fillingSurfaceMaterials": {
+        "lingual": "amalgam"
+      },
+      "cariesSeverity": {
+        "lingual": 4
+      }
+    },
+    "layers": [
+      {
+        "id": "base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "bone-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gum-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "mods",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-variants",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base-beauty",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-healthy-pulp",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "endos",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "surfaces",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "caries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "fillings",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "amalgam",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "composite",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gic",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "temporary",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "defect",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "contact-point",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "restorations",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "ortho",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "arrows",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "specials",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "plan",
+        "opacity": "",
+        "cls": ""
+      }
+    ]
+  },
+  {
+    "i": 784,
+    "template": "11",
+    "toothNo": 11,
+    "view": "front",
+    "state": {
+      "toothSelection": "tooth-base",
+      "caries": [
+        "caries-mesial"
+      ],
+      "fillingMaterial": "amalgam",
+      "fillingSurfaces": [
+        "mesial"
+      ],
+      "fillingSurfaceMaterials": {
+        "mesial": "amalgam"
+      },
+      "cariesSeverity": {
+        "mesial": 4
+      }
+    },
+    "layers": [
+      {
+        "id": "base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "bone-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gum-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "mods",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-variants",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base-beauty",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-healthy-pulp",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "endos",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "surfaces",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries-mesial",
+        "opacity": "0.72",
+        "cls": ""
+      },
+      {
+        "id": "caries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "fillings",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "amalgam",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "filling-amalgam-mesial",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "composite",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gic",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "temporary",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "defect",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "contact-point",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "restorations",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "ortho",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "arrows",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "specials",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "plan",
+        "opacity": "",
+        "cls": ""
+      }
+    ]
+  },
+  {
+    "i": 785,
+    "template": "11",
+    "toothNo": 11,
+    "view": "front",
+    "state": {
+      "toothSelection": "tooth-base",
+      "caries": [
+        "caries-distal"
+      ],
+      "fillingMaterial": "amalgam",
+      "fillingSurfaces": [
+        "distal"
+      ],
+      "fillingSurfaceMaterials": {
+        "distal": "amalgam"
+      },
+      "cariesSeverity": {
+        "distal": 4
+      }
+    },
+    "layers": [
+      {
+        "id": "base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "bone-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gum-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "mods",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-variants",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base-beauty",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-healthy-pulp",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "endos",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "surfaces",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries-distal",
+        "opacity": "0.72",
+        "cls": ""
+      },
+      {
+        "id": "caries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "fillings",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "amalgam",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "filling-amalgam-distal",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "composite",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gic",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "temporary",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "defect",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "contact-point",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "restorations",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "ortho",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "arrows",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "specials",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "plan",
+        "opacity": "",
+        "cls": ""
+      }
+    ]
+  },
+  {
+    "i": 786,
+    "template": "11",
+    "toothNo": 11,
+    "view": "front",
+    "state": {
+      "toothSelection": "tooth-base",
+      "caries": [
+        "caries-occlusal"
+      ],
+      "fillingMaterial": "amalgam",
+      "fillingSurfaces": [
+        "occlusal"
+      ],
+      "fillingSurfaceMaterials": {
+        "occlusal": "amalgam"
+      },
+      "cariesSeverity": {
+        "occlusal": 4
+      }
+    },
+    "layers": [
+      {
+        "id": "base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "bone-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "gum-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "mods",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-variants",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-base-beauty",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "tooth-healthy-pulp",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "endos",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "surfaces",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "subcaries-occlusal",
+        "opacity": "0.72",
+        "cls": ""
+      },
+      {
+        "id": "caries",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "fillings",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "amalgam",
+        "opacity": "",
+        "cls": ""
+      },
+      {
+        "id": "filling-amalgam-occlusal",
         "opacity": "",
         "cls": ""
       },

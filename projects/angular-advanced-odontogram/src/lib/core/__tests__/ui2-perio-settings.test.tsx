@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // UI-2 Task 1: app-level Settings -> Periodontal tab.
@@ -47,6 +47,22 @@ function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
     onToggleDark: vi.fn(),
     toothInfo: false,
     onToothInfo: vi.fn(),
+    fillingDefectEnabled: true, onFillingDefectEnabled: vi.fn(),
+    fillingComplexity: "complex", onFillingComplexity: vi.fn(),
+    fillingMaterials: { amalgam: true, composite: true, gic: true, temporary: true }, onFillingMaterial: vi.fn(),
+    fissureSealingEnabled: true, onFissureSealingEnabled: vi.fn(),
+    selectionColor: "#3b7bff", onSelectionColor: vi.fn(),
+    selectionBorderStyle: "dashed", onSelectionBorderStyle: vi.fn(),
+    perioChartAvailable: true, onPerioChartAvailable: vi.fn(),
+    planModeAvailable: true, onPlanModeAvailable: vi.fn(),
+    screenToothSpacing: "normal", onScreenToothSpacing: vi.fn(),
+    screenToothNumberSize: "normal", onScreenToothNumberSize: vi.fn(),
+    exportPng: true, onExportPng: vi.fn(),
+    exportJpg: true, onExportJpg: vi.fn(),
+    exportSvg: true, onExportSvg: vi.fn(),
+    exportPdf: true, onExportPdf: vi.fn(),
+    importStatus: true, onImportStatus: vi.fn(),
+    importFhir: true, onImportFhir: vi.fn(),
     secondaryCariesMode: "standard",
     onSecondaryCariesMode: vi.fn(),
     icdas: false,
@@ -77,6 +93,8 @@ function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
     onPerioRowVisibility: (id, v) => setPerioRowVisibility(id, v),
     perioIndexNameMode: getPerioIndexNameMode(),
     onPerioIndexNameMode: (v) => setPerioIndexNameMode(v),
+    pdfSettings: { defaultName: "John Doe", defaultDob: "1980-01-01", showAge: true, dateFormat: "iso", colorTheme: "blue", showBone: true, showHealthyPulp: true, toothSpacing: "wide", border: false, borderThickness: "medium", borderColor: "#000000", toothNumberSize: "normal", includeOdontogramText: true, includeOdontogramTable: true, perioToothSpacing: "wide", perioShowEmptyRows: true, perioLabelPlacement: "center", perioFontSize: "normal", includePerioTable: true, includePerioAbbrev: true, showDisclaimer: true, disclaimerText: "", summaryGrouping: "jaw", showGenerator: true },
+    onPdfSettings: () => {},
     ...overrides,
   };
 }
@@ -112,34 +130,37 @@ describe("UI-2 Task 1: module flags (odontogram.ts)", () => {
 
 describe("UI-2 Task 1: Periodontal settings tab", () => {
   it("is registered with the expected id/titleKey", () => {
-    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontal");
+    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontalChart");
     expect(tab).toBeTruthy();
-    expect(tab?.titleKey).toBe("settings.tab.periodontal");
+    expect(tab?.titleKey).toBe("settings.tab.periodontalChart");
   });
 
-  it("renders one checkbox ToggleRow per the 16 row ids, all checked by default", () => {
-    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontal")!;
+  it("renders one checkbox ToggleRow per the 16 row ids (+ the availability toggle), all checked by default", () => {
+    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontalChart")!;
     const s = makeSettings();
     const { container } = render(tab.render({ t, s }));
 
     const checkboxes = Array.from(
       container.querySelectorAll('input[type="checkbox"]'),
     ) as HTMLInputElement[];
-    expect(checkboxes.length).toBe(ALL_ROW_IDS.length);
+    // Round 2 (Stage 4): + the "Periodontal chart available" toggle at the top.
+    expect(checkboxes.length).toBe(ALL_ROW_IDS.length + 1);
     for (const cb of checkboxes) {
       expect(cb.checked).toBe(true);
     }
   });
 
   it("renders group sub-headings", () => {
-    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontal")!;
+    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontalChart")!;
     const s = makeSettings();
     const { container } = render(tab.render({ t, s }));
 
     const headings = Array.from(
       container.querySelectorAll(".odon-settings-group-title"),
     ).map((el) => el.textContent);
+    // Round 2 (Stage 4): a "General" group heads the tab (availability + view).
     expect(headings).toEqual([
+      "settings.perio.group.general",
       "settings.perio.group.pocket",
       "settings.perio.group.hygiene",
       "settings.perio.group.mucogingival",
@@ -149,7 +170,7 @@ describe("UI-2 Task 1: Periodontal settings tab", () => {
   });
 
   it("renders an index-name mode select bound to perioIndexNameMode", () => {
-    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontal")!;
+    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontalChart")!;
     const s = makeSettings({ perioIndexNameMode: "canonical" });
     const { container } = render(tab.render({ t, s }));
 
@@ -161,7 +182,7 @@ describe("UI-2 Task 1: Periodontal settings tab", () => {
   });
 
   it("toggling a row's checkbox calls onPerioRowVisibility(id, false)", () => {
-    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontal")!;
+    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontalChart")!;
     const onPerioRowVisibility = vi.fn();
     const s = makeSettings({ onPerioRowVisibility });
     const { container } = render(tab.render({ t, s }));
@@ -179,7 +200,7 @@ describe("UI-2 Task 1: Periodontal settings tab", () => {
   });
 
   it("changing the index-name select calls onPerioIndexNameMode('canonical')", () => {
-    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontal")!;
+    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontalChart")!;
     const onPerioIndexNameMode = vi.fn();
     const s = makeSettings({ onPerioIndexNameMode });
     const { container } = render(tab.render({ t, s }));
@@ -190,5 +211,29 @@ describe("UI-2 Task 1: Periodontal settings tab", () => {
     select.value = "canonical";
     select.dispatchEvent(new Event("change", { bubbles: true }));
     expect(onPerioIndexNameMode).toHaveBeenCalledWith("canonical");
+  });
+
+  it("Round 2 (Stage 4): availability toggle is wired; disabling it disables the other perio controls", () => {
+    const tab = SETTINGS_TABS.find((tab) => tab.id === "periodontalChart")!;
+    const onPerioChartAvailable = vi.fn();
+
+    // Available: the availability toggle is on and enabled; sub-controls enabled.
+    const on = render(tab.render({ t, s: makeSettings({ perioChartAvailable: true, onPerioChartAvailable }) }));
+    const availOn = on.container.querySelector('input[aria-label="settings.perioChart.available"]') as HTMLInputElement;
+    expect(availOn).toBeTruthy();
+    expect(availOn.checked).toBe(true);
+    expect(availOn.disabled).toBe(false);
+    expect((on.container.querySelector('input[aria-label="settings.perio.row.pi"]') as HTMLInputElement).disabled).toBe(false);
+    expect((on.container.querySelector('select[aria-label="settings.perioViewMode"]') as HTMLSelectElement).disabled).toBe(false);
+    availOn.click();
+    expect(onPerioChartAvailable).toHaveBeenCalledWith(false);
+    on.unmount();
+
+    // Unavailable: every OTHER perio control is disabled (the toggle itself stays on).
+    const off = render(tab.render({ t, s: makeSettings({ perioChartAvailable: false }) }));
+    expect((off.container.querySelector('input[aria-label="settings.perioChart.available"]') as HTMLInputElement).disabled).toBe(false);
+    expect((off.container.querySelector('input[aria-label="settings.perio.row.pi"]') as HTMLInputElement).disabled).toBe(true);
+    expect((off.container.querySelector('select[aria-label="settings.perioViewMode"]') as HTMLSelectElement).disabled).toBe(true);
+    expect((off.container.querySelector('select[aria-label="settings.perioIndexNameMode"]') as HTMLSelectElement).disabled).toBe(true);
   });
 });

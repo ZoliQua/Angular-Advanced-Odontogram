@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP15 Task 4:
@@ -30,6 +30,22 @@ function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
     onToggleDark: vi.fn(),
     toothInfo: false,
     onToothInfo: vi.fn(),
+    fillingDefectEnabled: true, onFillingDefectEnabled: vi.fn(),
+    fillingComplexity: "complex", onFillingComplexity: vi.fn(),
+    fillingMaterials: { amalgam: true, composite: true, gic: true, temporary: true }, onFillingMaterial: vi.fn(),
+    fissureSealingEnabled: true, onFissureSealingEnabled: vi.fn(),
+    selectionColor: "#3b7bff", onSelectionColor: vi.fn(),
+    selectionBorderStyle: "dashed", onSelectionBorderStyle: vi.fn(),
+    perioChartAvailable: true, onPerioChartAvailable: vi.fn(),
+    planModeAvailable: true, onPlanModeAvailable: vi.fn(),
+    screenToothSpacing: "normal", onScreenToothSpacing: vi.fn(),
+    screenToothNumberSize: "normal", onScreenToothNumberSize: vi.fn(),
+    exportPng: true, onExportPng: vi.fn(),
+    exportJpg: true, onExportJpg: vi.fn(),
+    exportSvg: true, onExportSvg: vi.fn(),
+    exportPdf: true, onExportPdf: vi.fn(),
+    importStatus: true, onImportStatus: vi.fn(),
+    importFhir: true, onImportFhir: vi.fn(),
     secondaryCariesMode: "standard",
     onSecondaryCariesMode: vi.fn(),
     icdas: false,
@@ -64,28 +80,36 @@ function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
     onPerioRowVisibility: vi.fn(),
     perioIndexNameMode: "translated",
     onPerioIndexNameMode: vi.fn(),
+    pdfSettings: { defaultName: "John Doe", defaultDob: "1980-01-01", showAge: true, dateFormat: "iso", colorTheme: "blue", showBone: true, showHealthyPulp: true, toothSpacing: "wide", border: false, borderThickness: "medium", borderColor: "#000000", toothNumberSize: "normal", includeOdontogramText: true, includeOdontogramTable: true, perioToothSpacing: "wide", perioShowEmptyRows: true, perioLabelPlacement: "center", perioFontSize: "normal", includePerioTable: true, includePerioAbbrev: true, showDisclaimer: true, disclaimerText: "", summaryGrouping: "jaw", showGenerator: true },
+    onPdfSettings: vi.fn(),
     ...overrides,
   };
 }
 
-describe("SP15 Task 4 (B1): Panels settings tab", () => {
+describe("SP15 Task 4 (B1): Odontogram settings tab (was Panels)", () => {
   it("is positioned immediately after the general tab", () => {
     const ids = SETTINGS_TABS.map((tab) => tab.id);
     const generalIdx = ids.indexOf("general");
     expect(generalIdx).toBeGreaterThanOrEqual(0);
-    expect(ids[generalIdx + 1]).toBe("panels");
+    expect(ids[generalIdx + 1]).toBe("odontogram");
   });
 
   it("has the expected titleKey", () => {
-    const tab = SETTINGS_TABS.find((t) => t.id === "panels");
-    expect(tab?.titleKey).toBe("settings.tab.panels");
+    const tab = SETTINGS_TABS.find((t) => t.id === "odontogram");
+    expect(tab?.titleKey).toBe("settings.tab.odontogram");
   });
 
-  it("renders two ToggleRows bound to showStatusCard / showOrthoCard, each wired to its handler", () => {
-    const tab = SETTINGS_TABS.find((t) => t.id === "panels")!;
+  it("renders Plan-mode + Tooth-info + Statuses + Orthodontics toggles, each wired to its handler", () => {
+    const tab = SETTINGS_TABS.find((t) => t.id === "odontogram")!;
+    const onPlanModeAvailable = vi.fn();
+    const onToothInfo = vi.fn();
     const onShowStatusCard = vi.fn();
     const onShowOrthoCard = vi.fn();
     const s = makeSettings({
+      planModeAvailable: true,
+      onPlanModeAvailable,
+      toothInfo: true,
+      onToothInfo,
       showStatusCard: true,
       onShowStatusCard,
       showOrthoCard: false,
@@ -93,16 +117,38 @@ describe("SP15 Task 4 (B1): Panels settings tab", () => {
     });
     const { container } = render(tab.render({ t, s }));
 
+    // Round 2 (Stage 3): 4 toggles now, in order: plan-mode, tooth-info,
+    // statuses, orthodontics (plus two SelectRows for screen spacing / number size).
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-    expect(checkboxes).toHaveLength(2);
-    expect((checkboxes[0] as HTMLInputElement).checked).toBe(true);
-    expect((checkboxes[1] as HTMLInputElement).checked).toBe(false);
+    expect(checkboxes).toHaveLength(4);
+    expect(container.querySelectorAll("select")).toHaveLength(2);
 
     (checkboxes[0] as HTMLInputElement).click();
-    expect(onShowStatusCard).toHaveBeenCalledWith(false);
+    expect(onPlanModeAvailable).toHaveBeenCalledWith(false);
 
     (checkboxes[1] as HTMLInputElement).click();
+    expect(onToothInfo).toHaveBeenCalledWith(false);
+
+    (checkboxes[2] as HTMLInputElement).click();
+    expect(onShowStatusCard).toHaveBeenCalledWith(false);
+
+    (checkboxes[3] as HTMLInputElement).click();
     expect(onShowOrthoCard).toHaveBeenCalledWith(true);
+  });
+
+  it("renders screen tooth-spacing + tooth-number-size selects wired to their handlers", () => {
+    const tab = SETTINGS_TABS.find((t) => t.id === "odontogram")!;
+    const onScreenToothSpacing = vi.fn();
+    const onScreenToothNumberSize = vi.fn();
+    const s = makeSettings({ onScreenToothSpacing, onScreenToothNumberSize });
+    const { container } = render(tab.render({ t, s }));
+
+    const spacing = container.querySelector('select[aria-label="settings.screen.spacing"]') as HTMLSelectElement;
+    const size = container.querySelector('select[aria-label="settings.screen.numberSize"]') as HTMLSelectElement;
+    expect(spacing).toBeTruthy();
+    expect(size).toBeTruthy();
+    expect(Array.from(spacing.options).map((o) => o.value)).toEqual(["wide", "normal", "close"]);
+    expect(Array.from(size.options).map((o) => o.value)).toEqual(["small", "normal", "xlarge"]);
   });
 });
 
@@ -155,19 +201,85 @@ describe("SP15 Task 4 (B2): merged Caries / Secondary-caries settings", () => {
 describe("UI-2 Task 1: Periodontal settings tab", () => {
   it("is present in the tab registry, uniquely", () => {
     const ids = SETTINGS_TABS.map((tab) => tab.id);
+    // Round 2 restructure: Panels→Odontogram, Periodontal→Periodontal Chart
+    // (moved up), PDF Settings→Export; Pulp+Notes tabs folded into Tooth details;
+    // new Fillings tab.
     expect(ids).toEqual([
       "general",
-      "panels",
+      "odontogram",
+      "periodontalChart",
       "toothDetails",
       "caries",
-      "pulpa",
-      "notes",
-      "periodontal",
+      "fillings",
+      "export",
     ]);
   });
 
   it("has the expected titleKey", () => {
-    const tab = SETTINGS_TABS.find((t) => t.id === "periodontal");
-    expect(tab?.titleKey).toBe("settings.tab.periodontal");
+    const tab = SETTINGS_TABS.find((t) => t.id === "periodontalChart");
+    expect(tab?.titleKey).toBe("settings.tab.periodontalChart");
+  });
+});
+
+describe("Round 2 (Stage 2): General export/import availability", () => {
+  it("renders the export (PNG/JPG/SVG/PDF) + import (Status/FHIR) toggles wired to handlers", () => {
+    const tab = SETTINGS_TABS.find((t) => t.id === "general")!;
+    const onExportPng = vi.fn();
+    const onExportPdf = vi.fn();
+    const onImportFhir = vi.fn();
+    const s = makeSettings({ exportPng: true, onExportPng, exportPdf: true, onExportPdf, importFhir: true, onImportFhir });
+    const { container } = render(tab.render({ t, s }));
+
+    const png = container.querySelector('input[aria-label="settings.export.png"]') as HTMLInputElement;
+    const pdf = container.querySelector('input[aria-label="settings.export.pdf"]') as HTMLInputElement;
+    const fhir = container.querySelector('input[aria-label="settings.import.fhir"]') as HTMLInputElement;
+    expect(png).toBeTruthy();
+    expect(pdf).toBeTruthy();
+    expect(fhir).toBeTruthy();
+    // JPG + SVG + Status toggles also present.
+    expect(container.querySelector('input[aria-label="settings.export.jpg"]')).toBeTruthy();
+    expect(container.querySelector('input[aria-label="settings.export.svg"]')).toBeTruthy();
+    expect(container.querySelector('input[aria-label="settings.import.status"]')).toBeTruthy();
+
+    png.click();
+    expect(onExportPng).toHaveBeenCalledWith(false);
+    pdf.click();
+    expect(onExportPdf).toHaveBeenCalledWith(false);
+    fhir.click();
+    expect(onImportFhir).toHaveBeenCalledWith(false);
+  });
+
+  it("no longer renders the coming-soon export/import placeholder", () => {
+    const tab = SETTINGS_TABS.find((t) => t.id === "general")!;
+    const { container } = render(tab.render({ t, s: makeSettings() }));
+    expect(container.querySelector(".odon-settings-badge")).toBeNull();
+  });
+});
+
+describe("Round 2 (Stage 6): Fillings tab", () => {
+  it("renders defect + fissure + 4 material toggles and a complexity select, wired to handlers", () => {
+    const tab = SETTINGS_TABS.find((t) => t.id === "fillings")!;
+    const onFillingDefectEnabled = vi.fn();
+    const onFillingComplexity = vi.fn();
+    const onFillingMaterial = vi.fn();
+    const onFissureSealingEnabled = vi.fn();
+    const s = makeSettings({ onFillingDefectEnabled, onFillingComplexity, onFillingMaterial, onFissureSealingEnabled });
+    const { container } = render(tab.render({ t, s }));
+
+    // 1 defect + 4 materials + 1 fissure = 6 checkboxes; 1 complexity select.
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    expect(checkboxes).toHaveLength(6);
+    const complexity = container.querySelector('select[aria-label="settings.filling.complexity"]') as HTMLSelectElement;
+    expect(complexity).toBeTruthy();
+    expect(Array.from(complexity.options).map((o) => o.value)).toEqual(["complex", "simple"]);
+
+    (container.querySelector('input[aria-label="settings.filling.defect"]') as HTMLInputElement).click();
+    expect(onFillingDefectEnabled).toHaveBeenCalledWith(false);
+
+    (container.querySelector('input[aria-label="filling.option.amalgam"]') as HTMLInputElement).click();
+    expect(onFillingMaterial).toHaveBeenCalledWith("amalgam", false);
+
+    (container.querySelector('input[aria-label="settings.filling.fissure"]') as HTMLInputElement).click();
+    expect(onFissureSealingEnabled).toHaveBeenCalledWith(false);
   });
 });

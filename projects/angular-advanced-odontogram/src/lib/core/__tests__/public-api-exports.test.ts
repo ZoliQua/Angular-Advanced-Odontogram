@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { describe, it, expect } from "vitest";
@@ -21,6 +21,10 @@ import {
   exportPdf,
   exportPerioImage,
   exportPerioSvg,
+  enablePersistence,
+  disablePersistence,
+  clearPersistedState,
+  isPersistenceEnabled,
 } from "../App";
 
 describe("public API exports — App.tsx re-exports", () => {
@@ -85,5 +89,16 @@ describe("public API exports — App.tsx re-exports", () => {
     expect(typeof exportPerioImage).toBe("function");
     expect(exportPerioSvg).toBeDefined();
     expect(typeof exportPerioSvg).toBe("function");
+  });
+
+  it("exports persistence control functions", () => {
+    expect(enablePersistence).toBeDefined();
+    expect(typeof enablePersistence).toBe("function");
+    expect(disablePersistence).toBeDefined();
+    expect(typeof disablePersistence).toBe("function");
+    expect(clearPersistedState).toBeDefined();
+    expect(typeof clearPersistedState).toBe("function");
+    expect(isPersistenceEnabled).toBeDefined();
+    expect(typeof isPersistenceEnabled).toBe("function");
   });
 });

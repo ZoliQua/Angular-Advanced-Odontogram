@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "tslib": "^2.3.0",
-    "jspdf": "^4.2.1"
+    "jspdf": "^4.2.1",
+    "dompurify": "^3.4.13"
   },
   "exports": {
     "./styles.css": {
@@ -17,5 +18,5 @@
       "default": "./styles.css"
     }
   },
-  "sideEffects": ["**/*.css"]
+  "sideEffects": ["**/*.css", "**/app-version.*"]
 }

@@ -1,10 +1,11 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { STATUS_EXTRAS } from "./status_extras";
 import { t, onI18nChange, getI18nLanguage } from "./i18n/useI18n";
 import { toLabel, type NumberingSystem } from "./utils/numbering";
 import { type OdontogramPlugin, getQuadrant, LAYER_Z } from "./plugin";
+import { sanitizePluginSvg } from "./pluginSanitize";
 import { buildFhirBundle } from "./fhir/toFhir";
 import { parseFhirBundle } from "./fhir/fromFhir";
 import type { FhirExportOptions } from "./fhir/types";
@@ -27,7 +28,7 @@ import {
 } from "./bridgeOverlay";
 import { derivePerioClassification, type PerioClassification, type PerioDerivationInput, type ToothDerivationInput } from "./perioClassification";
 import { buildPerioSvg } from "./perioExport";
-import { assemblePdf, type PdfExportOptions, type PdfAssembleData, type PdfDocLike } from "./perioPdf";
+import { assemblePdf, PDF_PALETTES, DEFAULT_PDF_THEME, type PdfExportOptions, type PdfAssembleData, type PdfDocLike, type PdfColorTheme } from "./perioPdf";
 // Tooth-template SVGs are imported with Vite's `?raw` suffix so their markup is
 // INLINED into the JS bundle as string literals at build time — no runtime
 // `fetch()` of an emitted asset URL. This is what makes the built library
@@ -93,7 +94,9 @@ const GROUPS = {
 };
 
 const MILKTOOTH_BLOCKED = new Set([16,17,18,26,27,28,36,37,38,46,47,48]);
-const FISSURE_ALLOWED = new Set([16,17,26,27,36,37,46,47]);
+// Fissure sealing applies to the occlusal posterior teeth — premolars and
+// first/second molars. Third molars are excluded (rarely sealed).
+const FISSURE_ALLOWED = new Set([14,15,16,17,24,25,26,27,34,35,36,37,44,45,46,47]);
 const BROKEN_VARIANTS = new Set([
   "tooth-broken-incisal",
   "tooth-broken-distal-incisal",
@@ -106,27 +109,26 @@ const MIXED_PERMANENT = new Set([11,12,16,21,22,26,31,32,36,41,42,46]);
 const MIXED_MILK = new Set([13,14,15,23,24,25,33,34,35,43,44,45]);
 const MIXED_NONE = new Set([17,18,27,28,37,38,47,48]);
 
-// SP6 Task 4 (§8): anterior teeth (incisors + canines) — FDI 11-13/21-23/31-33/
-// 41-43. Drives the "occlusal" -> "incisal" display-only label swap; the
-// stored surface value always stays "occlusal".
+// Anterior teeth (incisors + canines) — FDI 11-13/21-23/31-33/41-43. Drives
+// the "occlusal" -> "incisal" display-only label swap; the stored surface
+// value always stays "occlusal".
 const ANTERIOR_TEETH = new Set([11,12,13,21,22,23,31,32,33,41,42,43]);
 export function isAnteriorTooth(toothNo: number): boolean {
   return ANTERIOR_TEETH.has(toothNo);
 }
 
-// SP16 Task 2: arch helper (upper vs. lower jaw) — quadrants 1/2 (permanent
-// upper) and 5/6 (milk upper) are "upper"; 3/4 (permanent lower) and 7/8
-// (milk lower) are "lower". Drives the full-mode lingual->palatal swap.
+// Arch helper (upper vs. lower jaw) — quadrants 1/2 (permanent upper) and 5/6
+// (milk upper) are "upper"; 3/4 (permanent lower) and 7/8 (milk lower) are
+// "lower". Drives the full-mode lingual->palatal swap.
 export function isUpperTooth(toothNo: number): boolean {
   const q = Math.floor(toothNo / 10);
   return q === 1 || q === 2 || q === 5 || q === 6;
 }
 
-// SP-perio P2b Task 2: furcation entrance set for a given tooth, by FDI
-// POSITION (`toothNo % 10`) + quadrant. Deliberately position-based only —
-// it does NOT gate on whether the tooth is actually present/natural (that
-// present-natural-tooth gate belongs to the render layer, added in a later
-// task). Upper molars (position 6/7/8, quadrants 1-2: 16/17/18, 26/27/28)
+// Furcation entrance set for a given tooth, by FDI POSITION (`toothNo % 10`) +
+// quadrant. Deliberately position-based only — it does NOT gate on whether the
+// tooth is actually present/natural (that present-natural-tooth gate belongs to
+// the render layer). Upper molars (position 6/7/8, quadrants 1-2: 16/17/18, 26/27/28)
 // have 3 entrances (mesial/distal/buccal); lower molars (quadrants 3-4:
 // 36/37/38, 46/47/48) have 2 (buccal/lingual); upper FIRST premolars only
 // (14, 24 — position 4, quadrants 1-2) have 2 (mesial/distal), since the
@@ -194,11 +196,11 @@ const PROSTHESIS_SUMMARY_KEY: Record<string, string> = {
   "removable-full": "prosthesis.type.removableFull",
 };
 
-// SP-perio P1 Task 1: canonical 6-site periodontal probing order — buccal row
-// (mesio-buccal, buccal, disto-buccal), then lingual/palatal row (mesio-
-// lingual, lingual/palatal, disto-lingual). Shared verbatim by the data core
-// here and every later perio task (UI charting grid, FHIR mapping) — the
-// exact array identity/order those tasks key their per-site controls to.
+// Canonical 6-site periodontal probing order — buccal row (mesio-buccal,
+// buccal, disto-buccal), then lingual/palatal row (mesio-lingual,
+// lingual/palatal, disto-lingual). Shared verbatim by the data core, the UI
+// charting grid, and FHIR mapping, which key their per-site controls to this
+// exact array order.
 export const PERIO_SITES = ["MB", "B", "DB", "ML", "L", "DL"] as const;
 export type PerioSite = typeof PERIO_SITES[number];
 
@@ -211,12 +213,10 @@ function defaultState(){
     endo: "none", // none | endo-medical-filling | endo-filling | endo-glass-pin | endo-metal-pin
     caries: new Set(),
     cariesActiveDepth: 2, // canonical ICDAS code (2 = superficial representative)
-    // SP6 Task 1: the single unified per-surface caries severity (0..6). Read as
-    // ICDAS on a primary-caries surface (no filling → drives `caries-{surface}`
+    // The single unified per-surface caries severity (0..6). Read as ICDAS on a
+    // primary-caries surface (no filling → drives `caries-{surface}`
     // opacity/`caries-deep`) and as CARS on a recurrent surface (filling present
-    // → drives `subcaries-{surface}` opacity). Replaces the two SP5 fields
-    // `cariesDepths` (ICDAS) + `secondaryCaries` (CARS), which are now read only
-    // from the raw payload during migration (see hydrateState).
+    // → drives `subcaries-{surface}` opacity).
     cariesSeverity: new Map(), // surface -> unified severity 0..6
     fillingMaterial: "none", // active material chosen in the dropdown (applied on surface tap)
     fillingSurfaces: new Set(), // buccal/mesial/distal/occlusal (= keys of fillingSurfaceMaterials)
@@ -228,7 +228,7 @@ function defaultState(){
     wearEdge: "none", // none | attrition | erosion  (incisal/occlusal)
     wearCervical: "none", // none | abrasion | abfraction | erosion  (cervical)
     discoloration: "none", // none | tetracycline | fluorosis | nonvital | extrinsic | other
-    // SP14 Task 1: orthodontic axes foundation (additive; render lands in Task 2).
+    // Orthodontic charting axes.
     orthoAppliance: "none", // none | bracket | band
     orthoDrift: "none", // none | mesial | distal
     orthoVertical: "none", // none | extrusion | intrusion
@@ -248,43 +248,34 @@ function defaultState(){
     toothSubstrate: "natural",  // natural | radix | broken | crownprep
     restorationType: "none",    // none | crown | inlay | onlay | veneer | bridge
     restorationMaterial: "none", // none | emax | gold | gradia | zircon | metal | metal-ceramic | telescope | temporary
-    crownLeakage: false, // marginal leakage on a crown/bridge restoration (SP3b Task 6)
-    // SP4 Task 1: pulp/apical/resorption diagnosis axes. pulpLatin/apicalDx
-    // are additive scaffolding — not yet rendered/wired to UI or migration;
-    // see later SP4 tasks. resorptionType was wired up (render + migration;
-    // replaced the retired `rootResorption` boolean) in SP4 Task 2. pulpDx
-    // was wired up (render + migration; replaced the retired `pulpInflam`
-    // boolean) in SP4 Task 3.
+    crownLeakage: false, // marginal leakage on a crown/bridge restoration
+    // Pulp / apical / resorption diagnosis axes.
     pulpDx: "normal", // normal | reversible-pulpitis | irreversible-pulpitis | necrosis (replaces the legacy `pulpInflam` boolean)
     pulpLatin: "none", // none | pulpa-sana | hyperaemia-pulpae | pulpitis-acuta-serosa | pulpitis-acuta-purulenta | pulpitis-chronica-clausa | pulpitis-chronica-ulcerosa | pulpitis-chronica-hyperplastica | necrosis-pulpae | gangraena-pulpae
     apicalDx: "normal", // normal | symptomatic-apical-periodontitis | asymptomatic-apical-periodontitis | acute-apical-abscess | chronic-apical-abscess | condensing-osteitis
     resorptionType: "none", // none | internal | external-cervical (replaces the legacy `rootResorption` boolean)
-    // SP5 Task 1: caries fields foundation. `rootCaries` is a normal enum axis.
-    // `radiographicDepth` is a per-surface scalar map (independent of the visual
-    // severity — the radiographic-vs-visual split). The SP5 `secondaryCaries`
-    // CARS map was retired in SP6 Task 1 (folded into the unified
-    // `cariesSeverity` above; still read from the raw payload on migration).
+    // `rootCaries` is a normal enum axis. `radiographicDepth` is a per-surface
+    // scalar map, independent of the visual severity (the radiographic-vs-visual
+    // split).
     rootCaries: "none", // none | active | arrested | active-cavitated
     radiographicDepth: new Map(), // surface -> none | E1 | E2 | D1 | D2 | D3
     fillingDefect: new Map(), // surface -> none | marginal | fracture | wear (on a filled surface)
-    // SP8 Task 1 foundation, wired up (render + migration) in Task 3: implant-only
-    // peri-implant disease axis. none | mucositis | peri-implantitis-mild |
-    // peri-implantitis-moderate | peri-implantitis-severe.
+    // Implant-only peri-implant disease axis. none | mucositis |
+    // peri-implantitis-mild | peri-implantitis-moderate | peri-implantitis-severe.
     periImplant: "none",
-    // SP-perio PG-C Task 2: two per-tooth categorical DATA axes (registry/FHIR/
-    // payload only; the Dental Chart rows/UI land in PG-C Task 3). Both default
-    // "none" and are omit-when-none on serialize; NO svgLayer, so neither renders.
+    // Two per-tooth categorical data axes (registry/FHIR/payload only). Both
+    // default "none" and are omitted when "none" on serialize; NO svgLayer, so
+    // neither renders.
     cejVisibility: "none", // none | detectable | not-detectable
     rootConcavity: "none", // none | mild | deep
-    // SP-perio PG-D Task 3: two per-tooth categorical DATA axes (registry/FHIR/
-    // payload only; the Dental Chart rows/UI land in later PG-D tasks). Both
-    // are omit-when-skip on serialize; NO svgLayer, so neither renders.
+    // Two per-tooth categorical data axes (registry/FHIR/payload only). Both are
+    // omitted on serialize when at default; NO svgLayer, so neither renders.
     gingivalThickness: "unknown", // unknown | thin | medium | thick
     millerClass: "none", // none | i | ii | iii | iv
-    // SP-perio P1 Task 1: per-tooth, per-site periodontal probing data —
-    // deliberately a SEPARATE sub-record from the 5-surface caries maps
-    // above (perio sites are a different geometry: 6 fixed probing points,
-    // not tooth surfaces). `pd` (probing depth, mm) is the CHARTING key: a
+    // Per-tooth, per-site periodontal probing data — deliberately a SEPARATE
+    // sub-record from the 5-surface caries maps above (perio sites are a
+    // different geometry: 6 fixed probing points, not tooth surfaces). `pd`
+    // (probing depth, mm) is the CHARTING key: a
     // site exists in this record iff `pd` has an entry for it — "absence
     // means not charted", never zero. `gm` (gingival margin offset, mm;
     // signed — positive = recession, negative = coronal/pseudopocket)
@@ -293,16 +284,16 @@ function defaultState(){
     // (bleeding/suppuration on probing) are membership-only Sets, and are
     // only ever meaningful for a charted site (see setPerioSite()).
     perio: { pd: new Map(), gm: new Map(), bop: new Set(), sup: new Set() },
-    // SP-perio P2b Task 2: per-entrance Glickman furcation involvement grade
-    // (I-IV, stored as integer 1-4). Keyed by entrance ("mesial"/"distal"/
+    // Per-entrance Glickman furcation involvement grade (I-IV, stored as
+    // integer 1-4). Keyed by entrance ("mesial"/"distal"/
     // "buccal"/"lingual" — see furcationEntrances()); an entrance absent
     // from this map is "not recorded", never grade 0. Separate sub-record
     // from `perio` (different geometry: furcation entrances, not the 6
     // fixed probing sites) but follows the exact same omit-when-empty /
     // dual-state conventions.
     furcation: new Map(), // entrance -> grade 1-4
-    // SP-perio P2b Task 3: per-surface O'Leary plaque-index presence — a
-    // plain 4-surface membership Set (surface in the set = plaque present on
+    // Per-surface O'Leary plaque-index presence — a plain 4-surface membership
+    // Set (surface in the set = plaque present on
     // it; absence = clean/not recorded — NOT "known absent", same
     // "absence means not charted" convention `perio`/`furcation` use). The
     // 4 surfaces (VALID_PLAQUE_SURFACE below) are the SAME fixed set for
@@ -311,8 +302,8 @@ function defaultState(){
     // furcation's position-gated entrance set, no per-tooth gating function
     // is needed here.
     plaque: new Set(), // Set<"mesial"|"distal"|"buccal"|"lingual">
-    // SP-perio PG-D Task 1: Silness-Löe Plaque Index (`pi`) and Löe-Silness
-    // Gingival Index (`gi`) — per-surface GRADED indices (1-3), over the
+    // Silness-Löe Plaque Index (`pi`) and Löe-Silness Gingival Index (`gi`) —
+    // per-surface GRADED indices (1-3), over the
     // SAME 4 fixed surfaces as the O'Leary `plaque` boolean above but
     // DELIBERATELY SEPARATE from it (different clinical instrument; a tooth
     // can carry both). Grade 0 (healthy/absent) is never stored — a surface
@@ -322,8 +313,8 @@ function defaultState(){
     gi: new Map(), // surface -> Löe-Silness gingival grade 1-3 (absent = 0)
     mpi: new Map(), // implant-only: Mombelli modified plaque index, surface -> grade 1-3 (absent = 0)
     mbi: new Map(), // implant-only: Mombelli modified sulcus bleeding index, surface -> grade 1-3
-    // SP-perio PG-D Task 2: keratinized gingiva width — a single per-tooth
-    // BUCCAL mm scalar (integer, clamped 0-15), deliberately NOT per-site/
+    // Keratinized gingiva width — a single per-tooth BUCCAL mm scalar (integer,
+    // clamped 0-15), deliberately NOT per-site/
     // per-surface unlike pi/gi/perio above. `null` = not charted (never a
     // stored 0 vs "uncharted" ambiguity — see clampKg()/setKeratinizedWidth()).
     kg: null as number | null,
@@ -421,21 +412,14 @@ function svgGetById(root: Any, id: Any){
 }
 
 // ---- App state ----
-// R2-A Task 1: dual-state core. The chart now carries two PARALLEL per-case
-// states — "status" (findings as they are) and "plan" (proposed treatment) —
-// stored in `charts`. `toothState` is kept as a module-scoped, REASSIGNABLE
-// ALIAS to whichever chart is currently active, so every existing
-// `toothState.get/set/has/delete/clear/keys/values/entries`/`for...of
-// toothState` site (~78 of them) keeps compiling and operating on the active
-// chart unchanged — only the declaration (`const` -> `let`) and the addition
-// of `setChartMode()` reassigning it are new. Render/edit logic is untouched.
-// Map key is typed `Any` (not `number`) deliberately: the pre-existing
-// `const toothState = new Map()` had NO type parameters, so both key and
-// value inferred as `any` — several long-standing call sites pass an
-// untyped `Set`/array element (e.g. `selectedTeeth`, declared `Set()` with
-// no type param) as the key. Typing the key `number` here would newly
-// reject those ~78-unchanged call sites under `tsc -b --noEmit`, which is
-// exactly the compile-unchanged guarantee this task must preserve.
+// Dual-state core. The chart carries two PARALLEL per-case states — "status"
+// (findings as they are) and "plan" (proposed treatment) — stored in `charts`.
+// `toothState` is a module-scoped, REASSIGNABLE ALIAS to whichever chart is
+// currently active, so every `toothState.get/set/has/...`/`for...of toothState`
+// site operates on the active chart; `setChartMode()` reassigns it.
+// The Map key is typed `Any` (not `number`) deliberately: several call sites
+// pass an untyped `Set`/array element (e.g. `selectedTeeth`, declared `Set()`
+// with no type param) as the key, so typing the key `number` would reject them.
 const charts: Record<"status" | "plan", Map<Any, Any>> = {
   status: new Map(),
   plan: new Map(),
@@ -444,8 +428,8 @@ let toothState = charts.status; // active-chart ALIAS — reassigned by setChart
 export type ChartMode = "status" | "plan";
 let chartMode: ChartMode = "status";
 
-// ---- P4a Task 1: case-level metadata object -------------------------------
-// The engine's FIRST case-level object: a single SHARED module-level record
+// ---- Case-level metadata object -------------------------------------------
+// A single SHARED module-level record
 // (NOT per-tooth, NOT part of the status/plan dual-state) for chart-independent
 // case context — patient age, smoking, diabetes/HbA1c, and perio summary stats
 // (tooth loss attributable to periodontitis, max radiographic bone loss %).
@@ -461,31 +445,33 @@ type CaseMeta = {
   hba1c: number | null;
   toothLossPerio: number | null;
   maxRblPercent: number | null;
-  /** P4b Task 2: per-axis clinician overrides for the 2017 World Workshop
-   *  periodontal classification (`getPerioClassification()`). Each is either
-   *  a valid enum value for that axis or `null` (not overridden — the
-   *  derived value from `derivePerioClassification` wins). Shared caseMeta
-   *  fields exactly like the rest of this object — NOT DS-1 gated. */
+  /** Per-axis clinician overrides for the 2017 World Workshop periodontal
+   *  classification (`getPerioClassification()`). Each is either a valid enum
+   *  value for that axis or `null` (not overridden — the derived value from
+   *  `derivePerioClassification` wins). Shared caseMeta fields, not gated. */
   diagnosisOverride: string | null;
   stageOverride: string | null;
   gradeOverride: string | null;
   extentOverride: string | null;
-  /** UI-3b: PDF-report identity — patient display name + exam date (ISO
-   *  `YYYY-MM-DD`). Additive caseMeta fields; NOT emitted to FHIR. */
+  /** PDF-report identity — patient display name + exam date (ISO
+   *  `YYYY-MM-DD`). caseMeta fields; NOT emitted to FHIR. */
   patientName: string | null;
+  /** Patient date of birth (ISO `YYYY-MM-DD`). PDF-report identity only, like
+   *  patientName/examDate; NOT emitted to FHIR. */
+  patientDob: string | null;
   examDate: string | null;
 };
 function defaultCaseMeta(): CaseMeta {
   return { age: null, smokingStatus: "unknown", cigarettesPerDay: null,
     diabetesStatus: "unknown", hba1c: null, toothLossPerio: null, maxRblPercent: null,
     diagnosisOverride: null, stageOverride: null, gradeOverride: null, extentOverride: null,
-    patientName: null, examDate: null };
+    patientName: null, patientDob: null, examDate: null };
 }
 let caseMeta: CaseMeta = defaultCaseMeta();
 const VALID_SMOKING = new Set(["unknown", "never", "former", "current"]);
 const VALID_DIABETES = new Set(["unknown", "none", "present"]);
-/** P4b Task 2: valid enum values for the four classification override axes —
- *  mirrors `PerioDiagnosis`/`PerioStage`/`PerioGrade`/`PerioExtent` in
+/** Valid enum values for the four classification override axes — mirrors
+ *  `PerioDiagnosis`/`PerioStage`/`PerioGrade`/`PerioExtent` in
  *  `perioClassification.ts` MINUS their non-authorable derived-only values
  *  (`"na"`, `"indeterminate"`) — an override always names a concrete clinical
  *  value, never one of those computed placeholders. */
@@ -521,12 +507,11 @@ export function setHba1c(v: number | null): void {
 }
 export function setSmokingStatus(v: string): void { if(VALID_SMOKING.has(v) && v !== caseMeta.smokingStatus){ caseMeta.smokingStatus = v as CaseMeta["smokingStatus"]; notifyStateChange(); } }
 export function setDiabetesStatus(v: string): void { if(VALID_DIABETES.has(v) && v !== caseMeta.diabetesStatus){ caseMeta.diabetesStatus = v as CaseMeta["diabetesStatus"]; notifyStateChange(); } }
-/** P4b Task 2: per-axis classification override setters. Each accepts either
- *  a valid enum value for that axis (see `VALID_DIAGNOSIS`/`VALID_STAGE`/
- *  `VALID_GRADE`/`VALID_EXTENT`) OR `null` (clears the override, reverting
- *  that axis to the derived value). An invalid non-null value is a silent
- *  no-op — mirrors `setSmokingStatus`/`setDiabetesStatus` above. Shared
- *  caseMeta fields, NOT DS-1 gated (same as every other caseMeta setter). */
+/** Per-axis classification override setters. Each accepts either a valid enum
+ *  value for that axis (see `VALID_DIAGNOSIS`/`VALID_STAGE`/`VALID_GRADE`/
+ *  `VALID_EXTENT`) OR `null` (clears the override, reverting that axis to the
+ *  derived value). An invalid non-null value is a silent no-op. Shared caseMeta
+ *  fields, not gated. */
 export function setDiagnosisOverride(v: string | null): void {
   if(v === null){ if(caseMeta.diagnosisOverride !== null){ caseMeta.diagnosisOverride = null; notifyStateChange(); } return; }
   if(VALID_DIAGNOSIS.has(v) && v !== caseMeta.diagnosisOverride){ caseMeta.diagnosisOverride = v; notifyStateChange(); }
@@ -543,9 +528,9 @@ export function setExtentOverride(v: string | null): void {
   if(v === null){ if(caseMeta.extentOverride !== null){ caseMeta.extentOverride = null; notifyStateChange(); } return; }
   if(VALID_EXTENT.has(v) && v !== caseMeta.extentOverride){ caseMeta.extentOverride = v; notifyStateChange(); }
 }
-/** UI-3b Task 1: patient display name + exam date setters. Mirror the
- *  existing caseMeta setter pattern — trim, `null`-clears, malformed
- *  exam-date values are a silent no-op (mirrors `setSmokingStatus`). */
+/** Patient display name + exam date setters. Follow the caseMeta setter
+ *  pattern — trim, `null` clears, malformed exam-date values are a silent
+ *  no-op. */
 export function setPatientName(v: string | null): void {
   const next = (v === null) ? null : (v.trim() === "" ? null : v.trim());
   if(next !== caseMeta.patientName){ caseMeta.patientName = next; notifyStateChange(); }
@@ -558,12 +543,21 @@ export function setExamDate(v: string | null): void {
   const next = v.trim();
   if(next !== caseMeta.examDate){ caseMeta.examDate = next; notifyStateChange(); }
 }
+/** Patient date-of-birth setter — same ISO-validate/null-clear contract as
+ *  {@link setExamDate}; malformed values are a silent no-op. */
+export function setPatientDob(v: string | null): void {
+  if(v === null){ if(caseMeta.patientDob !== null){ caseMeta.patientDob = null; notifyStateChange(); } return; }
+  if(v.trim() === ""){ if(caseMeta.patientDob !== null){ caseMeta.patientDob = null; notifyStateChange(); } return; }
+  if(!ISO_DATE.test(v.trim())) return;  // malformed → no-op
+  const next = v.trim();
+  if(next !== caseMeta.patientDob){ caseMeta.patientDob = next; notifyStateChange(); }
+}
 export function resetCaseMeta(): void { caseMeta = defaultCaseMeta(); }
 function caseMetaIsEmpty(c: CaseMeta): boolean {
   return c.age === null && c.smokingStatus === "unknown" && c.cigarettesPerDay === null
     && c.diabetesStatus === "unknown" && c.hba1c === null && c.toothLossPerio === null && c.maxRblPercent === null
     && c.diagnosisOverride === null && c.stageOverride === null && c.gradeOverride === null && c.extentOverride === null
-    && c.patientName === null && c.examDate === null;
+    && c.patientName === null && c.patientDob === null && c.examDate === null;
 }
 function serializeCaseMeta(c: CaseMeta): Record<string, unknown> {
   const o: Record<string, unknown> = {};
@@ -579,6 +573,7 @@ function serializeCaseMeta(c: CaseMeta): Record<string, unknown> {
   if(c.gradeOverride !== null) o.gradeOverride = c.gradeOverride;
   if(c.extentOverride !== null) o.extentOverride = c.extentOverride;
   if(c.patientName !== null) o.patientName = c.patientName;
+  if(c.patientDob !== null) o.patientDob = c.patientDob;
   if(c.examDate !== null) o.examDate = c.examDate;
   return o;
 }
@@ -597,9 +592,10 @@ function hydrateCaseMeta(raw: Any): void {
   caseMeta.gradeOverride = VALID_GRADE.has(raw.gradeOverride) ? raw.gradeOverride : null;
   caseMeta.extentOverride = VALID_EXTENT.has(raw.extentOverride) ? raw.extentOverride : null;
   caseMeta.patientName = (typeof raw.patientName === "string" && raw.patientName.trim() !== "") ? raw.patientName.trim() : null;
+  caseMeta.patientDob = (typeof raw.patientDob === "string" && ISO_DATE.test(raw.patientDob.trim())) ? raw.patientDob.trim() : null;
   caseMeta.examDate = (typeof raw.examDate === "string" && ISO_DATE.test(raw.examDate.trim())) ? raw.examDate.trim() : null;
 }
-/** P4a Task 2: builds the compact, labelled case-context fragment
+/** Builds the compact, labelled case-context fragment
  *  (e.g. "Age 54 · current smoker (12/day) · diabetic (HbA1c 7.8%) · max
  *  RBL 45% · 3 teeth lost to perio") appended to {@link getOdontogramSummary}'s
  *  `periodontalText` whenever `!caseMetaIsEmpty(caseMeta)`. Skips any field
@@ -644,7 +640,7 @@ function cloneChart(src: Map<Any, Any>, dst: Map<Any, Any>): void {
   for(const [n, s] of src) dst.set(n, hydrateState(serializeState(s)));
 }
 
-// ---- DS-1 Task 1: status->plan edit gate + propagation --------------------
+// ---- Status->plan edit gate + propagation ---------------------------------
 // The set of teeth that have been EXPLICITLY edited while `chartMode === "plan"`.
 // Runtime-only — NEVER serialized (parity: SVG/FHIR/roundtrip goldens are
 // unaffected). It records which plan teeth the user has intentionally diverged
@@ -654,7 +650,7 @@ function cloneChart(src: Map<Any, Any>, dst: Map<Any, Any>): void {
 // plan (keeping the two charts in sync until the user deliberately plans that
 // tooth). Cleared whenever the plan is (re)initialized, reset, or replaced by
 // an import — a fresh plan carries no plan-edits.
-let planEditedTeeth = new Set<number>();
+const planEditedTeeth = new Set<number>();
 
 /** Deep-copy tooth `toothNo`'s STATUS state into the PLAN chart via the proven
  *  serializeState -> hydrateState round-trip (fresh Maps/Sets, no shared refs —
@@ -667,13 +663,12 @@ function mirrorStatusToPlan(toothNo: number): void {
   charts.plan.set(toothNo, hydrateState(serializeState(charts.status.get(toothNo) ?? defaultState()), false));
 }
 
-/** DS-1 central edit GATE for a SINGLE interactive per-tooth edit. Every
+/** Central edit GATE for a SINGLE interactive per-tooth edit. Every
  *  interactive per-tooth mutator routes its mutation through here so the
  *  status<->plan propagation policy lives in exactly one place. See the
  *  `planEditedTeeth` comment above for the policy. When the plan is
- *  uninitialized this is a pure passthrough (byte-identical to the
- *  pre-dual-state behavior). `applyFn` performs the actual mutation (+ any
- *  render) on the ACTIVE chart. */
+ *  uninitialized this is a pure passthrough. `applyFn` performs the actual
+ *  mutation (+ any render) on the ACTIVE chart. */
 function gateToothEdit(toothNo: number, applyFn: () => boolean | void): void {
   // `applyFn` may report `false` to signal it made NO change (a rejected /
   // no-op edit — e.g. an out-of-range perio value): in that case the tooth is
@@ -690,7 +685,7 @@ function gateToothEdit(toothNo: number, applyFn: () => boolean | void): void {
     return;
   }
   // status edit on a plan-edited tooth -> the status edit would DIVERGE from the
-  // plan (the user has deliberately planned this tooth). T2: confirm BEFORE
+  // plan (the user has deliberately planned this tooth). Confirm BEFORE
   // applying. `applyFn` is deferred — accept applies it (status only; the plan
   // stays as planned, so they diverge and the diff shows it), cancel re-syncs
   // the active tooth's controls so the just-changed control snaps back.
@@ -700,12 +695,12 @@ function gateToothEdit(toothNo: number, applyFn: () => boolean | void): void {
   );
 }
 
-/** DS-1 central edit GATE for a BATCH interactive edit spanning several teeth
+/** Central edit GATE for a BATCH interactive edit spanning several teeth
  *  (e.g. `applyToSelected`). `applyFn` mutates ALL `toothNos` in one pass. In
  *  plan mode every touched tooth is marked plan-edited; in status mode (plan
  *  initialized) every tooth NOT already plan-edited mirrors status->plan after
  *  the batch (planned teeth diverge). Uninitialized plan -> pure passthrough.
- *  T2: a batch touching >=1 plan-edited tooth is CONFIRMED ONCE before applying
+ *  A batch touching >=1 plan-edited tooth is CONFIRMED ONCE before applying
  *  (accept applies all + mirrors the un-planned teeth; cancel applies none +
  *  re-syncs the active tooth's controls). */
 function gateToothEditBatch(toothNos: number[], applyFn: () => void): void {
@@ -726,7 +721,7 @@ function gateToothEditBatch(toothNos: number[], applyFn: () => void): void {
   };
   // A batch touching >=1 plan-edited tooth would DIVERGE the plan -> confirm
   // ONCE before applying. Otherwise apply immediately and mirror the un-planned
-  // teeth (T1 behavior — planned teeth diverge, un-planned mirror).
+  // teeth (planned teeth diverge, un-planned mirror).
   if(toothNos.some(toothNo => planEditedTeeth.has(toothNo))){
     requestDualStateConfirm(
       () => { applyFn(); mirrorUnplanned(); },
@@ -738,8 +733,7 @@ function gateToothEditBatch(toothNos: number[], applyFn: () => void): void {
   mirrorUnplanned();
 }
 
-// ---- DS-1 Task 2: blocking confirm before a status edit on a plan-edited
-// tooth ---------------------------------------------------------------------
+// ---- Blocking confirm before a status edit on a plan-edited tooth ----------
 // A status-mode edit on a tooth the user has deliberately planned (a member of
 // `planEditedTeeth`) must be CONFIRMED before it applies, because it makes the
 // status chart DIVERGE from the plan. The actual mutation (`apply`) and the
@@ -790,7 +784,7 @@ function revertActiveControls(): void {
   if(activeTooth != null) syncControlsFromState(toothState.get(activeTooth));
 }
 
-/** R2-A Task 3: sync the `Status | Plan` toggle in the chart-header with the
+/** Sync the `Status | Plan` toggle in the chart-header with the
  *  current `chartMode` — `.is-active` on whichever of #chartModeStatus /
  *  #chartModePlan matches, `.plan-mode` on the chart card (`.chart`, the
  *  visual border/tint cue), and the "TERV/PLAN" badge's `.hidden` class.
@@ -834,7 +828,7 @@ export function setChartMode(mode: ChartMode): void {
   if(mode === "plan" && !planInitialized){
     cloneChart(charts.status, charts.plan);
     planInitialized = true;
-    // DS-1: a freshly-cloned plan exactly matches status -> no plan-edits yet.
+    // A freshly-cloned plan exactly matches status -> no plan-edits yet.
     planEditedTeeth.clear();
   }
   chartMode = mode;
@@ -845,6 +839,9 @@ export function setChartMode(mode: ChartMode): void {
     updateToothTileNumber(toothNo);
     updateToothLabelNoteIcon(toothNo);
   }
+  // The tooth-base picker's option set is mode-dependent (Plan omits
+  // milk/subgingival) — rebuild it whenever the mode changes.
+  refreshToothSelectOptions();
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
   notifyStateChange();
   syncChartModeUi();
@@ -869,22 +866,43 @@ let suppressEdentulousSync = false;
 let numberingSystem: NumberingSystem = "FDI";
 let readOnly = false;
 let notesEnabled = false;
+/** Per-card collapse state: maps a card id to collapsed (true) / expanded (false).
+ *  Keys mirror the btnToggle* button ids without the prefix, lowercased: controls,
+ *  status, caries, filling, rootPeriodontium. Session-only state — never serialized
+ *  to the export payload, like perioViewMode and the other UI-layout flags. */
+const VALID_CARD_IDS = new Set(["controls", "status", "caries", "filling", "rootPeriodontium"]);
+let collapsedCards: Record<string, boolean> = {};
+export function getCollapsedCards(): Record<string, boolean> { return { ...collapsedCards }; }
+export function isCardCollapsed(id: string): boolean {
+  return VALID_CARD_IDS.has(id) ? !!collapsedCards[id] : false;
+}
+export function setCollapsedCard(id: string, collapsed: boolean): void {
+  if(!VALID_CARD_IDS.has(id)) return;
+  collapsedCards[id] = !!collapsed;
+  notifyStateChange();
+}
+export function toggleCollapsedCard(id: string): void {
+  if(!VALID_CARD_IDS.has(id)) return;
+  collapsedCards[id] = !collapsedCards[id];
+  notifyStateChange();
+}
 let icdasEnabled = false;
 export function setIcdasEnabled(value: boolean){ icdasEnabled = !!value; if(activeTooth) syncControlsFromState(toothState.get(activeTooth)); }
 export function getIcdasEnabled(): boolean { return icdasEnabled; }
-// SP4 Task 5: pulp-detail level drives how the pulp control presents the pulp
+// The pulp-detail level drives how the pulp control presents the pulp
 // diagnosis — "simple" (healthy/pulpitis), "aae" (4 AAE pulpDx values, default)
 // or "latin" (9 practical-Latin pulpLatin subtypes). Changing it re-syncs the
 // active tooth's controls (the stored value is re-displayed collapsed to the
-// new level; state is not mutated). Mirrors the `icdasEnabled` accessor pattern.
+// new level; state is not mutated).
 let pulpDetailLevel: PulpDetailLevel = "aae";
 export function setPulpDetailLevel(value: PulpDetailLevel){
-  pulpDetailLevel = (value === "simple" || value === "latin") ? value : "aae";
+  const next = (value === "simple" || value === "latin") ? value : "aae";
+  if(next === pulpDetailLevel) return;
+  pulpDetailLevel = next;
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
-  // SP17 Task 1 Fix #1: pulpDiagnosisLabel() reads getPulpDetailLevel() live to
-  // pick Latin vs AAE wording — the whole-mouth summary panel and every
-  // per-tooth tooltip must refresh too, not just the active tooth's picker.
-  // Mirrors setSurfaceNotation() below exactly (same bug class, SP16 fix).
+  // pulpDiagnosisLabel() reads getPulpDetailLevel() live to pick Latin vs AAE
+  // wording — the whole-mouth summary panel and every per-tooth tooltip must
+  // refresh too, not just the active tooth's picker.
   notifyStateChange();
   for(const toothNo of ALL_TEETH){
     updateToothTooltip(toothNo);
@@ -892,12 +910,11 @@ export function setPulpDetailLevel(value: PulpDetailLevel){
 }
 export function getPulpDetailLevel(): PulpDetailLevel { return pulpDetailLevel; }
 
-// SP13 Task 2: wear/discoloration detail-level settings — each switches its
-// control between the full-option <select> ("complex", default) and a
-// yes/no checkbox ("simple"). wearDetailLevel drives BOTH wearEdge and
-// wearCervical (one shared setting); discolorationDetailLevel is independent.
-// Mirrors the pulpDetailLevel accessor pattern above: sanitize to the literal
-// set, re-sync the active tooth's controls, never mutate stored state.
+// Wear/discoloration detail-level settings — each switches its control between
+// the full-option <select> ("complex", default) and a yes/no checkbox
+// ("simple"). wearDetailLevel drives BOTH wearEdge and wearCervical (one shared
+// setting); discolorationDetailLevel is independent. Sanitizes to the literal
+// set, re-syncs the active tooth's controls, never mutates stored state.
 export type ToothDetailLevel = "simple" | "complex";
 let wearDetailLevel: ToothDetailLevel = "complex";
 export function setWearDetailLevel(value: ToothDetailLevel){
@@ -912,17 +929,17 @@ export function setDiscolorationDetailLevel(value: ToothDetailLevel){
 }
 export function getDiscolorationDetailLevel(): ToothDetailLevel { return discolorationDetailLevel; }
 
-// SP16 Task 2: surface-notation setting — "full" (default) makes the
-// caries/filling surface letters + captions POSITION-AWARE (incisal on an
-// anterior tooth, labial on an anterior buccal surface, palatal on an upper
-// lingual surface); "simple" always shows the tooth-independent B/O/L set.
-// Mirrors the wearDetailLevel/discolorationDetailLevel accessor pattern
-// above: sanitize to the literal set, re-sync the active tooth's controls,
-// never mutate stored state.
+// Surface-notation setting — "full" (default) makes the caries/filling surface
+// letters + captions POSITION-AWARE (incisal on an anterior tooth, labial on an
+// anterior buccal surface, palatal on an upper lingual surface); "simple"
+// always shows the tooth-independent B/O/L set. Sanitizes to the literal set,
+// re-syncs the active tooth's controls, never mutates stored state.
 export type SurfaceNotation = "simple" | "full";
 let surfaceNotation: SurfaceNotation = "full";
 export function setSurfaceNotation(value: SurfaceNotation){
-  surfaceNotation = value === "simple" ? "simple" : "full";
+  const next = value === "simple" ? "simple" : "full";
+  if(next === surfaceNotation) return;
+  surfaceNotation = next;
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
   // The new notation changes the caries/filling-defect LETTERS shown in the
   // whole-mouth summary panel and every per-tooth tooltip (both resolve
@@ -938,14 +955,13 @@ export function setSurfaceNotation(value: SurfaceNotation){
 }
 export function getSurfaceNotation(): SurfaceNotation { return surfaceNotation; }
 
-// SP5 Task 5: caries-granularity settings (modes). Each mode governs ONLY the
-// option list its authoring control offers; it never mutates stored state.
-// Non-collapsing: a stored value outside the current mode's list is preserved
-// and re-displayed when the mode widens again (the SP4 pulpLatin pattern).
-// `cariesDepthEnabled` additionally gates the visual caries-depth tier
-// (opacity + deep contour) in the SVG render; `radiographicDepthMode !== "off"`
-// gates the per-surface `data-radio` indicator badge. Each accessor re-syncs
-// the active tooth's controls, mirroring `icdasEnabled`/`pulpDetailLevel`.
+// Caries-granularity settings (modes). Each mode governs ONLY the option list
+// its authoring control offers; it never mutates stored state. Non-collapsing:
+// a stored value outside the current mode's list is preserved and re-displayed
+// when the mode widens again. `cariesDepthEnabled` additionally gates the visual
+// caries-depth tier (opacity + deep contour) in the SVG render;
+// `radiographicDepthMode !== "off"` gates the per-surface `data-radio` indicator
+// badge. Each accessor re-syncs the active tooth's controls.
 export type SecondaryCariesMode = "simple" | "standard" | "full";
 export type RootCariesMode = "simple" | "severity";
 export type RadiographicDepthMode = "off" | "threeLevel" | "detailed";
@@ -1004,10 +1020,10 @@ function notifyStateChange(){
   }
   // Redraw the multi-tooth bridge overlay after per-tooth renders settle.
   // notifyStateChange() is synchronous and is always invoked at the END of a
-  // mutation batch (single edit :~1570, edentulous :~2298, import :~2850, init
-  // :~3753), so tile geometry is current by this point. renderBridgeOverlay is
-  // internally guarded, but wrap defensively so a geometry hiccup can never
-  // break state notification.
+  // mutation batch (single edit, edentulous toggle, import, init), so tile
+  // geometry is current by this point. renderBridgeOverlay is internally
+  // guarded, but wrap defensively so a geometry hiccup can never break state
+  // notification.
   try{ updateBridgeOverlay(); }
   catch(e){ console.error("odontogram bridge overlay render failed", e); }
 }
@@ -1075,20 +1091,6 @@ let archMode: "both" | "upper" | "lower" = "both";
 let archToggleBar: HTMLElement | null = null;
 
 // ---- UI builders ----
-function buildRadios(container: Any, name: Any, options: Any, onChange: Any){
-  container.innerHTML = "";
-  for(const opt of options){
-    const id = `${name}-${opt.value}`;
-    const label = el("label", {}, [
-      el("input", { type:"radio", name, id, value:opt.value }),
-      el("span", { text: opt.label })
-    ]);
-    const input = label.querySelector("input") as HTMLInputElement;
-    input.addEventListener("change", (e)=>onChange((e.target as HTMLInputElement).value));
-    container.appendChild(label);
-  }
-}
-
 function buildChecks(container: Any, items: Any, onToggle: Any){
   container.innerHTML = "";
   for(const it of items){
@@ -1222,6 +1224,15 @@ const CARD_TOGGLE_LABELS: Record<string, string> = {
   btnToggleRootPeriodontiumCard: "card.rootPeriodontium",
 };
 
+// Maps each collapse-toggle button id to its session-state card id.
+const BTN_TO_CARD_ID: Record<string, string> = {
+  btnToggleControlsCard: "controls",
+  btnToggleStatusCard: "status",
+  btnToggleCariesCard: "caries",
+  btnToggleFillingCard: "filling",
+  btnToggleRootPeriodontiumCard: "rootPeriodontium",
+};
+
 // Delegated handler for all card collapse toggles. Attached once to `document`
 // so it survives React StrictMode double-mount and async init timing — per-button
 // listeners wired in wireControls() proved unreliable under those conditions.
@@ -1230,6 +1241,8 @@ function onCardToggleClick(e: Any){
   const btn = target?.closest?.(".icon-btn");
   if(!btn) return;
   const icon = btn.querySelector(".toggle-icon");
+  const cardId = BTN_TO_CARD_ID[btn.id];
+  if(!cardId) return; // not a recognised card toggle button
   // Controls card collapses its actions container (uses `.hidden`), not the card.
   if(btn.id === "btnToggleControlsCard"){
     const actions = document.querySelector("#controlsActions");
@@ -1237,6 +1250,8 @@ function onCardToggleClick(e: Any){
     const hidden = actions.classList.toggle("hidden");
     applyToggleA11y(btn, "panel.controls", hidden);
     if(icon) icon.textContent = hidden ? "+" : "−";
+    collapsedCards.controls = hidden;
+    notifyStateChange();
     return;
   }
   const labelKey = CARD_TOGGLE_LABELS[btn.id];
@@ -1246,6 +1261,8 @@ function onCardToggleClick(e: Any){
   const collapsed = card.classList.toggle("collapsed");
   applyToggleA11y(btn, labelKey, collapsed);
   if(icon) icon.textContent = collapsed ? "+" : "−";
+  collapsedCards[cardId] = collapsed;
+  notifyStateChange();
 }
 
 // Delegated handler for the global `setX(!current)` visibility toggles. A stable
@@ -1266,7 +1283,7 @@ function isToothPresent(sel: Any){
   return sel !== "none" && sel !== "implant";
 }
 
-/** SP7 Task 5 (extended by SP15 Task 3 / B4): hide the `mods.inflammation`
+/** Hide the `mods.inflammation`
  *  checkbox's row (built by buildChecks() as a <label> wrapping the checkbox
  *  input) inside `#modsChecks` for a PRESENT tooth (tooth-base/milktooth) —
  *  apicalDx now drives the periapical glyph there, so the checkbox would be a
@@ -1304,7 +1321,7 @@ export function __syncInflammationModVisibilityForTest(container: Element, tooth
   syncInflammationModVisibility(container, toothSelection);
 }
 
-/** SP8 Task 5: on an implant, the dedicated `periImplant` axis supersedes the
+/** On an implant, the dedicated `periImplant` axis supersedes the
  *  parodontal/inflammation mods (they're migrated away for implants — see
  *  hydrateState's implant-mods migration), so show `#periImplantRow` only for
  *  an implant and hide BOTH mod checkboxes' rows there. Composes with
@@ -1313,9 +1330,9 @@ export function __syncInflammationModVisibilityForTest(container: Element, tooth
  *  though, this function's blanket implant-only rule (visible for EVERY
  *  non-implant selection, including a present tooth) is deliberately
  *  overridden by syncInflammationModVisibility's more specific present/socket
- *  rule (SP15 Task 3 / B4) — syncControlsFromState() calls this function
- *  FIRST and syncInflammationModVisibility() AFTER, so the latter always has
- *  the final say for `inflammation`. */
+ *  rule — syncControlsFromState() calls this function FIRST and
+ *  syncInflammationModVisibility() AFTER, so the latter always has the final
+ *  say for `inflammation`. */
 function syncPeriImplantVisibility(periImplantRow: Element | null, modsContainer: Element | null, toothSelection: Any): void {
   const isImplantSel = toothSelection === "implant";
   if(periImplantRow) periImplantRow.classList.toggle("hidden", !isImplantSel);
@@ -1342,8 +1359,8 @@ function isExtraction(sel: Any){
   return sel === "no-tooth-after-extraction";
 }
 
-// SP-perio P1 Task 2: #perioRow gate. Periodontal probing applies only to a
-// tooth actually present in the mouth chairside — missing/implant/under-gum/
+// #perioRow gate. Periodontal probing applies only to a tooth actually present
+// in the mouth chairside — missing/implant/under-gum/
 // extraction-socket teeth have no probing site to chart at all, so (unlike
 // mobilityRowHidden, which stays visible-but-disabled for some of those) this
 // hides the whole row outright. `!isToothPresent(sel)` covers BOTH "none"
@@ -1357,6 +1374,9 @@ export function __perioRowHiddenForTest(s: Record<string, unknown>): boolean {
   return perioRowHidden(s);
 }
 
+// A milk tooth is stored under its permanent FDI number but DISPLAYED with the
+// deciduous quadrant digit (1->5, 2->6, 3->7, 4->8), so e.g. permanent 11 shows
+// as 51. Non-milk teeth display their own number unchanged.
 function getDisplayedToothNumber(toothNo: Any){
   const s = toothState.get(toothNo);
   if(!s || s.toothSelection !== "milktooth") return toothNo;
@@ -1385,6 +1405,8 @@ function updateAllToothTileNumbers(){
   }
 }
 
+// Rebuild a <select>'s options and select `value`, falling back to the first
+// option when `value` isn't among them.
 function setSelectOptions(selectEl: Any, options: Any, value: Any){
   if(!selectEl) return;
   selectEl.innerHTML = "";
@@ -1404,21 +1426,49 @@ function getEndoOptions(isMilktooth: Any){
   return optionsFor("endo", { isMilktooth: !!isMilktooth }).map(o => ({ value: o.value, label: t(o.labelKey) }));
 }
 
-function getFillingOptions(isMilktooth: Any){
-  if(isMilktooth){
-    return [
-      {value:"none", label:t("filling.option.none")},
-      {value:"composite", label:t("filling.option.composite")},
-      {value:"gic", label:t("filling.option.gic")},
-      {value:"temporary", label:t("filling.option.temporary")},
-    ];
+// ── Fillings-card session configuration ─────────────────────────────────────
+// App-level UI config (not part of the export payload), read by the Fillings
+// card render/wiring. Each setter updates the flag then re-syncs the active
+// tooth's controls.
+let fillingDefectEnabled = true;
+let fillingComplexity: "complex" | "simple" = "complex";
+let fissureSealingEnabled = true;
+const FILLING_MATERIALS = ["amalgam", "composite", "gic", "temporary"] as const;
+const fillingMaterialAvail: Record<string, boolean> = { amalgam: true, composite: true, gic: true, temporary: true };
+
+export function getFillingDefectEnabled(){ return fillingDefectEnabled; }
+export function setFillingDefectEnabled(v: boolean){ fillingDefectEnabled = !!v; if(activeTooth) syncControlsFromState(toothState.get(activeTooth)); }
+export function getFillingComplexity(): "complex" | "simple" { return fillingComplexity; }
+export function setFillingComplexity(v: "complex" | "simple"){ fillingComplexity = v === "simple" ? "simple" : "complex"; if(activeTooth) syncControlsFromState(toothState.get(activeTooth)); }
+export function getFissureSealingEnabled(){ return fissureSealingEnabled; }
+export function setFissureSealingEnabled(v: boolean){ fissureSealingEnabled = !!v; if(activeTooth) syncControlsFromState(toothState.get(activeTooth)); }
+export function getFillingMaterialAvailability(): Record<string, boolean> { return { ...fillingMaterialAvail }; }
+export function setFillingMaterialAvailability(material: string, v: boolean){
+  if(Object.prototype.hasOwnProperty.call(fillingMaterialAvail, material)){
+    fillingMaterialAvail[material] = !!v;
+    if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
   }
+}
+/** The filling materials currently available, in canonical order. */
+function availableFillingMaterials(): readonly string[] {
+  return FILLING_MATERIALS.filter((m) => fillingMaterialAvail[m]);
+}
+/** Filling-defect options for the simple-mode select. */
+function fillingDefectOptions(){
+  return ["none", "marginal", "fracture", "wear"].map((v) => ({ value: v, label: t("fillingDefect." + v) }));
+}
+
+function getFillingOptions(isMilktooth: Any){
+  const labels: Record<string, string> = {
+    amalgam: t("filling.option.amalgam"), composite: t("filling.option.composite"),
+    gic: t("filling.option.gic"), temporary: t("filling.option.temporary"),
+  };
+  // Milk teeth never offer amalgam; additionally filter by the per-material
+  // availability config.
+  const mats = availableFillingMaterials().filter((m) => !(isMilktooth && m === "amalgam"));
   return [
-    {value:"none", label:t("filling.option.none")},
-    {value:"amalgam", label:t("filling.option.amalgam")},
-    {value:"composite", label:t("filling.option.composite")},
-    {value:"gic", label:t("filling.option.gic")},
-    {value:"temporary", label:t("filling.option.temporary")},
+    { value: "none", label: t("filling.option.none") },
+    ...mats.map((m) => ({ value: m, label: labels[m] })),
   ];
 }
 
@@ -1461,9 +1511,9 @@ function getRestorationOptions(view: "front" | "occlusal", ctx: { isImplant?: bo
   });
 }
 
-// SP15 Task 1 (B5/B7): #restorationRow visibility gate — extracted as a
-// standalone predicate (mirrors wearRowAllowed) so it's independently unit
-// testable. An implant IS allowed here (restorationOptions already restricts
+// #restorationRow visibility gate — a standalone predicate (mirrors
+// wearRowAllowed) so it's independently unit testable. An implant IS allowed
+// here (restorationOptions already restricts
 // it to a crown/bridge + attachment set); milk teeth, under-gum,
 // extraction-socket teeth, and a radix substrate (a broken root can't carry a
 // restoration) are not.
@@ -1480,7 +1530,7 @@ export function __restorationRowHiddenForTest(s: Record<string, unknown>): boole
 // Apply a combined-dropdown value to a tooth state. The value is either a fixed
 // restoration `${type}|${material}` or a "Kivehető:" prosthesis `prosthesis|<value>`.
 // A tooth ends up with EITHER a fixed restoration OR a prosthesis, never both
-// (coherence mirrored in hydrateState's FIX 4 guard). Pure mutation, shared by the
+// (coherence mirrored in hydrateState's guard). Pure mutation, shared by the
 // #restorationSelect change handler and covered by __applyRestorationSelectionForTest.
 function applyRestorationSelection(s: Any, value: string){
   if(value.startsWith("prosthesis|")){
@@ -1502,7 +1552,7 @@ function applyRestorationSelection(s: Any, value: string){
       s.crownNeeded = false;
     }
   }
-  // FIX 3: crown-leakage is a crown/bridge-only finding — clear it whenever the
+  // Crown-leakage is a crown/bridge-only finding — clear it whenever the
   // restoration is no longer a crown or bridge (prevents a stale crown-leakage
   // FHIR finding on a non-crown tooth).
   if(s.restorationType !== "crown" && s.restorationType !== "bridge"){
@@ -1524,7 +1574,7 @@ function restorationSummaryLabel(type: Any, material: Any): string {
   return `${t(`restoration.type.${type}`)} – ${t(materialKey)}`;
 }
 
-// SP9: shared clinical-axis summary labels, reused by the tooltip (getStateSummary)
+// Shared clinical-axis summary labels, reused by the tooltip (getStateSummary)
 // and the whole-mouth panel (getOdontogramSummary). Each returns null at the axis's
 // skip value. Reuse the existing per-value i18n label families.
 function pulpDiagnosisLabel(state: Any): string | null {
@@ -1532,7 +1582,7 @@ function pulpDiagnosisLabel(state: Any): string | null {
     if(state.pulpLatin && state.pulpLatin !== "none"){
       return t("pulpLatin." + kebabToCamel(state.pulpLatin));
     }
-    // FIX 2: latin mode but pulpLatin is unset ("none") — resolve the Latin
+    // Latin mode but pulpLatin is unset ("none") — resolve the Latin
     // representative for the stored pulpDx (mirrors pulpDisplayValue's latin
     // branch) instead of falling through to the AAE label, so the tooltip/panel
     // never mix nomenclatures within the same detail level.
@@ -1556,7 +1606,7 @@ function resorptionDiagnosisLabel(state: Any): string | null {
   if(!state.resorptionType || state.resorptionType === "none") return null;
   return t("resorption.type." + kebabToCamel(state.resorptionType));
 }
-// FIX 3: peri-implant status only applies to implants — a stray `periImplant`
+// Peri-implant status only applies to implants — a stray `periImplant`
 // value on a non-implant tooth must render nothing, matching the SVG render
 // (which gates the peri-implant-bone-loss layer on isImplant).
 function periImplantSummaryLabel(state: Any): string | null {
@@ -1564,13 +1614,12 @@ function periImplantSummaryLabel(state: Any): string | null {
   if(!state.periImplant || state.periImplant === "none") return null;
   return t("periImplant." + kebabToCamel(state.periImplant));
 }
-// SP-perio PG-C Task 3: CEJ visibility + root concavity — periodontal
-// root-surface data axes (T2 shipped set/get, no svgLayer). Surfaced the same
-// way as periImplantSummaryLabel/getToothRecessionType above: a periodontal
-// PRESENCE line, not a pulp/apical/resorption diagnosis, so these are pushed
-// alongside peri-implant status / recession type (see getStateSummary /
-// getOdontogramSummary's "inflamed" bucket below), never through
-// diagnosisSummaryLabels.
+// CEJ visibility + root concavity — periodontal root-surface data axes (no
+// svgLayer). Surfaced the same way as periImplantSummaryLabel/
+// getToothRecessionType above: a periodontal PRESENCE line, not a
+// pulp/apical/resorption diagnosis, so these are pushed alongside peri-implant
+// status / recession type (see getStateSummary / getOdontogramSummary's
+// "inflamed" bucket below), never through diagnosisSummaryLabels.
 function cejVisibilitySummaryLabel(state: Any): string | null {
   if(!state.cejVisibility || state.cejVisibility === "none") return null;
   return t("perio.cej." + kebabToCamel(state.cejVisibility));
@@ -1579,15 +1628,12 @@ function rootConcavitySummaryLabel(state: Any): string | null {
   if(!state.rootConcavity || state.rootConcavity === "none") return null;
   return t("perio.rootConcavity." + kebabToCamel(state.rootConcavity));
 }
-// SP-perio PG-D Task 5: PI/GI (per-surface graded 1-3) + KG (mm) + GT
-// (biotype) + Miller (recession class) per-tooth summary lines — same
-// periodontal DATA-axis grouping as cejVisibilitySummaryLabel/
-// rootConcavitySummaryLabel above (surfaced in BOTH getStateSummary's
-// tooltip and getOdontogramSummary's "inflamed" bucket, never through
-// diagnosisSummaryLabels). Take `toothNo` (not `state`) since all five read
-// through their own public getter (mirrors getToothRecessionType's
-// toothNo-based call style, already used alongside the state-based helpers
-// at the very same call sites).
+// PI/GI (per-surface graded 1-3) + KG (mm) + GT (biotype) + Miller (recession
+// class) per-tooth summary lines — same periodontal DATA-axis grouping as
+// cejVisibilitySummaryLabel/rootConcavitySummaryLabel above (surfaced in BOTH
+// getStateSummary's tooltip and getOdontogramSummary's "inflamed" bucket, never
+// through diagnosisSummaryLabels). Take `toothNo` (not `state`) since all five
+// read through their own public getter.
 /** PI/GI: summarize only the CHARTED (non-zero graded) surfaces of the fixed
  *  4-surface set, in the same display order the rest of the file's per-
  *  surface summaries use. `null` when nothing is charted on this tooth for
@@ -1608,8 +1654,8 @@ function plaqueIndexSummaryLine(toothNo: number): string | null {
 function gingivalIndexSummaryLine(toothNo: number): string | null {
   return graduatedSurfaceSummaryLine(toothNo, getGingivalIndex, "perio.gi.row");
 }
-// SP-perio PG-E Task 3: mPI/mBI (Mombelli peri-implant indices) — same
-// per-surface graded summary-line shape as PI/GI above, reusing
+// mPI/mBI (Mombelli peri-implant indices) — same per-surface graded
+// summary-line shape as PI/GI above, reusing
 // graduatedSurfaceSummaryLine. Implant-gated at the setter (a non-implant
 // tooth's mpi/mbi maps are always empty), so no extra guard is needed here:
 // graduatedSurfaceSummaryLine already returns null when nothing is charted.
@@ -1639,7 +1685,7 @@ function millerClassSummaryLabel(toothNo: number): string | null {
   return t("perio.miller." + mc);
 }
 /** All non-empty clinical diagnosis labels for a tooth, in a stable order.
- *  FIX 1: peri-implant status is deliberately NOT included here — it belongs to
+ *  Peri-implant status is deliberately NOT included here — it belongs to
  *  the periodontal grouping (see getOdontogramSummary's `inflamed` list and
  *  getStateSummary's dedicated push), not the pulp/apical/resorption diagnoses
  *  section, so an implant's periodontal state is reported consistently in one
@@ -1670,6 +1716,8 @@ function fractureSummaryLabel(state: Any): string | null {
   return t("summary.fracture");
 }
 
+// Pick the broken-crown SVG layer id from which corners are broken (mesial /
+// incisal / distal), or null when none are — most-broken combinations first.
 function getBrokenCrownVariant(state: Any){
   const m = !!state.brokenMesial;
   const i = !!state.brokenIncisal;
@@ -1685,7 +1733,18 @@ function getBrokenCrownVariant(state: Any){
 }
 
 function getToothSelectOptions(){
-  return optionsFor("toothSelection").map(o => ({ value: o.value, label: t(o.labelKey) }));
+  const all = optionsFor("toothSelection").map(o => ({ value: o.value, label: t(o.labelKey) }));
+  if(getChartMode() !== "plan") return all;
+  // Plan-mode: a plan records what a dentist will DO, so the only base states
+  // that make sense as a PLAN are extract (Missing), keep/restore a
+  // permanent tooth, or place an Implant. Primary (milk) teeth and subgingival
+  // remnants are status-only findings — omit them from the Plan base picker.
+  // The active tooth's CURRENT base is always kept in the list so an
+  // already-charted milk/under-gum tooth still displays (never silently blank).
+  const allowed = new Set(["none", "tooth-base", "implant"]);
+  const current = activeTooth ? toothState.get(activeTooth)?.toothSelection : undefined;
+  if(current) allowed.add(current);
+  return all.filter(o => allowed.has(o.value));
 }
 
 function getStatusExtras(){
@@ -1704,12 +1763,12 @@ function getMobilityOptions(){
   return optionsFor("mobility").map(o => ({ value: o.value, label: t(o.labelKey) }));
 }
 
-// SP15 Task 1 (B5): #mobilityRow / #mobilitySelect gates — standard tooth
-// mobility grading (Miller) applies to a natural tooth's periodontal
-// ligament; an implant is osseointegrated and has no PDL, so the control is
-// hidden/disabled there. Extracted as standalone predicates (mirrors
-// wearRowAllowed) so they're independently unit testable. Hiding the control
-// is enough — any previously stored mobility value is left untouched.
+// #mobilityRow / #mobilitySelect gates — standard tooth mobility grading
+// (Miller) applies to a natural tooth's periodontal ligament; an implant is
+// osseointegrated and has no PDL, so the control is hidden/disabled there.
+// Standalone predicates (mirrors wearRowAllowed) so they're independently unit
+// testable. Hiding the control is enough — any previously stored mobility value
+// is left untouched.
 function mobilityRowHidden(s: Any): boolean {
   const isImplant = s?.toothSelection === "implant";
   const underGum = isUnderGum(s?.toothSelection);
@@ -1745,12 +1804,11 @@ function getCariesDepthOptions(): Array<{ value: number; label: string; title?: 
   ];
 }
 
-// ---- SP5 Task 5: caries-granularity option builders + surface-write helpers ----
+// ---- Caries-granularity option builders + surface-write helpers ----
 // (kebabToCamel / VALID_ROOT_CARIES are declared below; both are resolved at
 // call time, so the forward reference is safe.)
-// SP6 Task 2 (step 5): the CARS 0..6 picker now reads the dedicated
-// `caries.cars.{n}` ICDAS-based names (all 9 languages). Kept as a map so the
-// score→key mapping stays explicit and unit-checkable.
+// The CARS 0..6 picker reads the dedicated `caries.cars.{n}` ICDAS-based names.
+// Kept as a map so the score→key mapping stays explicit and unit-checkable.
 const SECONDARY_CARS_LABEL_KEY: Record<number, string> = {
   0: "caries.cars.0",
   1: "caries.cars.1",
@@ -1771,8 +1829,8 @@ export function secondaryCariesOptions(mode: SecondaryCariesMode = secondaryCari
 
 /** Root-caries options at a given mode (defaults to the module setting).
  *  simple -> none / present (present writes the canonical "active-cavitated"
- *  enum — SP6 Task 3: the most-severe value, so simple-mode "present" renders
- *  at full opacity); severity -> the full rootCaries enum. Pure. */
+ *  enum — the most-severe value, so simple-mode "present" renders at full
+ *  opacity); severity -> the full rootCaries enum. Pure. */
 export function rootCariesOptions(mode: RootCariesMode = rootCariesMode): { value: string; label: string }[]{
   if(mode === "severity"){
     return Array.from(VALID_ROOT_CARIES).map((v) => ({ value: v, label: t("rootCaries." + kebabToCamel(v)) }));
@@ -1786,7 +1844,7 @@ export function rootCariesOptions(mode: RootCariesMode = rootCariesMode): { valu
 /** The rootCaries option value to SHOW for a stored value at a given mode
  *  (display-only collapse; never mutates state). simple buckets every non-none
  *  severity into the single "present" (=active-cavitated) option — matching the
- *  canonical value rootCariesOptions("simple") now writes (SP6 Task 3) — so the
+ *  canonical value rootCariesOptions("simple") writes — so the
  *  select's selected option always matches one of its own values; severity
  *  shows it verbatim. Mirrors pulpDisplayValue. */
 export function rootCariesDisplayValue(mode: RootCariesMode, stored: string): string {
@@ -1819,7 +1877,7 @@ export function applySecondaryCariesScore(map: Map<string, number>, surface: str
   else map.delete(surface);
 }
 
-/** SP6 Task 2: the recurrent (secondary) caries transition on a FILLED surface.
+/** The recurrent (secondary) caries transition on a FILLED surface.
  *  The CARS group of the contextual popup drives the caries state-machine on a
  *  surface that carries a filling:
  *   - score 0 (Sound)  → remove the caries from the surface (revert to a plain
@@ -1861,18 +1919,17 @@ export function applyFillingDefect(map: Map<string, string>, surface: string, va
   else map.delete(surface);
 }
 
-// ---- SP4 Task 5: pulp/apical/resorption diagnosis authoring ----
+// ---- Pulp/apical/resorption diagnosis authoring ----
 export type PulpDetailLevel = "simple" | "aae" | "latin";
 
-// kebab-case value id -> camelCase i18n key suffix. Matches the keys Task 1
-// added to translations.ts (e.g. "reversible-pulpitis" -> "reversiblePulpitis",
-// "external-cervical" -> "externalCervical").
+// kebab-case value id -> camelCase i18n key suffix (e.g. "reversible-pulpitis"
+// -> "reversiblePulpitis", "external-cervical" -> "externalCervical").
 function kebabToCamel(id: string): string {
   return String(id).replace(/-([a-z])/g, (_m, c) => c.toUpperCase());
 }
 
 // Each practical-Latin pulp subtype collapses to exactly one AAE `pulpDx`
-// parent (spec §3.2 clinical grouping): pulpa-sana = normal; hyperaemia =
+// parent: pulpa-sana = normal; hyperaemia =
 // reversible; every "pulpitis acuta/chronica" = irreversible; necrosis /
 // gangraena = necrosis. "none" (no Latin subtype recorded) maps to the
 // healthy parent.
@@ -1921,7 +1978,7 @@ export function pulpSelectOptionValues(level: PulpDetailLevel): { value: string;
 /** Maps a pulp-control selection to the {pulpDx,pulpLatin} it writes. At "latin"
  *  the selected Latin value sets `pulpLatin` and its parent `pulpDx`; at
  *  "simple"/"aae" the value is a `pulpDx` and `pulpLatin` is cleared to "none". */
-/** SP7: the periapical lesion subtype (granuloma / cyst) is a refinement of
+/** The periapical lesion subtype (granuloma / cyst) is a refinement of
  *  apical periodontitis, so its row (#periapicalTypeRow) shows only when the
  *  apical diagnosis is symptomatic or asymptomatic apical periodontitis. Other
  *  apicalDx values (abscess forms, condensing osteitis, normal) carry no
@@ -1957,24 +2014,24 @@ function getPulpOptions(): { value: string; label: string }[]{
   return pulpSelectOptionValues(pulpDetailLevel).map(o => ({ value: o.value, label: t(o.labelKey) }));
 }
 
-// SP7 Task 4: a value belongs to the "treated (endo)" branch iff it is a non-"none"
-// endo value; otherwise it is a vital pulp value. `endo`/`pulpDx` never share
-// a value, so this disambiguation is total.
+// A value belongs to the "treated (endo)" branch iff it is a non-"none" endo
+// value; otherwise it is a vital pulp value. `endo`/`pulpDx` never share a
+// value, so this disambiguation is total.
 export function isEndoValue(value: string): boolean {
   return value !== "none" && VALID_ENDO.has(value);
 }
 
-// SP7 Task 4: the merged selector's displayed value. A treated tooth shows its
-// endo value; otherwise the pulp value collapsed to the active detail level.
+// The merged selector's displayed value. A treated tooth shows its endo value;
+// otherwise the pulp value collapsed to the active detail level.
 export function pulpEndoDisplayValue(state: Any): string {
   if(state.endo && state.endo !== "none") return state.endo;
   return pulpDisplayValue(pulpDetailLevel, state);
 }
 
-// SP7 Task 4: build/refresh the grouped #pulpEndoSelect. Two <optgroup>s: vital
-// pulp diagnoses (at the active detail level) and treated endo options
-// (non-"none", milktooth-filtered). Selection is applied by pulpEndoOnSelect.
-export function buildPulpEndoSelect(sel: Any, isMilktooth: boolean, selected: string): void {
+// Build/refresh the grouped #pulpEndoSelect. Two <optgroup>s: vital pulp
+// diagnoses (at the active detail level) and treated endo options (non-"none",
+// milktooth-filtered). Selection is applied by pulpEndoOnSelect.
+export function buildPulpEndoSelect(sel: Any, isMilktooth: boolean, selected: string, omitPulpDx: boolean = false): void {
   if(!sel) return;
   sel.innerHTML = "";
   const mkGroup = (labelKey: string, opts: { value: string; label: string }[]) => {
@@ -1987,14 +2044,39 @@ export function buildPulpEndoSelect(sel: Any, isMilktooth: boolean, selected: st
     }
     sel.appendChild(g);
   };
-  mkGroup("pulpEndo.groupVital", getPulpOptions());
-  mkGroup("pulpEndo.groupTreated", getEndoOptions(isMilktooth).filter(o => o.value !== "none"));
-  sel.value = selected;
+  if(!omitPulpDx){
+    // Status: the vital-pulp DIAGNOSIS group + the treated-endo group.
+    mkGroup("pulpEndo.groupVital", getPulpOptions());
+    mkGroup("pulpEndo.groupTreated", getEndoOptions(isMilktooth).filter(o => o.value !== "none"));
+    sel.value = selected;
+  }else{
+    // Plan-mode: an ENDO TREATMENT picker only — the vital-pulp diagnosis
+    // group (pulpitis/necrosis) is a status finding, out of scope for a plan.
+    // A standalone "none" (no endo planned) plus the treated-endo options; the
+    // displayed value collapses any non-endo (healthy/diseased-pulp) state to
+    // "none" so a plan never shows a pulp diagnosis.
+    const endoOpts = getEndoOptions(isMilktooth);
+    const none = endoOpts.find(o => o.value === "none");
+    if(none){
+      const el = document.createElement("option");
+      el.value = none.value; el.textContent = none.label;
+      sel.appendChild(el);
+    }
+    mkGroup("pulpEndo.groupTreated", endoOpts.filter(o => o.value !== "none"));
+    sel.value = isEndoValue(selected) ? selected : "none";
+  }
 }
 
-// SP7 Task 4: apply a merged-selector choice, enforcing the mutual-exclusion
-// invariant (mirrors the hydrate-time normalize at s.endo assignment, above).
+// Apply a merged-selector choice, enforcing the mutual-exclusion invariant
+// (mirrors the hydrate-time normalize at s.endo assignment, above).
 export function pulpEndoOnSelect(s: Any, value: string): void {
+  if(value === "none"){
+    // Plan-mode "no endo planned": clear the endo treatment, leave the
+    // (Plan-hidden) pulp diagnosis untouched. In Status the vital group's
+    // healthy option is used instead, so this branch is Plan-only in practice.
+    s.endo = "none";
+    return;
+  }
   if(isEndoValue(value)){
     s.endo = value;
     s.pulpDx = "normal";
@@ -2023,7 +2105,7 @@ function getDiscolorationOptions(): { value: string; label: string }[]{
   return Array.from(VALID_DISCOLORATION).map(v => ({ value: v, label: t("discoloration." + v) }));
 }
 
-// SP14 Task 1: orthodontic axes foundation (additive; render lands in Task 2).
+// Orthodontic axis option builders.
 function getOrthoApplianceOptions(): { value: string; label: string }[]{
   return Array.from(VALID_ORTHO_APPLIANCE).map(v => ({ value: v, label: t("ortho.appliance." + v) }));
 }
@@ -2034,9 +2116,8 @@ function getOrthoVerticalOptions(): { value: string; label: string }[]{
   return Array.from(VALID_ORTHO_VERTICAL).map(v => ({ value: v, label: t("ortho.vertical." + v) }));
 }
 
-// SP11 Task 3: #bruxismRow visibility gate — aligned to the render gate
-// (__renderActiveLayers' wearAllowed, ~line 1355) by requiring
-// toothSubstrate === "natural" too; the row gate previously omitted it.
+// #bruxismRow visibility gate — aligned to the render gate
+// (__renderActiveLayers' wearAllowed) by requiring toothSubstrate === "natural".
 function wearRowAllowed(s: Any): boolean{
   return s?.toothSelection === "tooth-base" && s?.restorationType === "none" && s?.toothSubstrate === "natural";
 }
@@ -2044,7 +2125,7 @@ export function __wearRowAllowedForTest(s: Record<string, unknown>): boolean {
   return wearRowAllowed(s);
 }
 
-// SP12: discoloration crown tint. Fill is NOT recorded by the SVG-fingerprint
+// Discoloration crown tint. Fill is NOT recorded by the SVG-fingerprint
 // (collectActiveLayers captures id/opacity/cls only) — parity-safe. Applies to the
 // natural crown of a permanent OR milk tooth (no restoration, natural substrate).
 const DISCOLORATION_TINT: Record<string, string> = {
@@ -2055,24 +2136,23 @@ function discolorationAllowed(s: Any): boolean {
     && s?.restorationType === "none" && s?.toothSubstrate === "natural";
 }
 export function __discolorationAllowedForTest(s: Record<string, unknown>): boolean { return discolorationAllowed(s); }
-// SP12 Task 3: named alias for the #discolorationRow visibility-gate test seam
-// (mirrors __wearRowAllowedForTest); same underlying predicate as the render
-// gate above — the row's visibility must never contradict the chart.
+// Named alias for the #discolorationRow visibility-gate test seam (mirrors
+// __wearRowAllowedForTest); same underlying predicate as the render gate above —
+// the row's visibility must never contradict the chart.
 export function __discolorationRowAllowedForTest(s: Record<string, unknown>): boolean { return discolorationAllowed(s); }
 
-// SP14: orthodontic glyphs (appliance/drift/vertical/rotation) — gated to a
-// present natural tooth (permanent or milk), same shape as discolorationAllowed
-// above minus the restoration/substrate constraints (ortho hardware can sit on
-// a restored tooth). ONE shared predicate reused by the Task 3 UI picker and
-// the Task 4 whole-mouth summary (SP9/10/11 lesson: don't fork the gate).
+// Orthodontic glyphs (appliance/drift/vertical/rotation) — gated to a present
+// natural tooth (permanent or milk), same shape as discolorationAllowed above
+// minus the restoration/substrate constraints (ortho hardware can sit on a
+// restored tooth). ONE shared predicate reused by the UI picker and the
+// whole-mouth summary, so the gate never forks.
 function orthoAllowed(s: Any): boolean {
   return s?.toothSelection === "tooth-base" || s?.toothSelection === "milktooth";
 }
 export function __orthoAllowedForTest(s: Record<string, unknown>): boolean { return orthoAllowed(s); }
-// SP14 Task 3: named alias for the #orthoCard visibility-gate test seam
-// (mirrors __discolorationRowAllowedForTest); same underlying predicate as
-// the render gate above — the card's visibility must never contradict the
-// chart.
+// Named alias for the #orthoCard visibility-gate test seam (mirrors
+// __discolorationRowAllowedForTest); same underlying predicate as the render
+// gate above — the card's visibility must never contradict the chart.
 export function __orthoCardAllowedForTest(s: Record<string, unknown>): boolean { return orthoAllowed(s); }
 
 function getPeriImplantOptions(): { value: string; label: string }[]{
@@ -2091,8 +2171,8 @@ export function __applyPeriImplantSelectionForTest(s: Record<string, unknown>, v
   applyPeriImplantSelection(s, value);
 }
 
-// SP7 (fixed post-review): symmetrically set the 8 flame sublayers (and their
-// "-N1" variants) of the tooth-inflam-pulp / milktooth-inflam-pulp group to
+// Symmetrically set the 8 flame sublayers (and their "-N1" variants) of the
+// tooth-inflam-pulp / milktooth-inflam-pulp group to
 // `active`. The mild (reversible) tier turns them OFF, every other diseased
 // tier turns them ON. Must be called unconditionally on every diseased-pulp
 // render — the live app reuses one persistent SVG DOM node per tooth, so a
@@ -2144,41 +2224,33 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
   };
   applyFlagLayers(svg, state, buildFlagCtx(state, toothNo, flagDeps), flagDeps);
 
-  // SP4 Task 2: resorptionType (enum) replaces the retired rootResorption
-  // boolean. applyFlagLayers only auto-activates boolean-kind axes' svgLayer,
-  // so this enum axis needs explicit activation here. Both "internal" and
-  // "external-cervical" render the SAME endo-resorption layer (visually
-  // identical; only the data model distinguishes them) — byte-identical to
-  // the retired rootResorption:true render (same appliesWhen: toothPresent).
+  // resorptionType (enum). applyFlagLayers only auto-activates boolean-kind
+  // axes' svgLayer, so this enum axis needs explicit activation here. Both
+  // "internal" and "external-cervical" render the SAME endo-resorption layer
+  // (visually identical; only the data model distinguishes them).
   if(state.resorptionType !== "none" && isToothPresent(state.toothSelection)){
     setActive(svgGetById(svg, "endo-resorption"), true);
   }
 
-  // SP11: tooth wear (per location; reuses the two existing wear layers). Same
-  // gate the retired booleans used (bruxismAllowed) so migrated legacy states
-  // render byte-identically.
+  // Tooth wear (per location; reuses the two existing wear layers).
   const wearAllowed = state.toothSelection === "tooth-base" && state.restorationType === "none" && state.toothSubstrate === "natural";
   if(wearAllowed){
     if(state.wearEdge !== "none") setActive(svgGetById(svg, "tooth-bruxism-wear"), true);
     if(state.wearCervical !== "none") setActive(svgGetById(svg, "tooth-bruxism-neck-wear"), true);
   }
 
-  // SP5 Task 2: rootCaries (enum) wires the previously-dormant `caries-root`
-  // artwork layer (present since v2.5.0, but only in the 4 main-view templates
-  // — 11/13/14/16 — never in the 2 occlusal templates, and never toggled by
-  // any code until now). Same enum-explicit-activation pattern as
-  // resorptionType above: applyFlagLayers only auto-activates boolean-kind
-  // axes, so this enum axis (appliesWhen: toothPresent, mirrored from
-  // src/registry/axes.ts) needs an explicit setActive here. Additionally
-  // gated on restorationView === "front" (the same occlusal-vs-main-view
-  // detection composeRestorationLayers uses, see :952) since the occlusal
-  // templates carry no caries-root artwork at all — svgGetById would return
-  // null there and setActive is a no-op on null, but the explicit gate keeps
-  // intent clear and matches the brief.
+  // rootCaries (enum) wires the `caries-root` artwork layer, present only in the
+  // 4 main-view templates (11/13/14/16), never in the 2 occlusal templates. Same
+  // enum-explicit-activation pattern as resorptionType above: applyFlagLayers
+  // only auto-activates boolean-kind axes, so this enum axis (appliesWhen:
+  // toothPresent) needs an explicit setActive here. Additionally gated on
+  // restorationView === "front" (the same occlusal-vs-main-view detection
+  // composeRestorationLayers uses) since the occlusal templates carry no
+  // caries-root artwork at all.
   if(state.rootCaries !== "none" && isToothPresent(state.toothSelection) && restorationView === "front"){
     const rootEl = svgGetById(svg, "caries-root") as SVGElement | null;
     setActive(rootEl, true);
-    // SP6 Task 3: severity-based opacity, same style.opacity mechanism as the
+    // Severity-based opacity, same style.opacity mechanism as the
     // caries-surface / subcaries opacity above. `active-cavitated` is the most
     // severe (fully opaque); `active` is the least severe (most translucent).
     // Simple-mode "present" is stored canonically as `active-cavitated` (see
@@ -2191,10 +2263,10 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
     }
   }
 
-  // SP8: peri-implant disease (implants only). mucositis = soft-tissue inflammation
+  // Peri-implant disease (implants only). mucositis = soft-tissue inflammation
   // (reuse the existing `parodontal` gum glyph); peri-implantitis adds crestal bone
   // loss at severity-scaled opacity. Set both the active flag and opacity every
-  // render (the live app reuses one SVG DOM node per tooth — SP7 lesson).
+  // render (the live app reuses one SVG DOM node per tooth).
   if(isImplant && state.periImplant !== "none"){
     setActive(svgGetById(svg, "parodontal"), true);
     const boneEl = svgGetById(svg, "peri-implant-bone-loss") as SVGElement | null;
@@ -2206,22 +2278,19 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
     if(boneEl && boneOpacity !== "") boneEl.style.opacity = boneOpacity;
   }
 
-  // SP4 Task 3: pulpDx (enum) replaces the retired pulpInflam boolean. Any
-  // non-"normal" pulpDx value is clinically "diseased pulp" for rendering
-  // purposes — the same single condition the old boolean encoded — so a
-  // plain boolean gate here is byte-identical to the retired render. The
-  // bespoke milktooth/permanent split + showHealthyPulp gating below is
-  // otherwise unchanged.
+  // Any non-"normal" pulpDx value is clinically "diseased pulp" for rendering
+  // purposes. The bespoke milktooth/permanent split + showHealthyPulp gating
+  // below distinguishes the glyph variants.
   const pulpDiseased = state.pulpDx !== "normal";
 
-  // SP7: reversible pulpitis (and its Latin equivalent, hyperaemia pulpae) is a
-  // mild, reversible state — render a reduced glyph (the base inflamed-pulp
-  // shape without the flame sublayers). Every other diseased state renders the
-  // full glyph, as before. Checking both fields keeps this correct in aae and
-  // latin modes regardless of the Latin->AAE parent mapping.
+  // Reversible pulpitis (and its Latin equivalent, hyperaemia pulpae) is a mild,
+  // reversible state — render a reduced glyph (the base inflamed-pulp shape
+  // without the flame sublayers). Every other diseased state renders the full
+  // glyph. Checking both fields keeps this correct in aae and latin modes
+  // regardless of the Latin->AAE parent mapping.
   const pulpTierMild = state.pulpDx === "reversible-pulpitis" || state.pulpLatin === "hyperaemia-pulpae";
-  // SP7: a root-treated tooth has no vital pulp — its endo artwork represents
-  // the canal, so suppress both pulp glyphs.
+  // A root-treated tooth has no vital pulp — its endo artwork represents the
+  // canal, so suppress both pulp glyphs.
   const endoTreated = state.endo !== "none";
 
   // base visibility toggle
@@ -2286,7 +2355,7 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
     setActive(svgGetById(svg, "no-tooth-after-extraction"), true);
   }
 
-  // SP12: discoloration — tint the shown natural crown's fill. Symmetric: reset
+  // Discoloration — tint the shown natural crown's fill. Symmetric: reset
   // BOTH crown paths every render so a reused per-tooth node never keeps a stale
   // tint (permanent<->milk switch, or cleared). Fill isn't fingerprinted (parity-safe).
   //
@@ -2318,9 +2387,9 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
     }
   }
 
-  // SP14: orthodontic glyphs (dormant since v2.5.0). Explicit + symmetric; null-guarded
-  // (occlusal templates lack ring/bracket/up/down — 4 of the 7 ids — so every lookup
-  // must be guarded). Gate: present natural tooth (orthoAllowed, shared w/ Task 3/4).
+  // Orthodontic glyphs. Explicit + symmetric; null-guarded (occlusal templates
+  // lack ring/bracket/up/down — 4 of the 7 ids — so every lookup must be
+  // guarded). Gate: present natural tooth (orthoAllowed).
   //
   // extrusion/intrusion <-> arrow-up/arrow-down binding (verified from 11.svg geometry,
   // viewBox "0 0 39.2 62.7"): the crown/incisal edge sits at LARGER y (e.g. crown-needed
@@ -2345,19 +2414,15 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
   }
 
   // 2) Mods — periapical glyph.
-  // SP4 Task 4: on a PRESENT tooth the `apicalDx` clinical axis (not
-  // `mods.inflammation`) drives the periapical glyph. On a NON-present tooth
-  // (missing / implant) `mods.inflammation` retains its SECOND, PERIODONTAL
-  // role and still drives the glyph exactly as before — the label switches to
-  // "periodontal inflammation" in updateInflammationSection, but the glyph is
-  // unchanged. This split is byte-identical to the pre-rewrite single block:
-  // migration derives apicalDx from a present tooth's legacy mods.inflammation
-  // (and strips that mod), while a non-present tooth keeps mods.inflammation
-  // with apicalDx left at "normal". `periapicalType` still selects the lesion
-  // subtype glyph; when it is unset, apicalDx suggests abscess-vs-granuloma.
-  // SP8: an implant no longer shows the periapical (apical-lesion) glyph — its
-  // inflammation is expressed via the periImplant axis. Missing / extraction-socket
-  // teeth keep the mods.inflammation-driven periapical/residual glyph (SP4).
+  // On a PRESENT tooth the `apicalDx` clinical axis (not `mods.inflammation`)
+  // drives the periapical glyph. On a NON-present tooth (missing / implant)
+  // `mods.inflammation` retains its SECOND, PERIODONTAL role and still drives the
+  // glyph — the label switches to "periodontal inflammation" in
+  // updateInflammationSection, but the glyph is unchanged. `periapicalType`
+  // selects the lesion subtype glyph; when it is unset, apicalDx suggests
+  // abscess-vs-granuloma. An implant shows no periapical glyph — its inflammation
+  // is expressed via the periImplant axis. Missing / extraction-socket teeth keep
+  // the mods.inflammation-driven periapical/residual glyph.
   const periapicalGlyphActive = isToothPresent(state.toothSelection)
     ? state.apicalDx !== "normal"
     : (state.toothSelection === "implant" ? false : state.mods.has("inflammation"));
@@ -2376,7 +2441,7 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
       : "granuloma"; // default incl. "none" and "granuloma"
     setActive(svgGetById(svg, glyph), true);
   } else if(isImplant){
-    // SP8: applyFlagLayers (the generic mods-set pass) unconditionally activates
+    // applyFlagLayers (the generic mods-set pass) unconditionally activates
     // the shared "inflammation" container for ANY tooth carrying a legacy/imported
     // `mods.inflammation` entry, independent of periapicalGlyphActive above. Since
     // an implant's periapical glyph is retired (finding now expressed via
@@ -2385,10 +2450,9 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
     // empty-of-children-but-active "inflammation" group.
     setActive(svgGetById(svg, "inflammation"), false);
   }
-  // SP15 wholebranch fix: mobilityRowHidden() also hides the mobility control
-  // on an implant (osseointegrated, no PDL) — gate the render the same way.
-  // The stored value is deliberately left untouched (T1's choice), just not
-  // drawn/summarized on an implant.
+  // mobilityRowHidden() also hides the mobility control on an implant
+  // (osseointegrated, no PDL) — gate the render the same way. The stored value
+  // is deliberately left untouched, just not drawn/summarized on an implant.
   if(state.mobility !== "none" && state.toothSelection !== "none" && !extraction && !isImplant){
     setActive(svgGetById(svg, "mobility"), true);
   }
@@ -2417,12 +2481,11 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
     setActive(svgGetById(svg, "prosthesis-connector"), true);
   }
 
-  // Implant attachments (healing-abutment / locator / bar) — SP3b: render off the
-  // dedicated `prosthesis` axis (field-move from the legacy `crownMaterial`,
-  // byte-identical to the pre-move layer sets). Fixed implant crowns/bridges
-  // (Task 3) are first-class in the restoration model: only the connector is
-  // implant-specific here — the crown/bridge material layers themselves flow
-  // through the shared restoration composition below (same as non-implant teeth).
+  // Implant attachments (healing-abutment / locator / bar) — rendered off the
+  // dedicated `prosthesis` axis. Fixed implant crowns/bridges are first-class in
+  // the restoration model: only the connector is implant-specific here — the
+  // crown/bridge material layers themselves flow through the shared restoration
+  // composition below (same as non-implant teeth).
   if(isImplant){
     if(state.prosthesis === "healing-abutment"){
       setActive(svgGetById(svg, "implant-healing-abutment"), true);
@@ -2460,11 +2523,10 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
   }
   if(isNone){
     setActive(svgGetById(svg, "restorations"), true);
-    // Removable/bar prosthesis on a gap — SP3b: render off `prosthesis` (field-move
-    // from the legacy `bridgeUnit`). Fixed bridge values flow through the
-    // composition below. Note this branch's layer set intentionally differs from
-    // the isImplant "bar"/"bar-denture" branch above (no connector/locator-screw
-    // on a gap tooth) — matches the pre-move `bridgeUnit` render exactly.
+    // Removable/bar prosthesis on a gap — rendered off the `prosthesis` axis.
+    // Fixed bridge values flow through the composition below. This branch's layer
+    // set intentionally differs from the isImplant "bar"/"bar-denture" branch
+    // above (no connector/locator-screw on a gap tooth).
     if(state.prosthesis === "bar"){
       setActive(svgGetById(svg, "implant"), true);
       setActive(svgGetById(svg, "implant-bar"), true);
@@ -2502,7 +2564,7 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
         continue;
       }
       if(hasRestoration || hasCrown) continue;
-      // SP6 Task 1: per-surface caries STATE MACHINE. A caried surface is either
+      // Per-surface caries STATE MACHINE. A caried surface is either
       // PRIMARY caries (no filling) or RECURRENT/secondary caries (a filling on
       // the same surface). Recurrence is DERIVED from the filling — never a
       // separate stored flag — so a surface is NEVER both `caries-X` and
@@ -2525,9 +2587,9 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
         const surfEl = svgGetById(svg, id) as SVGElement | null;
         setActive(surfEl, true);
         // Primary caries depth: opacity encodes the ICDAS depth; "deep" recolors
-        // the contour. SP5 Task 5: the whole depth-tier encoding is gated by the
+        // the contour. The whole depth-tier encoding is gated by the
         // `cariesDepthEnabled` setting — with it OFF, caried surfaces render at
-        // the SVG default (no opacity/contour tier). Default ON = unchanged.
+        // the SVG default (no opacity/contour tier).
         if(surfEl && cariesDepthEnabled){
           const tier = icdasTier(sev);
           surfEl.style.opacity = tier === 3 ? "1" : tier === 2 ? "0.7" : "0.45";
@@ -2543,8 +2605,8 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
       }
     }
 
-    // SP10: per-surface filling defect — activate the (already-present, dormant)
-    // defect-{surface} marker on a filled surface with a recorded defect. Generic
+    // Per-surface filling defect — activate the defect-{surface} marker on a
+    // filled surface with a recorded defect. Generic
     // marker (type lives in the data / summary), no opacity. Independent of
     // secondary caries (both may be active on the same surface).
     if(state.fillingDefect && state.fillingDefect.size > 0 && !hasCrown){
@@ -2569,11 +2631,9 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
     }
     const resectionActive = state.endoResection && isToothPresent(state.toothSelection) && !underGum && !extraction;
     const resorptionActive = state.resorptionType !== "none" && isToothPresent(state.toothSelection);
-    // SP4 Task 4: the lift now keys off the SAME `periapicalGlyphActive`
-    // predicate that gates the glyph render above (was `mods.inflammation`).
-    // Both resection/resorption are toothPresent-gated, so this reduces to
-    // `apicalDx !== "normal"` on a present tooth — byte-identical to the old
-    // `mods.inflammation` gate after migration moves that lesion into apicalDx.
+    // The lift keys off the SAME `periapicalGlyphActive` predicate that gates the
+    // glyph render above. Both resection/resorption are toothPresent-gated, so
+    // this reduces to `apicalDx !== "normal"` on a present tooth.
     const lift = (resectionActive || resorptionActive) && periapicalGlyphActive;
     if(lift){
       // Move inflammation to the END of the `tooth` group's own parent, so it
@@ -2601,8 +2661,8 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
   updateWarnings(state);
 }
 
-// R2-C Task 1: proposed-layer styling. In Plan mode, a layer that is active
-// in the PLAN chart but NOT in the STATUS chart (a "plan add" — e.g. a crown
+// Proposed-layer styling. In Plan mode, a layer that is active in the PLAN
+// chart but NOT in the STATUS chart (a "plan add" — e.g. a crown
 // proposed on a tooth that is sound in status) gets a distinct dashed+tinted
 // look, so a plan reads as PROPOSED treatment rather than as-if-already-done
 // findings. PARITY IS SACRED: `collectActiveLayers` (below) fingerprints only
@@ -2616,10 +2676,10 @@ const PROPOSED_TINT = "#5b7a9d";
 
 /** Restore every previously-marked layer in `svg` to its captured base style,
  *  then drop the `data-proposed` marker. Runs FIRST on every
- *  `applyProposedStyling` call (symmetric reset — SP12 discoloration
- *  capture-once pattern, see the discoloration tint block above): this is
- *  what un-dashes a layer when switching plan -> status, or when a plan edit
- *  is reverted back to match status. */
+ *  `applyProposedStyling` call (symmetric reset, like the discoloration tint
+ *  block's capture-once pattern above): this is what un-dashes a layer when
+ *  switching plan -> status, or when a plan edit is reverted back to match
+ *  status. */
 function clearProposedStyling(svg: Any){
   const marked = svg.querySelectorAll ? svg.querySelectorAll('[data-proposed="1"]') : [];
   for(const el of Array.from(marked) as Any[]){
@@ -2631,7 +2691,7 @@ function clearProposedStyling(svg: Any){
 
 /** Mark `el` as a proposed (plan-only) layer: capture its base
  *  strokeDasharray/stroke ONCE (data-base-dash/data-base-pstroke — mirrors
- *  the SP12 `data-base-fill` pattern so a reused node's second render doesn't
+ *  the `data-base-fill` capture pattern so a reused node's second render doesn't
  *  capture an already-tinted value as "base"), then apply the dashed+tint
  *  treatment. Neither captured/written attribute is part of the SVG
  *  fingerprint (`collectActiveLayers` reads only id/opacity/class). */
@@ -2682,7 +2742,7 @@ function applyStateToSvg(toothNo: Any){
   if(!roots) return;
   for(const svg of roots){
     applyStateToSvgSingle(toothNo, svg);
-    applyProposedStyling(toothNo, svg); // R2-C Task 1: dashed+tint plan-only layers (Plan mode only)
+    applyProposedStyling(toothNo, svg); // dashed+tint plan-only layers (Plan mode only)
   }
   applyPluginOverlays(toothNo);
   updateToothTooltip(toothNo);
@@ -2715,7 +2775,7 @@ function collectActiveLayers(svg: Any): { id: string; opacity: string; cls: stri
 
 /** TEST-ONLY: render `serialized` state onto a fresh copy of `rawSvgText` and return the
  *  in-document-order active-layer fingerprint (id + opacity + class per element). Used by
- *  the SP2 parity harness; not part of the public API. */
+ *  the parity harness; not part of the public API. */
 export function __renderActiveLayers(rawSvgText: string, toothNo: number, serialized: Record<string, unknown>): { id: string; opacity: string; cls: string }[] {
   const parsed = new DOMParser().parseFromString(rawSvgText, "image/svg+xml");
   const svg = parsed.documentElement as unknown as Any;
@@ -2758,15 +2818,14 @@ export function __renderActiveLayersOnNode(svg: Any, toothNo: number, serialized
  *  required). Lets summary/warning getters be exercised without a live SVG grid.
  *  Not part of the public API. */
 export function __setToothStateForTest(toothNo: number, raw: Record<string, unknown>, version?: string): void {
-  // `version` drives FIX 1's legacy secondary-caries gate exactly as importStatus
-  // does (per-tooth call of the same decision). Omitting it → legacy (infer),
-  // preserving every existing caller's default-true behavior.
+  // `version` drives the legacy secondary-caries gate exactly as importStatus
+  // does (per-tooth call of the same decision). Omitting it → legacy (infer).
   toothState.set(toothNo, hydrateState(raw, isLegacyPayloadVersion(version)));
 }
 
 /** TEST-ONLY: convert a hydrated state object to a plain object (Sets/Maps
  *  converted to arrays/objects for easy assertions). Shared by
- *  __getToothStateForTest and the R2-A __getStatusStateForTest/
+ *  __getToothStateForTest and the __getStatusStateForTest/
  *  __getPlanStateForTest seams below. Not part of the public API. */
 function __plainStateForTest(s: Any): Record<string, unknown> {
   return {
@@ -2788,25 +2847,23 @@ export function __getToothStateForTest(toothNo: number): Record<string, unknown>
   return __plainStateForTest(s);
 }
 
-/** TEST-ONLY (R2-A Task 1 seam, kept until T2's public getStatusChart()
- *  supersedes it): read back a tooth's state from the STATUS chart
- *  regardless of which chart is currently active. Not part of the public API. */
+/** TEST-ONLY: read back a tooth's state from the STATUS chart regardless of
+ *  which chart is currently active. Not part of the public API. */
 export function __getStatusStateForTest(toothNo: number): Record<string, unknown> | undefined {
   const s = charts.status.get(toothNo);
   if(!s) return undefined;
   return __plainStateForTest(s);
 }
 
-/** TEST-ONLY (R2-A Task 1 seam, kept until T2's public getPlanChart()
- *  supersedes it): read back a tooth's state from the PLAN chart regardless
- *  of which chart is currently active. Not part of the public API. */
+/** TEST-ONLY: read back a tooth's state from the PLAN chart regardless of
+ *  which chart is currently active. Not part of the public API. */
 export function __getPlanStateForTest(toothNo: number): Record<string, unknown> | undefined {
   const s = charts.plan.get(toothNo);
   if(!s) return undefined;
   return __plainStateForTest(s);
 }
 
-/** TEST-ONLY (R2-A Task 1 seam): fully reset the dual-chart container —
+/** TEST-ONLY: fully reset the dual-chart container —
  *  clears BOTH charts, drops `planInitialized`, and returns to "status"
  *  mode — without requiring a live DOM/initToken the way destroyOdontogram()
  *  does. Lets each test in a suite start from a clean slate instead of
@@ -2821,9 +2878,10 @@ export function __resetChartStateForTest(): void {
   chartMode = "status";
   toothState = charts.status;
   resetCaseMeta();
+  collapsedCards = {};
 }
 
-/** TEST-ONLY (DS-1 Task 2 seam): set the active tooth (and lazily vivify its
+/** TEST-ONLY: set the active tooth (and lazily vivify its
  *  state) so a control-revert test can exercise `revertActiveControls()`
  *  against a real active tooth without going through the DOM tooth grid. Not
  *  part of the public API. */
@@ -2832,42 +2890,41 @@ export function __setActiveToothForTest(toothNo: number | null): void {
   if(toothNo != null && !toothState.get(toothNo)) toothState.set(toothNo, defaultState());
 }
 
-/** TEST-ONLY (DS-1 Task 1 seam): snapshot of the teeth currently flagged as
- *  plan-edited (a COPY — mutating it never touches module state). Not part of
- *  the public API. */
+/** TEST-ONLY: snapshot of the teeth currently flagged as plan-edited (a COPY —
+ *  mutating it never touches module state). Not part of the public API. */
 export function __planEditedTeethForTest(): number[] {
   return Array.from(planEditedTeeth);
 }
 
-/** TEST-ONLY (DS-1 Task 1 seam): invoke {@link mirrorStatusToPlan} directly so
- *  the deep-copy behavior can be exercised without going through the gate. Not
- *  part of the public API. */
+/** TEST-ONLY: invoke {@link mirrorStatusToPlan} directly so the deep-copy
+ *  behavior can be exercised without going through the gate. Not part of the
+ *  public API. */
 export function __mirrorStatusToPlanForTest(toothNo: number): void {
   mirrorStatusToPlan(toothNo);
 }
 
-/** TEST-ONLY (DS-1 review-fix seam): drive {@link setEdentulous} directly so the
- *  gated whole-mouth structural edit can be exercised without a live DOM/
- *  initOdontogram() token. Not part of the public API. */
+/** TEST-ONLY: drive {@link setEdentulous} directly so the gated whole-mouth
+ *  structural edit can be exercised without a live DOM/initOdontogram() token.
+ *  Not part of the public API. */
 export function __setEdentulousForTest(on: boolean): void {
   setEdentulous(on);
 }
 
-/** TEST-ONLY (DS-1 review-fix seam): drive the single-tooth reset through the
- *  same code path as the zoom-popover / context-menu reset buttons, without a
- *  live DOM/initOdontogram() token. Not part of the public API. */
+/** TEST-ONLY: drive the single-tooth reset through the same code path as the
+ *  zoom-popover / context-menu reset buttons, without a live DOM/
+ *  initOdontogram() token. Not part of the public API. */
 export function __resetToothForTest(toothNo: number): void {
   resetToothGated(toothNo);
 }
 
-/** TEST-ONLY (DS-1 review-fix seam): drive the multi-tooth (selection) reset
- *  through the same code path as the "Reset selected teeth" button, without a
- *  live DOM/initOdontogram() token. Not part of the public API. */
+/** TEST-ONLY: drive the multi-tooth (selection) reset through the same code
+ *  path as the "Reset selected teeth" button, without a live DOM/
+ *  initOdontogram() token. Not part of the public API. */
 export function __resetTeethForTest(toothNos: number[]): void {
   resetTeethGated(toothNos);
 }
 
-/** TEST-ONLY (DS-1 review-fix seam): drive a dentition preset through the same
+/** TEST-ONLY: drive a dentition preset through the same
  *  code path as the #btnPrimaryDentition / #btnMixedDentition buttons, without a
  *  live DOM/initOdontogram() token. Not part of the public API. */
 export function __applyDentitionPresetForTest(kind: "primary" | "mixed"): void {
@@ -2914,10 +2971,19 @@ function applyPluginOverlays(toothNo: number){
       }
       if(!svgContent) continue;
 
+      // Security: plugin output is third-party content — sanitize before the
+      // innerHTML sink. An entirely-malicious fragment sanitizes to "" and the
+      // overlay is skipped rather than inserted empty.
+      const cleanSvg = sanitizePluginSvg(svgContent);
+      if(!cleanSvg){
+        console.warn(`odontogram plugin "${plugin.id}": renderSvg() output was fully removed by sanitization — overlay skipped`);
+        continue;
+      }
+
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
       g.setAttribute("data-plugin", plugin.id);
       g.setAttribute("data-layer", plugin.layer);
-      g.innerHTML = svgContent;
+      g.innerHTML = cleanSvg;
 
       // Insert into SVG at the correct z-position based on layer
       insertPluginGroup(svg, g, plugin.layer);
@@ -2975,8 +3041,7 @@ function getStateSummary(toothNo: number): string[]{
   }
 
   // Prosthesis / implant attachment (healing-abutment/locator/bar attachments and
-  // removable/bar-retained dentures) — SP3b: reads the dedicated `prosthesis` axis
-  // (field-move from the legacy `crownMaterial`/`bridgeUnit`).
+  // removable/bar-retained dentures) — reads the dedicated `prosthesis` axis.
   if(state.prosthesis !== "none"){
     const prosthesisKey = PROSTHESIS_SUMMARY_KEY[state.prosthesis];
     if(prosthesisKey) summary.push(t(prosthesisKey));
@@ -3003,7 +3068,7 @@ function getStateSummary(toothNo: number): string[]{
     if(fillKey) summary.push(t(fillKey));
   }
 
-  // SP10: filling defects (per filled surface). Gated on !hasCrown to match
+  // Filling defects (per filled surface). Gated on !hasCrown to match
   // the render (applyStateToSvgSingle), which suppresses fillings/defects
   // entirely under a crown/bridge — a crowned tooth's stored filling defect
   // must not be surfaced here when the chart shows nothing for it.
@@ -3015,16 +3080,16 @@ function getStateSummary(toothNo: number): string[]{
     }
   }
 
-  // Caries (+ SP9 coarse severity qualifier)
+  // Caries (+ coarse severity qualifier)
   if(state.caries.size > 0){
     const sev = cariesSeverityTierLabel(state);
     summary.push(sev ? `${t("caries.title")} (${sev})` : t("caries.title"));
   }
-  // Root caries — SP9: show the value (active/arrested/active-cavitated), not just the generic label.
+  // Root caries — show the value (active/arrested/active-cavitated), not just the generic label.
   if(state.rootCaries && state.rootCaries !== "none"){
     summary.push(`${t("caries.rootLabel")} (${t("rootCaries." + kebabToCamel(state.rootCaries))})`);
   }
-  // SP9: clinical diagnoses (pulp / apical / resorption / peri-implant).
+  // Clinical diagnoses (pulp / apical / resorption / peri-implant).
   for(const dx of diagnosisSummaryLabels(state)) summary.push(dx);
 
   // Mods
@@ -3034,44 +3099,44 @@ function getStateSummary(toothNo: number): string[]{
       else if(mod === "inflammation") summary.push(t("mods.periapicalInflammation"));
     }
   }
-  // SP15 wholebranch fix: mobilityRowHidden() hides the mobility control on
-  // an implant — the summary must not contradict that hidden control, so
-  // suppress the line there too (stored value stays untouched, per T1).
+  // mobilityRowHidden() hides the mobility control on an implant — the summary
+  // must not contradict that hidden control, so suppress the line there too
+  // (stored value stays untouched).
   if(state.mobility !== "none" && state.toothSelection !== "implant") summary.push(t("inflammation.mobilityLabel") + " " + t(`mobility.${state.mobility}`));
 
-  // SP9: previously-invisible findings.
+  // Findings not drawn on the chart.
   if(state.calculus) summary.push(t("calculus.label"));
-  // FIX 1(d): peri-implant status is no longer in diagnosisSummaryLabels (it now
-  // groups with periodontal findings), so push it here explicitly to keep the
-  // tooltip showing it, alongside the other periodontal presence lines.
+  // Peri-implant status is not in diagnosisSummaryLabels (it groups with
+  // periodontal findings), so push it here explicitly to keep the tooltip
+  // showing it, alongside the other periodontal presence lines.
   { const pi = periImplantSummaryLabel(state); if(pi) summary.push(pi); }
-  // SP-perio PG-C Task 1: derived Cairo recession TYPE (RT1-3), a periodontal
-  // presence line alongside peri-implant status above — never stored, just
-  // read via getToothRecessionType (see its doc comment for the rule).
+  // Derived Cairo recession TYPE (RT1-3), a periodontal presence line alongside
+  // peri-implant status above — never stored, just read via
+  // getToothRecessionType (see its doc comment for the rule).
   { const rt = getToothRecessionType(toothNo); if(rt !== "none") summary.push(t(`perio.recession.${rt}`)); }
-  // SP-perio PG-C Task 3: CEJ visibility / root concavity — same periodontal
-  // presence grouping as peri-implant status / recession type above.
+  // CEJ visibility / root concavity — same periodontal presence grouping as
+  // peri-implant status / recession type above.
   { const cej = cejVisibilitySummaryLabel(state); if(cej) summary.push(cej); }
   { const rc = rootConcavitySummaryLabel(state); if(rc) summary.push(rc); }
-  // SP-perio PG-D Task 5: PI/GI (per-surface graded) + KG (mm) + GT
-  // (biotype) + Miller (recession class) — same periodontal-presence
-  // grouping as CEJ visibility / root concavity above.
+  // PI/GI (per-surface graded) + KG (mm) + GT (biotype) + Miller (recession
+  // class) — same periodontal-presence grouping as CEJ visibility / root
+  // concavity above.
   { const pi = plaqueIndexSummaryLine(toothNo); if(pi) summary.push(pi); }
   { const gi = gingivalIndexSummaryLine(toothNo); if(gi) summary.push(gi); }
   { const kg = keratinizedWidthSummaryLine(toothNo); if(kg) summary.push(kg); }
   { const gt = gingivalThicknessSummaryLabel(toothNo); if(gt) summary.push(gt); }
   { const mc = millerClassSummaryLabel(toothNo); if(mc) summary.push(mc); }
-  // SP-perio PG-E Task 3: mPI/mBI (Mombelli peri-implant indices) — same
-  // periodontal-presence grouping as PI/GI/KG/GT/Miller above.
+  // mPI/mBI (Mombelli peri-implant indices) — same periodontal-presence
+  // grouping as PI/GI/KG/GT/Miller above.
   { const mpi = periImplantPlaqueSummaryLine(toothNo); if(mpi) summary.push(mpi); }
   { const mbi = periImplantBleedingSummaryLine(toothNo); if(mbi) summary.push(mbi); }
-  // SP17 Task 1 Fix #2 (gate-parity follow-up): gate on the SAME FULL predicate
-  // the #crownLeakageRow control uses (crownLeakageAllowed, ~line 2974) —
-  // !restorationRowHidden(state) AND crown/bridge. Checking crown/bridge alone
-  // is not enough: a tooth reachable via import/hydrate with a stale
-  // restorationType of "crown"/"bridge" but a hidden restoration row (e.g.
-  // milktooth, under-gum, extraction socket, or radix substrate) must not
-  // show this line either. The stored crownLeakage value is left untouched.
+  // Gate on the SAME FULL predicate the #crownLeakageRow control uses
+  // (crownLeakageAllowed) — !restorationRowHidden(state) AND crown/bridge.
+  // Checking crown/bridge alone is not enough: a tooth reachable via
+  // import/hydrate with a stale restorationType of "crown"/"bridge" but a hidden
+  // restoration row (e.g. milktooth, under-gum, extraction socket, or radix
+  // substrate) must not show this line either. The stored crownLeakage value is
+  // left untouched.
   if(state.crownLeakage && !restorationRowHidden(state) && (state.restorationType === "crown" || state.restorationType === "bridge")) summary.push(t("crownLeakage.label"));
   if(state.endoResection) summary.push(t("endo.resection"));
   if(state.fissureSealing) summary.push(t("filling.fissureSealing"));
@@ -3079,22 +3144,22 @@ function getStateSummary(toothNo: number): string[]{
   { const fx = fractureSummaryLabel(state); if(fx) summary.push(fx); }
   if(state.contactMesial) summary.push(t("tooth.contact.mesialMissing"));
   if(state.contactDistal) summary.push(t("tooth.contact.distalMissing"));
-  // Review fix (post-SP11): gate wear on the same wearRowAllowed predicate the
-  // render/UI row use — a crowned/non-natural-substrate tooth must not surface
-  // a stored wearEdge/wearCervical value that the chart itself hides.
+  // Gate wear on the same wearRowAllowed predicate the render/UI row use — a
+  // crowned/non-natural-substrate tooth must not surface a stored
+  // wearEdge/wearCervical value that the chart itself hides.
   if(wearRowAllowed(state)){
     if(state.wearEdge !== "none") summary.push(`${t("tooth.bruxism.edgeWear")}: ${t("wearType." + state.wearEdge)}`);
     if(state.wearCervical !== "none") summary.push(`${t("tooth.bruxism.neckWear")}: ${t("wearType." + state.wearCervical)}`);
   }
-  // SP12 Task 4: gate discoloration on the same discolorationAllowed predicate
-  // the render tint and UI row use — a crowned/non-natural-substrate tooth must
-  // not surface a stored discoloration value that the chart itself hides.
+  // Gate discoloration on the same discolorationAllowed predicate the render
+  // tint and UI row use — a crowned/non-natural-substrate tooth must not surface
+  // a stored discoloration value that the chart itself hides.
   if(discolorationAllowed(state) && state.discoloration !== "none"){
     summary.push(`${t("discoloration.label")}: ${t("discoloration." + state.discoloration)}`);
   }
-  // SP14 Task 4: gate orthodontic findings on the same orthoAllowed predicate
-  // the render glyphs and the Ortho UI card use — an implant/missing/pontic
-  // tooth must not surface a stored ortho value the chart itself hides.
+  // Gate orthodontic findings on the same orthoAllowed predicate the render
+  // glyphs and the Ortho UI card use — an implant/missing/pontic tooth must not
+  // surface a stored ortho value the chart itself hides.
   if(orthoAllowed(state)){
     if(state.orthoAppliance !== "none") summary.push(`${t("ortho.appliance.label")}: ${t("ortho.appliance." + state.orthoAppliance)}`);
     if(state.orthoDrift !== "none") summary.push(`${t("ortho.drift.label")}: ${t("ortho.drift." + state.orthoDrift)}`);
@@ -3160,7 +3225,6 @@ function updateToothLabelNoteIcon(toothNo: number){
 // ---- State validation ----
 function getStateWarnings(state: Any): string[]{
   const warnings: string[] = [];
-  const isPresent = isToothPresent(state.toothSelection);
   const isNone = state.toothSelection === "none";
   const isImplant = state.toothSelection === "implant";
 
@@ -3185,8 +3249,8 @@ function getStateWarnings(state: Any): string[]{
   if(state.bridgePillar && !(state.toothSelection === "tooth-base" && state.restorationType !== "none")){
     warnings.push(t("warn.pillarNoCrown"));
   }
-  // Invalid restoration type/material combo (SP3b Task 6, spec §9 gap). Defense
-  // in depth: hydrateState() already coerces an invalid pair on import, so this
+  // Invalid restoration type/material combo. Defense in depth:
+  // hydrateState() already coerces an invalid pair on import, so this
   // should never fire for a state that only ever went through hydrateState —
   // but it reuses the SAME warning mechanism as every other check here as a
   // safety net for any other path (plugins, direct programmatic state writes)
@@ -3221,10 +3285,10 @@ function updateWarningsFromState(state: Any){
 
 /** Apply the per-surface caries-depth indicator attributes to one
  *  `.surface-cell` (the ICDAS/3-bar `data-depth`/`data-icdas` badge, plus the
- *  SP5 Task 4 `data-radio` radiographic-depth attribute) for `cell`'s surface,
+ *  `data-radio` radiographic-depth attribute) for `cell`'s surface,
  *  read off `state`. `radiographicDepth` is a SEPARATE, independent per-surface
- *  scale from the unified visual severity `cariesSeverity` — no crosswalk between them
- *  (constitution); `data-radio` never touches `data-depth`/`data-icdas`/opacity
+ *  scale from the unified visual severity `cariesSeverity` — no crosswalk between
+ *  them; `data-radio` never touches `data-depth`/`data-icdas`/opacity
  *  or the SVG-fingerprint render (it lives outside `__renderActiveLayers`).
  *  Extracted out of `syncControlsFromState` so it can be exercised without the
  *  full DOM/asset-fetch wiring `initOdontogram()` needs (see
@@ -3241,7 +3305,7 @@ function syncSurfaceDepthIndicator(cell: Element, state: Any): void {
     ind.textContent = ""; // clear
     if(icdasEnabled){ ind.textContent = String(code); }      // badge number
     else { ind.innerHTML = "<i></i><i></i><i></i>"; }        // 3 bars
-    // SP5 Task 5: `data-radio` reflects the surface's `radiographicDepth` value
+    // `data-radio` reflects the surface's `radiographicDepth` value
     // (when set and not "none"), but ONLY when the radiographic-depth mode is on
     // (`!== "off"`). With the mode off (default) the badge is never emitted.
     const radio = state.radiographicDepth?.get(surface);
@@ -3251,7 +3315,7 @@ function syncSurfaceDepthIndicator(cell: Element, state: Any): void {
 }
 
 /** TEST-ONLY: apply `syncSurfaceDepthIndicator`'s per-surface indicator-attribute
- *  logic (ICDAS `data-depth`/`data-icdas` badge + SP5 Task 4 `data-radio`) to a
+ *  logic (ICDAS `data-depth`/`data-icdas` badge + `data-radio`) to a
  *  single hand-built `.surface-cell` element, without requiring a live grid /
  *  `initOdontogram()` (which needs real SVG-asset fetches). Not part of the
  *  public API. */
@@ -3259,8 +3323,8 @@ export function __syncSurfaceDepthIndicatorForTest(cell: Element, state: Record<
   syncSurfaceDepthIndicator(cell, state as Any);
 }
 
-/** SP6 Task 2 (step 2): sync the recurrent-caries indicator on ONE
- *  filling-surface `.surface-cell`. The `.surf-depth` span is shown by CSS
+/** Sync the recurrent-caries indicator on ONE filling-surface `.surface-cell`.
+ *  The `.surf-depth` span is shown by CSS
  *  whenever the filling checkbox is checked (a filling exists on the surface),
  *  so the picker is always reachable to author recurrent caries. When the
  *  surface ALSO carries caries (`caries ∩ fillingSurfaceMaterials` → recurrent /
@@ -3297,7 +3361,7 @@ export function __syncFillingSubcariesIndicatorForTest(cell: Element, state: Rec
   syncFillingSubcariesIndicator(cell, state as Any);
 }
 
-/** SP10 Task 3: sync the LEFT-side structural filling-defect indicator on ONE
+/** Sync the LEFT-side structural filling-defect indicator on ONE
  *  filling-surface `.surface-cell` (`.surf-defect`, mirroring the RIGHT-side
  *  `.surf-depth` / {@link syncFillingSubcariesIndicator}). A surface carries a
  *  defect only when it BOTH has a filling (`fillingSurfaceMaterials`) AND a
@@ -3326,15 +3390,14 @@ export function __syncFillingDefectIndicatorForTest(cell: Element, state: Record
  *  {@link computeFillingSubcariesSummaryLine} read from a tooth state. */
 type SubcariesStateLike = { caries?: Set<string>; fillingSurfaceMaterials?: Map<string, string> } | undefined | null;
 
-/** SP6 Task 4 (§7): the recurrent ("sub") caries surfaces on ONE tooth — a
- *  surface carries BOTH caries and a filling (`state.caries` has
- *  `caries-{surface}` AND `state.fillingSurfaceMaterials` has `{surface}`).
- *  Returns the surfaces' letters, in the codebase's existing anatomical order
- *  (`SUMMARY_SURFACE_ORDER`: B, M, O, D, L), concatenated with no separator
- *  (e.g. "MOD", "B"); "" when the tooth has no recurrent-caries surface.
- *  On an anterior tooth (§8) the occlusal/incisal surface's letter is "I"
- *  instead of "O" (the stored value is still plain "occlusal"). Pure and
- *  exported for direct unit testing. */
+/** The recurrent ("sub") caries surfaces on ONE tooth — a surface carries BOTH
+ *  caries and a filling (`state.caries` has `caries-{surface}` AND
+ *  `state.fillingSurfaceMaterials` has `{surface}`). Returns the surfaces'
+ *  letters, in the codebase's existing anatomical order (`SUMMARY_SURFACE_ORDER`:
+ *  B, M, O, D, L), concatenated with no separator (e.g. "MOD", "B"); "" when the
+ *  tooth has no recurrent-caries surface. On an anterior tooth the
+ *  occlusal/incisal surface's letter is "I" instead of "O" (the stored value is
+ *  still plain "occlusal"). Pure and exported for direct unit testing. */
 export function subcariesLettersForTooth(toothNo: number, state: SubcariesStateLike): string {
   if(!state || !state.caries || !state.fillingSurfaceMaterials) return "";
   const letters: string[] = [];
@@ -3347,8 +3410,8 @@ export function subcariesLettersForTooth(toothNo: number, state: SubcariesStateL
   return letters.join("");
 }
 
-/** SP6 Task 4 (§7): the "Fillings and restorative" panel's informational
- *  subcaries-summary line — one entry per SELECTED tooth that has recurrent
+/** The "Fillings and restorative" panel's informational subcaries-summary line
+ *  — one entry per SELECTED tooth that has recurrent
  *  caries (see {@link subcariesLettersForTooth}), in `ALL_TEETH` order, styled
  *  "{FDI} ({letters})" and joined with ", ". Uses the singular phrasing
  *  (`filling.subcariesSummarySingle`) for exactly one such tooth, the plural
@@ -3391,7 +3454,7 @@ type FillingDefectStateLike =
   | undefined
   | null;
 
-/** SP16 Task 1: the filling-defect surfaces on ONE tooth, parallel to
+/** The filling-defect surfaces on ONE tooth, parallel to
  *  {@link subcariesLettersForTooth} — a surface carries a defect when it is
  *  BOTH present in `fillingSurfaceMaterials` AND has a non-"none"
  *  `fillingDefect` entry, gated the SAME way the existing whole-mouth
@@ -3414,8 +3477,8 @@ export function fillingDefectLettersForTooth(toothNo: number, state: FillingDefe
   return letters.join("");
 }
 
-/** SP16 Task 1: the "Fillings and restorative" panel's informational
- *  filling-defect-summary line, parallel to {@link computeFillingSubcariesSummaryLine}
+/** The "Fillings and restorative" panel's informational filling-defect-summary
+ *  line, parallel to {@link computeFillingSubcariesSummaryLine}
  *  — one entry per SELECTED tooth that has a filling-defect surface (see
  *  {@link fillingDefectLettersForTooth}), in `ALL_TEETH` order, styled
  *  "{FDI} ({letters})" and joined with ", ". Uses the singular phrasing
@@ -3453,16 +3516,12 @@ function updateFillingDefectSummary(): void {
   lineEl.classList.toggle("hidden", !line);
 }
 
-/** SP13 Task 2: toggle the wear (edge + cervical, shared wearDetailLevel) and
- *  discoloration (own discolorationDetailLevel) controls between their
- *  "complex" <select> and "simple" checkbox presentation, and derive each
- *  checkbox's `.checked` from the stored value. Non-collapsing: this ONLY
- *  flips `.hidden`/`.checked` — it never mutates `state`, so switching levels
- *  back and forth cannot lose/rewrite a stored value. Mirrors
- *  syncInflammationModVisibility / syncPeriImplantVisibility (small
- *  standalone syncs called from syncControlsFromState, independently
- *  testable since no full-DOM initOdontogram() mount harness exists for the
- *  tooth panel — see __syncInflammationModVisibilityForTest). */
+/** Toggle the wear (edge + cervical, shared wearDetailLevel) and discoloration
+ *  (own discolorationDetailLevel) controls between their "complex" <select> and
+ *  "simple" checkbox presentation, and derive each checkbox's `.checked` from
+ *  the stored value. Non-collapsing: this ONLY flips `.hidden`/`.checked` — it
+ *  never mutates `state`, so switching levels back and forth cannot lose/rewrite
+ *  a stored value. A small standalone sync called from syncControlsFromState. */
 function syncToothDetailControls(state: Any): void {
   const wearSimple = getWearDetailLevel() === "simple";
   $("#wearEdgeSelectLabel").classList.toggle("hidden", wearSimple);
@@ -3486,11 +3545,11 @@ export function __syncToothDetailControlsForTest(state: Record<string, unknown>)
 }
 
 /**
- * SP-perio P1 Task 2: sync the #perioRow six-site PD/GM/BOP/SUP grid (built
- * once by {@link buildPerioGrid}) + the live derived read-out (per-site CAL,
- * tooth %BOP) for `toothNo`. Values are read via the SAME public
+ * Sync the #perioRow six-site PD/GM/BOP/SUP grid (built once by
+ * {@link buildPerioGrid}) + the live derived read-out (per-site CAL, tooth
+ * %BOP) for `toothNo`. Values are read via the SAME public
  * getToothPerio()/getToothCal() API the write path (buildPerioGrid's change
- * listeners) and later FHIR/export tasks use — this never re-derives CAL or
+ * listeners) and the FHIR/export paths use — this never re-derives CAL or
  * %BOP itself, it only formats what those functions already return. The row
  * is hidden via {@link perioRowHidden} (missing/implant/under-gum/
  * extraction-socket teeth have no probing site to chart); when hidden (or
@@ -3548,7 +3607,7 @@ export function __syncPerioRowForTest(state: Record<string, unknown>, toothNo: n
 }
 
 /**
- * SP-perio P1 Task 2: build the static 6-site PD/GM/BOP/SUP grid ONCE — site
+ * Build the static 6-site PD/GM/BOP/SUP grid ONCE — site
  * identities never change across teeth, mirroring buildSurfaceCross/
  * buildChecks building their option lists once in wireControls(); per-tooth
  * VALUES are synced separately by {@link syncPerioRow} (called from
@@ -3622,15 +3681,22 @@ function buildPerioGrid(container: Any): void {
 
 /** TEST-ONLY: apply {@link buildPerioGrid} to a hand-built container, without
  *  requiring a live initOdontogram() (there is no full-DOM mount harness for
- *  the tooth panel — see sp14-ortho-ui.test.ts's header comment). Lets a test
- *  verify the real grid-building DOM shape (ids/data-attributes/types) that
+ *  the tooth panel). Lets a test verify the real grid-building DOM shape
+ *  (ids/data-attributes/types) that
  *  production wireControls() builds once at init. Not part of the public API. */
 export function __buildPerioGridForTest(container: Element): void {
   buildPerioGrid(container);
 }
 
 function syncControlsFromState(state: Any){
-  // SP4 Task 5: apical (AAE) diagnosis picker.
+  // Plan-mode gating: the Plan chart records TREATMENT ("what a dentist will
+  // DO"), so diagnosis-only / status-only controls are hidden while in Plan.
+  // Woven into the individual show/hide predicates below (Base picker, caries,
+  // wear, discoloration, pulp/apical/resorption diagnosis, and the whole perio
+  // block) rather than a single post-hoc sweep, so each control's Status behavior
+  // is untouched.
+  const isPlan = getChartMode() === "plan";
+  // Apical (AAE) diagnosis picker.
   setSelectOptions($("#apicalDxSelect"), getApicalDxOptions(), state.apicalDx);
   if($("#apicalDxSelect").value !== state.apicalDx){
     state.apicalDx = $("#apicalDxSelect").value;
@@ -3682,8 +3748,7 @@ function syncControlsFromState(state: Any){
   // and writes BOTH fields. Options are filtered by the active tooth's view.
   const restoView = restorationViewFor(activeTooth);
   // The ONE dropdown reflects EITHER a fixed restoration OR a "Kivehető:"
-  // prosthesis (never both — FIX 4 coherence). Prefer the prosthesis encoding
-  // when one is set.
+  // prosthesis (never both). Prefer the prosthesis encoding when one is set.
   const restoSelected = state.prosthesis && state.prosthesis !== "none"
     ? `prosthesis|${state.prosthesis}`
     : `${state.restorationType}|${state.restorationMaterial}`;
@@ -3706,12 +3771,11 @@ function syncControlsFromState(state: Any){
   }
 
   // Gating: milktooth / under-gum / extraction / radix substrate carry no
-  // fixed restoration (mirrors the old crownMaterial="natural" reset).
-  // Implants are exempt — a fixed crown/bridge on an abutment is
-  // first-class (Task 3): the restorationOptions(ctx) call above already
-  // restricts an implant's dropdown to crown/bridge × material. A radix
-  // substrate (root remnant) is included here (SP15 wholebranch fix): the
-  // restoration row is hidden for it (restorationRowHidden above), so a
+  // fixed restoration. Implants are exempt — a fixed crown/bridge on an abutment
+  // is first-class: the restorationOptions(ctx) call above already restricts an
+  // implant's dropdown to crown/bridge × material. A radix substrate (root
+  // remnant) is included here: the restoration row is hidden for it
+  // (restorationRowHidden above), so a
   // stored crown must be cleared too — otherwise it keeps rendering
   // (emax-crown over tooth-radix) with no control left to clear it.
   if(isMilktooth || underGum || extraction || state.toothSubstrate === "radix"){
@@ -3724,12 +3788,11 @@ function syncControlsFromState(state: Any){
     state.toothSubstrate = "natural";
     $("#substrateSelect").value = "natural";
   }
-  // SP7 Task 4: merged pulp/endo status selector (two optgroups). Displayed
-  // value derives from (endo, pulpDx) via pulpEndoDisplayValue; the change
-  // handler (wireControls) routes selection through pulpEndoOnSelect, which
-  // enforces the mutual-exclusion invariant, so no post-sync normalization is
-  // needed here (unlike the old #endoSelect block this replaces).
-  buildPulpEndoSelect($("#pulpEndoSelect"), isMilktooth, pulpEndoDisplayValue(state));
+  // Merged pulp/endo status selector (two optgroups). Displayed value derives
+  // from (endo, pulpDx) via pulpEndoDisplayValue; the change handler
+  // (wireControls) routes selection through pulpEndoOnSelect, which enforces the
+  // mutual-exclusion invariant, so no post-sync normalization is needed here.
+  buildPulpEndoSelect($("#pulpEndoSelect"), isMilktooth, pulpEndoDisplayValue(state), isPlan);
   setSelectOptions($("#fillingSelect"), getFillingOptions(isMilktooth), state.fillingMaterial);
   if($("#fillingSelect").value !== state.fillingMaterial){
     state.fillingMaterial = $("#fillingSelect").value;
@@ -3740,13 +3803,12 @@ function syncControlsFromState(state: Any){
   }
   // mods
   $$("#modsChecks input[type=checkbox]").forEach(c => c.checked = state.mods.has(c.value));
-  // SP4: the periapical lesion-subtype row follows the apical diagnosis on a
-  // present tooth (apicalDx !== "normal"). A non-present tooth (implant/missing)
-  // never derives apicalDx but CAN still carry `mods.inflammation` (peri-implant /
-  // periodontal, still toggleable) — for those, keep the pre-SP4 behaviour and
-  // show the subtype row when the inflammation mod is set, so the lesion subtype
-  // stays authorable (regression fix).
-  $("#periapicalTypeRow").classList.toggle("hidden", !periapicalRowVisible(state));
+  // The periapical lesion-subtype row follows the apical diagnosis on a present
+  // tooth (apicalDx !== "normal"). A non-present tooth (implant/missing) never
+  // derives apicalDx but CAN still carry `mods.inflammation` (peri-implant /
+  // periodontal, still toggleable) — for those, show the subtype row when the
+  // inflammation mod is set, so the lesion subtype stays authorable.
+  $("#periapicalTypeRow").classList.toggle("hidden", !periapicalRowVisible(state) || isPlan);
   setSelectOptions($("#periapicalTypeSelect"), getPeriapicalTypeOptions(), state.periapicalType);
   if($("#periapicalTypeSelect").value !== state.periapicalType){
     state.periapicalType = $("#periapicalTypeSelect").value;
@@ -3754,49 +3816,48 @@ function syncControlsFromState(state: Any){
   $("#calculusToggle").checked = !!state.calculus;
   const calculusAllowed = state.toothSelection === "tooth-base" || state.toothSelection === "milktooth";
   $("#calculusRow").classList.toggle("hidden", !calculusAllowed);
-  // SP8 Task 5: periImplant (enum) is authored via a picker, shown only for an
-  // implant; on an implant it also supersedes the parodontal/inflammation mods.
+  // periImplant (enum) is authored via a picker, shown only for an implant; on
+  // an implant it also supersedes the parodontal/inflammation mods.
   setSelectOptions($("#periImplantSelect"), getPeriImplantOptions(), state.periImplant);
   if($("#periImplantSelect").value !== state.periImplant){
     state.periImplant = $("#periImplantSelect").value;
   }
   syncPeriImplantVisibility($("#periImplantRow"), $("#modsChecks"), state.toothSelection);
-  // SP7 Task 5 (extended by SP15 Task 3 / B4): the periapical-inflammation mod
-  // is retired as an authoring control on a PRESENT tooth (apicalDx drives the
-  // glyph) AND on an implant (periImplant covers implant inflammation). It
-  // stays visible for a missing tooth or an extraction-socket, where it marks
-  // periodontal inflammation that neither apicalDx nor periImplant cover.
-  // MUST run after syncPeriImplantVisibility() above — see that function's and
-  // syncInflammationModVisibility's doc comments for why the order matters.
+  // The periapical-inflammation mod is retired as an authoring control on a
+  // PRESENT tooth (apicalDx drives the glyph) AND on an implant (periImplant
+  // covers implant inflammation). It stays visible for a missing tooth or an
+  // extraction-socket, where it marks periodontal inflammation that neither
+  // apicalDx nor periImplant cover. MUST run after syncPeriImplantVisibility()
+  // above — see that function's and syncInflammationModVisibility's doc comments
+  // for why the order matters.
   syncInflammationModVisibility($("#modsChecks"), state.toothSelection);
-  // SP4 Task 5: resorptionType (enum) is authored via a none/internal/
-  // external-cervical picker (both subtypes render identically; the picker only
-  // records which). Replaces the interim on/off checkbox.
+  // resorptionType (enum) is authored via a none/internal/external-cervical
+  // picker (both subtypes render identically; the picker only records which).
   setSelectOptions($("#resorptionSelect"), getResorptionOptions(), state.resorptionType);
   if($("#resorptionSelect").value !== state.resorptionType){
     state.resorptionType = $("#resorptionSelect").value;
   }
 
   // caries (cross surfaces + the separate subcrown row) + per-surface depth indicator
-  // (ICDAS `data-depth`/`data-icdas` badge + SP5 Task 4 `data-radio` — see
+  // (ICDAS `data-depth`/`data-icdas` badge + `data-radio` — see
   // syncSurfaceDepthIndicator())
   $$("#cariesChecks input[type=checkbox], #cariesSubcrownRow input[type=checkbox]").forEach(c => c.checked = state.caries.has(c.value));
   $$("#cariesChecks .surface-cell").forEach(cell => syncSurfaceDepthIndicator(cell, state));
 
   // Depth selector at the top sets the DEFAULT depth for newly tapped surfaces.
-  // SP5 Task 5: the whole visual caries-depth UI is gated by `cariesDepthEnabled`.
-  $("#cariesDepthRow").classList.toggle("hidden", !cariesDepthEnabled);
+  // The whole visual caries-depth UI is gated by `cariesDepthEnabled`.
+  $("#cariesDepthRow").classList.toggle("hidden", !cariesDepthEnabled || isPlan);
   setSelectOptions($("#cariesDepthSelect"), getCariesDepthOptions(), state.cariesActiveDepth);
   if($("#cariesDepthSelect").value !== String(state.cariesActiveDepth)){
     state.cariesActiveDepth = Number($("#cariesDepthSelect").value);
   }
 
-  // SP5 Task 5: per-tooth root-caries picker. Options come from the current
+  // Per-tooth root-caries picker. Options come from the current
   // `rootCariesMode`; the stored value is displayed collapsed to that list but
   // NEVER written back (non-collapsing — widening the mode reveals it again).
   // Shown only on a present tooth (mirrors the endo/pulp per-tooth controls).
   setSelectOptions($("#rootCariesSelect"), rootCariesOptions(), rootCariesDisplayValue(rootCariesMode, state.rootCaries));
-  $("#rootCariesRow").classList.toggle("hidden", !isToothPresent(state.toothSelection));
+  $("#rootCariesRow").classList.toggle("hidden", !isToothPresent(state.toothSelection) || isPlan);
 
   // filling surfaces
   $$("#fillingSurfaceChecks input[type=checkbox]").forEach(c => {
@@ -3807,9 +3868,9 @@ function syncControlsFromState(state: Any){
       cell.setAttribute("data-material", mat || "");
     }
   });
-  // SP6 Task 2 (step 2): recurrent-caries dark-border indicator on filled surfaces.
+  // Recurrent-caries dark-border indicator on filled surfaces.
   $$("#fillingSurfaceChecks .surface-cell").forEach(cell => syncFillingSubcariesIndicator(cell, state));
-  // SP10 Task 3: structural filling-defect dark-border indicator (LEFT side).
+  // Structural filling-defect dark-border indicator (LEFT side).
   $$("#fillingSurfaceChecks .surface-cell").forEach(cell => syncFillingDefectIndicator(cell, state));
 
   // disable logic in UI
@@ -3822,7 +3883,34 @@ function syncControlsFromState(state: Any){
     else setDisabled(c, hasRestoration || hasCrown);
   });
   const showFillingSurfaces = state.fillingMaterial !== "none" && !hasCrown;
-  $("#fillingSurfaceChecks").classList.toggle("hidden", !showFillingSurfaces);
+  // In "simple" complexity, the per-surface grid is replaced by a single
+  // filled/not-filled toggle (both gated on showFillingSurfaces).
+  const simpleFilling = fillingComplexity === "simple";
+  $("#fillingSurfaceChecks").classList.toggle("hidden", !showFillingSurfaces || simpleFilling);
+  const simpleRow = $("#fillingSimpleRow") as HTMLElement | null;
+  if(simpleRow){
+    simpleRow.classList.toggle("hidden", !showFillingSurfaces || !simpleFilling);
+    const simpleInput = simpleRow.querySelector("input") as HTMLInputElement | null;
+    if(simpleInput) simpleInput.checked = state.fillingSurfaceMaterials.size > 0;
+  }
+  // In simple mode, a defect button (applying to ALL filled surfaces) shows only
+  // when the defect feature is on and the tooth is filled.
+  const simpleDefectRow = $("#fillingSimpleDefectRow") as HTMLElement | null;
+  if(simpleDefectRow){
+    const showSimpleDefect = showFillingSurfaces && simpleFilling && fillingDefectEnabled && state.fillingSurfaceMaterials.size > 0;
+    simpleDefectRow.classList.toggle("hidden", !showSimpleDefect);
+    const sel = $("#fillingSimpleDefectSelect") as HTMLSelectElement | null;
+    if(sel){
+      // Reflect the representative (first filled surface's) defect; applying via
+      // the select writes the chosen value to EVERY filled surface.
+      const firstSurf = [...state.fillingSurfaceMaterials.keys()][0];
+      const cur = firstSurf ? (state.fillingDefect?.get(firstSurf) ?? "none") : "none";
+      setSelectOptions(sel, fillingDefectOptions(), cur);
+    }
+  }
+  // Hide the per-surface filling-defect indicator when the defect feature is
+  // turned off in Settings → Fillings.
+  $("#fillingSurfaceChecks").classList.toggle("defect-disabled", !fillingDefectEnabled);
 
   // endo only if tooth present
   const endoDisabled = !isToothPresent(state.toothSelection) || underGum || extraction;
@@ -3842,7 +3930,10 @@ function syncControlsFromState(state: Any){
   const noneSelected = selectedArr.length > 0 && selectedArr.some(tn => toothState.get(tn)?.toothSelection === "none");
   const hideByNone = state.toothSelection === "none" || noneSelected;
   const hideByRadix = state.toothSubstrate === "radix";
-  $("#cariesSection").classList.toggle("hidden", hideByBase || hideByRadix);
+  // Plan-mode: caries is a status finding (a diagnosis), so the whole caries
+  // section is hidden in Plan — a filling/restoration is still plannable via the
+  // Fillings + Restoration controls, which stay visible.
+  $("#cariesSection").classList.toggle("hidden", hideByBase || hideByRadix || isPlan);
   const hideFillingsByCrown = state.toothSelection === "tooth-base" && hasCrown;
   $("#fillingSection").classList.toggle("hidden", hideByBase || hideFillingsByCrown);
   // Combined restoration dropdown: available on a present permanent tooth and on
@@ -3854,15 +3945,27 @@ function syncControlsFromState(state: Any){
   $("#substrateRow").classList.toggle("hidden", hideSubstrateRow);
   $("#brokenCrownRow").classList.toggle("hidden", state.toothSubstrate !== "broken" || hideSubstrateRow);
   $("#extractionRow").classList.toggle("hidden", state.toothSelection !== "none");
-  // SP7 Task 5: the merged Root+Periodontium card reconciles the two original
-  // cards' different hide predicates — the root block (endo/apical/lesion/
+  // The merged Root+Periodontium card reconciles the two original cards'
+  // different hide predicates — the root block (endo/apical/lesion/
   // resorption/resection/pin) keeps the old #endoSection predicate
   // (hideByBase), the perio block (mobility/mods/calculus) keeps the old
   // #inflammationSection predicate (hideByNone); the card itself only
   // collapses away when BOTH blocks would be empty.
   $("#rpRootBlock").classList.toggle("hidden", hideByBase);
-  $("#rpPerioBlock").classList.toggle("hidden", hideByNone);
-  $("#rootPeriodontiumSection").classList.toggle("hidden", hideByBase && hideByNone);
+  // Plan-mode: the entire periodontal block (mobility, 6-site probing grid,
+  // inflammation/parodontal mods, calculus, peri-implant status) is status-only
+  // diagnosis — hidden in Plan. The root block stays visible so endo TREATMENT
+  // remains plannable.
+  $("#rpPerioBlock").classList.toggle("hidden", hideByNone || isPlan);
+  // Section collapses only when BOTH blocks are gone; in Plan the root block
+  // still shows, so the section stays (unless the base already hides it).
+  $("#rootPeriodontiumSection").classList.toggle("hidden", hideByBase && (hideByNone || isPlan));
+  // Plan-mode: inside the still-visible root block, hide the diagnosis-only rows
+  // (apical diagnosis, periapical lesion subtype above, root resorption). Endo
+  // TREATMENT (root canal/post via #pulpEndoSelect, apicoectomy, parapulpal pin)
+  // stays plannable.
+  $("#apicalDxRow").classList.toggle("hidden", isPlan);
+  $("#resorptionRow").classList.toggle("hidden", isPlan);
   const selectedList = selectedArr.length > 0 ? selectedArr : (activeTooth ? [activeTooth] : []);
   const contactAllowed = selectedList.length > 0 && selectedList.every(tn => {
     const s = toothState.get(tn);
@@ -3871,20 +3974,22 @@ function syncControlsFromState(state: Any){
     if(s.toothSelection === "tooth-base" && s.restorationType !== "none") return false;
     return true;
   });
-  const bruxismAllowed = selectedList.length > 0 && selectedList.every(tn => {
+  // Plan-mode: tooth wear is a status finding — not plannable treatment.
+  const bruxismAllowed = !isPlan && selectedList.length > 0 && selectedList.every(tn => {
     const s = toothState.get(tn);
     return s && wearRowAllowed(s);
   });
-  // SP12 Task 3: #discolorationRow visibility gate — reuses the same
-  // discolorationAllowed predicate the render tint and tooltip use, so the
-  // dropdown's visibility never contradicts the chart (SP9/10/11 lesson).
-  const discolorationRowAllowed = selectedList.length > 0 && selectedList.every(tn => {
+  // #discolorationRow visibility gate — reuses the same discolorationAllowed
+  // predicate the render tint and tooltip use, so the dropdown's visibility never
+  // contradicts the chart. Plan-mode: discoloration is a status finding — hidden
+  // in Plan.
+  const discolorationRowAllowed = !isPlan && selectedList.length > 0 && selectedList.every(tn => {
     const s = toothState.get(tn);
     return s && discolorationAllowed(s);
   });
-  // SP14 Task 3: #orthoCard visibility gate — reuses the same orthoAllowed
-  // predicate the render glyphs and tooltip use (Task 2/4), so the card's
-  // visibility never contradicts the chart (SP9/10/11 lesson).
+  // #orthoCard visibility gate — reuses the same orthoAllowed predicate the
+  // render glyphs and tooltip use, so the card's visibility never contradicts the
+  // chart.
   const orthoCardAllowed = selectedList.length > 0 && selectedList.every(tn => {
     const s = toothState.get(tn);
     return s && orthoAllowed(s);
@@ -3897,7 +4002,8 @@ function syncControlsFromState(state: Any){
   $("#bruxismRow").classList.toggle("hidden", !bruxismAllowed);
   $("#discolorationRow").classList.toggle("hidden", !discolorationRowAllowed);
   $("#orthoCard").classList.toggle("hidden", !orthoCardAllowed);
-  $("#fissureSealingRow").classList.toggle("hidden", !fissureAllowed);
+  // Also hidden when fissure sealing is turned off in Settings.
+  $("#fissureSealingRow").classList.toggle("hidden", !fissureAllowed || !fissureSealingEnabled);
   const extractionPlanAllowed = selectedList.length > 0 && selectedList.every(tn => {
     const s = toothState.get(tn);
     return s && ["tooth-base","milktooth","implant","tooth-under-gum"].includes(s.toothSelection);
@@ -3953,8 +4059,8 @@ function syncControlsFromState(state: Any){
     }
     extractionPlanRow.classList.toggle("hidden", !extractionPlanAllowed);
   }
-  // SP8 Task 5: the dedicated periImplant axis now owns "peri-implantitis";
-  // the parodontal mod keeps its plain label on every tooth type.
+  // The dedicated periImplant axis owns "peri-implantitis"; the parodontal mod
+  // keeps its plain label on every tooth type.
   const parodontLabel = $("#lbl-parodontal");
   if(parodontLabel){ parodontLabel.textContent = t("mods.parodontal"); }
 
@@ -3971,9 +4077,9 @@ function syncControlsFromState(state: Any){
     inflammationLabel.textContent = extraction ? t("mods.periodontalInflammation") : t("mods.periapicalInflammation");
   }
   $("#mobilityRow").classList.toggle("hidden", mobilityRowHidden(state));
-  // SP-perio P1 Task 2: sync the #perioRow six-site grid + derived read-out
-  // from state on every syncControlsFromState() call — i.e. on tooth select,
-  // mirroring exactly how mobility syncs its own control above.
+  // Sync the #perioRow six-site grid + derived read-out from state on every
+  // syncControlsFromState() call — i.e. on tooth select, mirroring how mobility
+  // syncs its own control above.
   syncPerioRow(state);
   const parodontalInput = $("#chk-parodontal");
   if(parodontalInput){
@@ -3984,39 +4090,26 @@ function syncControlsFromState(state: Any){
     if(inflammationInput) setDisabled(inflammationInput, false);
   }
 
-  // SP6 Task 4 (§8): re-resolve the "occlusal"/"incisal" surface-picker labels
-  // for the (possibly just-changed) active tooth — anterior vs. posterior only
-  // affects the displayed label, never the stored surface value.
+  // Re-resolve the "occlusal"/"incisal" surface-picker labels for the (possibly
+  // just-changed) active tooth — anterior vs. posterior only affects the
+  // displayed label, never the stored surface value.
   refreshCheckLabels();
-  // SP6 Task 4 (§7): the "Fillings and restorative" panel's informational
-  // subcaries-summary line depends on ALL selected teeth, not just the active
-  // one, so it reads `selectedTeeth`/`toothState` directly rather than `state`.
+  // The "Fillings and restorative" panel's informational subcaries-summary line
+  // depends on ALL selected teeth, not just the active one, so it reads
+  // `selectedTeeth`/`toothState` directly rather than `state`.
   updateFillingSubcariesSummary();
-  // SP16 Task 1: parallel filling-defect-summary line, same all-selected-teeth
-  // rationale as updateFillingSubcariesSummary above.
+  // Parallel filling-defect-summary line, same all-selected-teeth rationale as
+  // updateFillingSubcariesSummary above.
   updateFillingDefectSummary();
 }
 
 // ---- Event handlers ----
-function applyAndSync(toothNo: Any){
-  applyStateToSvg(toothNo);
-  updateToothTileNumber(toothNo);
-  if(toothNo === activeTooth){
-    syncControlsFromState(toothState.get(toothNo));
-  }
-  if(edentulous && !suppressEdentulousSync){
-    setEdentulous(false);
-  }
-  updateSelectionFilterButtons();
-}
-
 function applyToSelected(fn: Any){
   if(selectedTeeth.size === 0) return;
-  // DS-1: route the whole selection edit through the batch gate — in plan mode
-  // every selected tooth is marked plan-edited; in status mode (plan
-  // initialized) every selected tooth that is NOT already plan-edited mirrors
-  // status->plan after the batch (planned teeth diverge). Uninitialized plan is
-  // a pure passthrough (byte-identical to the pre-dual-state behavior).
+  // Route the whole selection edit through the batch gate — in plan mode every
+  // selected tooth is marked plan-edited; in status mode (plan initialized) every
+  // selected tooth that is NOT already plan-edited mirrors status->plan after the
+  // batch (planned teeth diverge). Uninitialized plan is a pure passthrough.
   const toothNos = Array.from(selectedTeeth) as number[];
   gateToothEditBatch(toothNos, () => {
     for(const toothNo of toothNos){
@@ -4037,7 +4130,7 @@ function applyToSelected(fn: Any){
   });
 }
 
-/** DS-1 (review Fix 1): reset a SINGLE tooth to `defaultState()`, routed through
+/** Reset a SINGLE tooth to `defaultState()`, routed through
  *  the edit {@link gateToothEdit} so a per-tooth reset behaves like every other
  *  edit — on an un-planned tooth it mirrors status->plan (no spurious diff), on
  *  a plan-edited tooth it CONFIRMS before applying (parity with clearing the
@@ -4054,7 +4147,7 @@ function resetToothGated(toothNo: number): void {
   });
 }
 
-/** DS-1 (review Fix 1): reset a SET of selected teeth to `defaultState()`,
+/** Reset a SET of selected teeth to `defaultState()`,
  *  routed through {@link gateToothEditBatch} — one confirm covers the whole set
  *  when it touches a plan-edited tooth; un-planned teeth mirror status->plan.
  *  The `edentulous` flip + render + control-sync all live INSIDE the gated
@@ -4082,14 +4175,14 @@ function resetTeethGated(toothNos: number[]): void {
   });
 }
 
-/** DS-1: apply the PRIMARY (deciduous) dentition preset — a STRUCTURAL
+/** Apply the PRIMARY (deciduous) dentition preset — a STRUCTURAL
  *  interactive edit (not a reset), routed through the batch gate. `targetFor`
  *  is the state each tooth ends up in; only teeth that actually change are
  *  passed to the gate so unchanged teeth are not marked plan-edited / mirrored
  *  (per-tooth no-op signaling). Uninitialized plan stays a pure passthrough.
- *  DS-1 (review Fix 3): the `edentulous` flip + button state live INSIDE the
- *  gated closure so on the deferred-confirm path they take effect only on
- *  Accept — otherwise Cancel would leave `edentulous` flipped while every tooth
+ *  The `edentulous` flip + button state live INSIDE the gated closure so on the
+ *  deferred-confirm path they take effect only on Accept — otherwise Cancel
+ *  would leave `edentulous` flipped while every tooth
  *  is untouched (flag/teeth mismatch). `notifyStateChange()` moves inside too so
  *  the whole-mouth refresh fires when the batch actually applies. */
 function applyPrimaryDentition(): void {
@@ -4114,9 +4207,9 @@ function applyPrimaryDentition(): void {
   });
 }
 
-/** DS-1: apply the MIXED dentition preset — see {@link applyPrimaryDentition};
- *  gated STRUCTURAL edit with per-tooth no-op signaling and (Fix 3) the
- *  `edentulous` flip inside the gated closure. */
+/** Apply the MIXED dentition preset — see {@link applyPrimaryDentition}; gated
+ *  STRUCTURAL edit with per-tooth no-op signaling and the `edentulous` flip
+ *  inside the gated closure. */
 function applyMixedDentition(): void {
   const targetFor = (toothNo: number)=>{
     const s = defaultState();
@@ -4198,25 +4291,25 @@ function refreshCheckLabels(){
     const label = $(`#lbl-${opt.value}`);
     if(!label) continue;
     const surface = opt.value.replace("caries-", "");
-    // SP6 Task 4 (§8) / SP16 Task 2: occlusal, buccal, and lingual all resolve
-    // through surfaceLabelKey — arch/anterior-aware in "full" notation mode
+    // occlusal, buccal, and lingual all resolve through surfaceLabelKey —
+    // arch/anterior-aware in "full" notation mode
     // ("incisal"/"labial"/"palatal"); mesial/distal/subcrown are
     // position-independent and keep their own generic labelKey.
     const key = (surface === "occlusal" || surface === "buccal" || surface === "lingual")
       ? surfaceLabelKey(surface, activeTooth)
       : opt.labelKey;
     label.textContent = t(key);
-    // SP16 Task 2: the boxed `.surf-letter` span is set once at build time
-    // (buildSurfaceCross) and was never refreshed per-tooth — rewrite it here
-    // too, so it tracks the active tooth's position + the surfaceNotation
-    // setting (subcrown has no `.surf-letter` sibling, so this is a no-op there).
+    // The boxed `.surf-letter` span is set once at build time (buildSurfaceCross);
+    // rewrite it here per-tooth so it tracks the active tooth's position + the
+    // surfaceNotation setting (subcrown has no `.surf-letter` sibling, so this is
+    // a no-op there).
     const letterEl = label.parentElement?.querySelector(".surf-letter");
     if(letterEl) letterEl.textContent = surfaceLetter(surface, activeTooth);
   }
   for(const surface of GROUPS.fillingSurfaces){
     const label = $(`#lbl-${surface}`);
     if(!label) continue;
-    // SP6 Task 4 (§8) / SP16 Task 2: mirrors the caries-picker swap above.
+    // Mirrors the caries-picker swap above.
     const key = (surface === "occlusal" || surface === "buccal" || surface === "lingual")
       ? surfaceLabelKey(surface, activeTooth)
       : (FILLING_SURFACE_LABELS[surface] || "surface.mesial");
@@ -4282,9 +4375,9 @@ function refreshAllSelectOptions(){
   if(mobilityEl) setSelectOptions(mobilityEl, getMobilityOptions(), mobilityEl.value);
   const periapicalEl = $("#periapicalTypeSelect");
   if(periapicalEl) setSelectOptions(periapicalEl, getPeriapicalTypeOptions(), periapicalEl.value);
-  // SP7 Task 4: merged pulp/endo selector — rebuild both optgroups, preserving
-  // the currently selected value (mirrors the other re-localize-in-place calls
-  // in this function).
+  // Merged pulp/endo selector — rebuild both optgroups, preserving the currently
+  // selected value (mirrors the other re-localize-in-place calls in this
+  // function).
   const pulpEndoEl = $("#pulpEndoSelect");
   if(pulpEndoEl) buildPulpEndoSelect(pulpEndoEl, isMilktooth, pulpEndoEl.value);
   const apicalEl = $("#apicalDxSelect");
@@ -4583,12 +4676,12 @@ function hideCariesDepthPopup(){
 }
 
 /** Popup to author a single caries surface on the selected teeth. Beyond the
- *  original visual caries-depth (ICDAS/3-level) picker it now offers, in the
- *  SAME anchored popup (SP5 Task 5): a per-surface secondary-caries CARS-score
+ *  original visual caries-depth (ICDAS/3-level) picker it also offers, in the
+ *  SAME anchored popup: a per-surface secondary-caries CARS-score
  *  picker and — only when `radiographicDepthMode !== "off"` — a per-surface
  *  radiographic-depth picker. Each group's option list follows its granularity
  *  mode; the depth group itself is hidden when `cariesDepthEnabled` is off. */
-/** SP16 Task 2: resolves the DISPLAY LETTER for a caries/filling surface,
+/** Resolves the DISPLAY LETTER for a caries/filling surface,
  *  respecting the `surfaceNotation` setting ("full", default) and — in full
  *  mode — the tooth's arch (upper/lower) and anterior/posterior position.
  *
@@ -4624,15 +4717,14 @@ export function surfaceLetter(surface: string, toothNo?: number | null): string 
  *  so the popup header can read e.g. "Caries details – Buccal". Falls back to
  *  the raw surface string for any (unexpected) unmapped value.
  *
- *  SP6 Task 4 (§8): when `toothNo` is given and is an anterior tooth
- *  (incisor/canine), the "occlusal" surface DISPLAYS as "incisal"
- *  (`surface.incisal`) instead of `surface.occlusal` — the stored surface
- *  value is unaffected, this only changes which i18n key the label resolves
- *  to.
+ *  When `toothNo` is given and is an anterior tooth (incisor/canine), the
+ *  "occlusal" surface DISPLAYS as "incisal" (`surface.incisal`) instead of
+ *  `surface.occlusal` — the stored surface value is unaffected, this only
+ *  changes which i18n key the label resolves to.
  *
- *  SP16 Task 2: extended to be arch/anterior-aware for ALL of
- *  occlusal/buccal/lingual, gated on the `surfaceNotation` setting. In
- *  "full" mode (default): occlusal -> incisal (anterior), buccal -> labial
+ *  Arch/anterior-aware for ALL of occlusal/buccal/lingual, gated on the
+ *  `surfaceNotation` setting. In "full" mode (default): occlusal -> incisal
+ *  (anterior), buccal -> labial
  *  (anterior), lingual -> palatal (upper) / lingual (lower, a NEW key
  *  separate from the combined `surface.lingualPalatal`). In "simple" mode
  *  the generic, tooth-independent keys are always used
@@ -4661,7 +4753,7 @@ function showCariesDepthPopup(surface: string, anchor: HTMLElement, toothNo?: nu
   const rect = anchor.getBoundingClientRect();
   const popup = el("div", { class: "odon-depth-popup" });
   const active = activeTooth != null ? toothState.get(activeTooth) : null;
-  // SP6 Task 2 (step 1): the popup is CONTEXTUAL. A surface that carries a
+  // The popup is CONTEXTUAL. A surface that carries a
   // filling is a (potential) recurrent-caries surface → show the CARS group and
   // the "Recurrent caries – {surface}" title; a filling-free surface is primary
   // caries → show the depth group and the "Caries – {surface}" title. Never both.
@@ -4689,7 +4781,7 @@ function showCariesDepthPopup(surface: string, anchor: HTMLElement, toothNo?: nu
     }
   };
 
-  // SP6 Task 2 (step 1): show exactly ONE severity group by context. Both groups
+  // Show exactly ONE severity group by context. Both groups
   // write the single unified `cariesSeverity` (read as ICDAS on a primary
   // surface, CARS on a recurrent one); the context — filling present or not —
   // decides which labels the user sees and which transition a pick performs.
@@ -4736,7 +4828,7 @@ function showCariesDepthPopup(surface: string, anchor: HTMLElement, toothNo?: nu
   }, 0);
 }
 
-/** SP10 Task 3: small dedicated anchored popup to author the structural
+/** Small dedicated anchored popup to author the structural
  *  filling-defect (`none` | `marginal` | `fracture` | `wear`) on ONE filled
  *  surface, opened from the LEFT-side `.surf-defect` indicator. Reuses
  *  {@link hideCariesDepthPopup}'s shared close/teardown, and the SAME
@@ -5040,17 +5132,17 @@ function updateToothTileVisibility(){
 
 function setEdentulous(on: Any){
   if(on){
-    // DS-1: turning on whole-mouth edentulous is a STRUCTURAL interactive edit
+    // Turning on whole-mouth edentulous is a STRUCTURAL interactive edit
     // (not a reset), so route it through the batch gate — in plan mode every
     // changed tooth is marked plan-edited; in status mode (plan initialized)
     // every changed tooth NOT already plan-edited mirrors status->plan (planned
     // teeth diverge). Only teeth that ACTUALLY change (were not already sound-
     // missing) are passed to the gate, so an already-missing tooth's plan is
     // left untouched (per-tooth no-op signaling). Uninitialized plan stays a
-    // pure passthrough (byte-identical to the pre-dual-state behavior).
+    // pure passthrough.
     const missingKey = JSON.stringify(serializeState((()=>{ const s = defaultState(); s.toothSelection = "none"; return s; })()));
     const changed = ALL_TEETH.filter(tn => JSON.stringify(serializeState(toothState.get(tn) ?? defaultState())) !== missingKey);
-    // DS-1 (review Fix 3): set the `edentulous` global + the toggle-button state
+    // Set the `edentulous` global + the toggle-button state
     // INSIDE the gated closure, NOT synchronously before it resolves. On the
     // deferred-confirm path they must take effect only on Accept — otherwise
     // Cancel (which never runs this closure) would leave `edentulous === true`
@@ -5125,27 +5217,23 @@ function serializeState(s: Any){
   return {
     toothSelection: s.toothSelection,
     pulpDx: s.pulpDx,
-    // SP4 Task 5: pulpLatin (practical-Latin subtype) and apicalDx (apical AAE
-    // diagnosis) are now authorable in the diagnosis UI, so they join the
-    // serialized payload — this is also what feeds the FHIR export (both are
-    // already mapped in FIELD_MAPPINGS). Both round-trip via fromRaw below.
+    // pulpLatin (practical-Latin subtype) and apicalDx (apical AAE diagnosis) are
+    // authorable in the diagnosis UI and join the serialized payload — this also
+    // feeds the FHIR export (both are mapped in FIELD_MAPPINGS). Both round-trip
+    // via fromRaw below.
     pulpLatin: s.pulpLatin,
     apicalDx: s.apicalDx,
     endoResection: !!s.endoResection,
     resorptionType: s.resorptionType,
-    // SP18: peri-implant status (mucositis / peri-implantitis staging) was
-    // authored, rendered, and read back by hydrateState, but omitted here —
-    // an SP8 omission that silently dropped it on export/import. Fixed by
-    // adding it alongside the other enum-axis fields.
+    // Peri-implant status (mucositis / peri-implantitis staging) — serialized
+    // alongside the other enum-axis fields so it round-trips on export/import.
     periImplant: s.periImplant,
     mods: Array.from(s.mods || []),
     periapicalType: s.periapicalType,
     endo: s.endo,
     caries: Array.from(s.caries || []),
     cariesActiveDepth: s.cariesActiveDepth,
-    // SP6 Task 1: the unified per-surface severity replaces the SP5
-    // `cariesDepths` + `secondaryCaries` pair. Serialized like `cariesDepths`
-    // was (Record<surface,number>). Payload version bumped to 2.4.
+    // The unified per-surface severity, serialized as Record<surface,number>.
     cariesSeverity: Object.fromEntries(s.cariesSeverity || new Map()),
     fillingMaterial: s.fillingMaterial,
     fillingSurfaces: Array.from(s.fillingSurfaces || []),
@@ -5180,46 +5268,37 @@ function serializeState(s: Any){
     rootCaries: s.rootCaries,
     radiographicDepth: Object.fromEntries(s.radiographicDepth || new Map()),
     fillingDefect: Object.fromEntries(s.fillingDefect || new Map()),
-    // SP-perio P1 Task 1: omitted ENTIRELY when no site is charted (mirrors
-    // the customStates/note pattern below) — a no-perio tooth/payload stays
-    // byte-identical to its pre-perio serialization.
+    // Omitted ENTIRELY when no site is charted (mirrors the customStates/note
+    // pattern below).
     ...((s.perio?.pd?.size ?? 0) > 0 ? { perio: {
       pd: Object.fromEntries(s.perio.pd),
       gm: Object.fromEntries(s.perio.gm),
       bop: Array.from(s.perio.bop),
       sup: Array.from(s.perio.sup),
     } } : {}),
-    // SP-perio P2b Task 2: omitted ENTIRELY when no entrance is graded, same
-    // convention as `perio` above — a no-furcation tooth/payload stays
-    // byte-identical to its pre-furcation serialization.
+    // Omitted ENTIRELY when no entrance is graded, same convention as `perio`
+    // above.
     ...((s.furcation?.size ?? 0) > 0 ? { furcation: Object.fromEntries(s.furcation) } : {}),
-    // SP-perio P2b Task 3: omitted ENTIRELY when no surface has plaque, same
-    // convention as `perio`/`furcation` above (additive) — a no-plaque
-    // tooth/payload stays byte-identical apart from the version field.
+    // Omitted ENTIRELY when no surface has plaque, same convention as
+    // `perio`/`furcation` above.
     ...((s.plaque?.size ?? 0) > 0 ? { plaque: Array.from(s.plaque) } : {}),
-    // SP-perio PG-D Task 1: pi/gi are emitted ONLY when at least one surface
-    // is graded, same omit-when-empty convention as perio/furcation/plaque
-    // above — a tooth never touched by PI/GI stays byte-identical apart from
-    // the version bump (payload 2.15).
+    // pi/gi are emitted ONLY when at least one surface is graded, same
+    // omit-when-empty convention as perio/furcation/plaque above.
     ...((s.pi?.size ?? 0) > 0 ? { pi: Object.fromEntries(s.pi) } : {}),
     ...((s.gi?.size ?? 0) > 0 ? { gi: Object.fromEntries(s.gi) } : {}),
     ...((s.mpi?.size ?? 0) > 0 ? { mpi: Object.fromEntries(s.mpi) } : {}),
     ...((s.mbi?.size ?? 0) > 0 ? { mbi: Object.fromEntries(s.mbi) } : {}),
-    // SP-perio PG-D Task 2: keratinized gingiva width — omitted ENTIRELY when
-    // not charted (null), same omit-when-empty convention as pi/gi above — a
-    // tooth never touched by KG stays byte-identical (payload stays 2.15,
-    // Task 1 already bumped it).
+    // Keratinized gingiva width — omitted ENTIRELY when not charted (null), same
+    // omit-when-empty convention as pi/gi above.
     ...(s.kg != null ? { kg: s.kg } : {}),
-    // SP-perio PG-C Task 2: cejVisibility/rootConcavity are emitted ONLY when set
-    // (!== "none"), like the omit-when-empty perio fields above — a default tooth
-    // stays byte-identical (payload bumped to 2.14). Both round-trip via
-    // validateEnum in hydrateState (default "none").
+    // cejVisibility/rootConcavity are emitted ONLY when set (!== "none"), like the
+    // omit-when-empty perio fields above. Both round-trip via validateEnum in
+    // hydrateState (default "none").
     ...(s.cejVisibility && s.cejVisibility !== "none" ? { cejVisibility: s.cejVisibility } : {}),
     ...(s.rootConcavity && s.rootConcavity !== "none" ? { rootConcavity: s.rootConcavity } : {}),
-    // SP-perio PG-D Task 3: gingivalThickness/millerClass are emitted ONLY
-    // when set (!== their skip value), like cejVisibility/rootConcavity above
-    // — a default tooth stays byte-identical (payload stays 2.15). Both
-    // round-trip via validateEnum in hydrateState.
+    // gingivalThickness/millerClass are emitted ONLY when set (!== their skip
+    // value), like cejVisibility/rootConcavity above. Both round-trip via
+    // validateEnum in hydrateState.
     ...(s.gingivalThickness && s.gingivalThickness !== "unknown" ? { gingivalThickness: s.gingivalThickness } : {}),
     ...(s.millerClass && s.millerClass !== "none" ? { millerClass: s.millerClass } : {}),
     ...(Object.keys(s.customStates || {}).length > 0 ? { customStates: s.customStates } : {}),
@@ -5239,8 +5318,7 @@ export const VALID_RESTORATION_MATERIAL = validValues("restorationMaterial");
 export const VALID_MODS = validValues("mods");
 export const VALID_PERIAPICAL_TYPE = validValues("periapicalType");
 export const VALID_CARIES = validValues("caries");
-// SP4 Task 1: pulp/apical/resorption diagnosis axes (additive; unused until
-// later SP4 tasks wire up render/migration/validate).
+// Pulp/apical/resorption diagnosis axes.
 export const VALID_PULP_DX = validValues("pulpDx");
 export const VALID_PULP_LATIN = validValues("pulpLatin");
 export const VALID_APICAL_DX = validValues("apicalDx");
@@ -5248,28 +5326,24 @@ export const VALID_RESORPTION_TYPE = validValues("resorptionType");
 export const VALID_WEAR_EDGE = validValues("wearEdge");
 export const VALID_WEAR_CERVICAL = validValues("wearCervical");
 export const VALID_DISCOLORATION = validValues("discoloration");
-// SP14 Task 1: orthodontic axes foundation (additive; see registry/axes.ts).
+// Orthodontic axes.
 export const VALID_ORTHO_APPLIANCE = validValues("orthoAppliance");
 export const VALID_ORTHO_DRIFT = validValues("orthoDrift");
 export const VALID_ORTHO_VERTICAL = validValues("orthoVertical");
-const VALID_CARIES_DEPTH = new Set(["surface","dentin","deep"]);
 export const VALID_FILLING_SURFACES = validSurfaces();
-// SP5/SP6: caries fields. `rootCaries` is a registered axis, so it reads from
-// AXES like every other enum. `cariesSeverity` (unified 0..6 visual severity)
-// and `radiographicDepth` are per-surface scalar-map fields with no axis of
-// their own, so their valid sets are literal here. `VALID_CARS` is retained for
-// reading the retired SP5 `secondaryCaries` map off legacy raw payloads during
+// Caries fields. `rootCaries` is a registered axis, so it reads from AXES like
+// every other enum. `cariesSeverity` (unified 0..6 visual severity) and
+// `radiographicDepth` are per-surface scalar-map fields with no axis of their
+// own, so their valid sets are literal here. `VALID_CARS` is retained for
+// reading the legacy `secondaryCaries` map off legacy raw payloads during
 // migration (see hydrateState).
 export const VALID_ROOT_CARIES = validValues("rootCaries");
-// SP8 Task 1: peri-implantitis foundation (registry axis; unused until later
-// SP8 tasks wire up render/migration/UI).
+// Peri-implantitis axis.
 export const VALID_PERI_IMPLANT = validValues("periImplant");
-// SP-perio PG-C Task 2: the two new categorical data axes (registry axes; read
-// from AXES like every other enum).
+// Two categorical data axes (registry axes; read from AXES like every other enum).
 export const VALID_CEJ_VISIBILITY = validValues("cejVisibility");
 export const VALID_ROOT_CONCAVITY = validValues("rootConcavity");
-// SP-perio PG-D Task 3: the two new categorical data axes (registry axes; read
-// from AXES like every other enum).
+// Two categorical data axes (registry axes; read from AXES like every other enum).
 export const VALID_GINGIVAL_THICKNESS = validValues("gingivalThickness");
 export const VALID_MILLER_CLASS = validValues("millerClass");
 export const VALID_CARS = new Set([0, 1, 2, 3, 4, 5, 6]);
@@ -5277,8 +5351,8 @@ export const VALID_CARIES_SEVERITY = new Set([0, 1, 2, 3, 4, 5, 6]);
 export const VALID_RADIOGRAPHIC_DEPTH = new Set(["none", "E1", "E2", "D1", "D2", "D3"]);
 export const VALID_FILLING_DEFECT = new Set(["none", "marginal", "fracture", "wear"]);
 export const VALID_FILLING_DEFECT_SET = new Set(["marginal", "fracture", "wear"]); // non-none, valid stored values
-// SP-perio P2b Task 2: the union of every entrance value furcationEntrances()
-// can ever return, across all tooth positions — used by hydrateState to
+// The union of every entrance value furcationEntrances() can ever return,
+// across all tooth positions — used by hydrateState to
 // validate a raw payload's `furcation` keys generically (hydrateState has no
 // tooth-position context to call furcationEntrances(toothNo) itself, exactly
 // like VALID_FILLING_SURFACES/VALID_RADIOGRAPHIC_DEPTH above are validated
@@ -5286,7 +5360,7 @@ export const VALID_FILLING_DEFECT_SET = new Set(["marginal", "fracture", "wear"]
 // contrast, DOES know the tooth and validates against the exact per-tooth set.
 export const VALID_FURCATION_ENTRANCE = new Set(["mesial", "distal", "buccal", "lingual"]);
 export const VALID_FURCATION_GRADE = new Set([1, 2, 3, 4]); // Glickman I-IV
-// SP-perio P2b Task 3: the 4 fixed O'Leary plaque-index surfaces — the SAME
+// The 4 fixed O'Leary plaque-index surfaces — the SAME
 // set for every tooth (unlike VALID_FURCATION_ENTRANCE, which is filtered
 // per-tooth-position by furcationEntrances()), so both setPlaque() and
 // hydrateState() validate directly against this one constant.
@@ -5301,7 +5375,7 @@ function validateEnum(value: Any, allowed: Set<string>, fallback: string): strin
   return typeof value === "string" && allowed.has(value) ? value : fallback;
 }
 
-// SP-perio P1 Task 1: clinical ranges for the two perio scalar fields.
+// Clinical ranges for the two perio scalar fields.
 type PerioField = "pd" | "gm";
 const PERIO_RANGES: Record<PerioField, [number, number]> = { pd: [1, 15], gm: [-10, 20] };
 
@@ -5326,7 +5400,7 @@ function clampPerio(field: PerioField, v: unknown): number | null {
 }
 
 /**
- * SP5 final review (FIX 1): is a payload version older than 2.3?
+ * Is a payload version older than 2.3?
  *
  * Payloads before 2.3 never stored an explicit per-surface `secondaryCaries`
  * CARS score — recurrent/secondary caries was DERIVED at render/summary time
@@ -5357,7 +5431,7 @@ function isLegacyPayloadVersion(version: unknown): boolean {
  *   internal seam/preset/version-less caller and the existing SVG goldens), a
  *   surface present in BOTH `caries` and `fillingSurfaceMaterials` with no
  *   stored severity is given the canonical recurrent `cariesSeverity` value 3
- *   (SP6 Task 1: the surface is recurrent regardless — this only fixes its CARS
+ *   (the surface is recurrent regardless — this only fixes its CARS
  *   opacity). The JSON/FHIR import path passes `false` for native ≥2.3 payloads
  *   so a caried+filled surface with no stored value keeps the render default.
  */
@@ -5390,28 +5464,28 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       raw.crownMaterial = "natural";
     }else{
       // Implant attachments (healing-abutment/locator/bar…): preserved in
-      // `crownMaterial` for the interim render path (absorbed by SP3b).
+      // `crownMaterial`, migrated onto the `prosthesis` axis below.
       raw.restorationType = "none";
       raw.restorationMaterial = "none";
     }
     // Fixed bridge values fold into restorationType:bridge × material; removable/
-    // bar values stay on `bridgeUnit` (legacy path, retained through SP3a).
+    // bar values stay on `bridgeUnit` (migrated onto `prosthesis` below).
     if(raw.bridgeUnit === "zircon" || raw.bridgeUnit === "metal" || raw.bridgeUnit === "temporary"){
       raw.restorationType = "bridge";
       raw.restorationMaterial = raw.bridgeUnit === "metal" ? "metal-ceramic" : raw.bridgeUnit;
       raw.bridgeUnit = "none";
     }
   }
-  // SP3b FIX 1: a v1.14.0 (payload 2.0) implant FIXED crown was serialized by the
-  // SP3a interim defer as {toothSelection:"implant", restorationType:"none",
-  // restorationMaterial:"none", crownMaterial:<fixed material>}. The legacy block
-  // above is gated on restorationType===undefined so it skips this (restorationType
-  // is "none", not absent), and the prosthesis-migration below only maps ATTACHMENT
-  // crownMaterial values — so the crown would silently vanish. Fold a fixed-crown
-  // crownMaterial on an implant (restorationType absent OR "none") into
-  // restorationType:"crown" × material, mirroring the 1.4 fold + metal→metal-ceramic
-  // rename. Attachment crownMaterial values (healing-abutment/locator/bar…) are not
-  // in this set, so they fall through to the prosthesis migration untouched.
+  // A legacy (payload 2.0) implant FIXED crown was serialized as
+  // {toothSelection:"implant", restorationType:"none", restorationMaterial:"none",
+  // crownMaterial:<fixed material>}. The legacy block above is gated on
+  // restorationType===undefined so it skips this (restorationType is "none", not
+  // absent), and the prosthesis-migration below only maps ATTACHMENT crownMaterial
+  // values — so the crown would silently vanish. Fold a fixed-crown crownMaterial
+  // on an implant (restorationType absent OR "none") into restorationType:"crown"
+  // × material, with the metal→metal-ceramic rename. Attachment crownMaterial
+  // values (healing-abutment/locator/bar…) are not in this set, so they fall
+  // through to the prosthesis migration untouched.
   const FIXED_CROWN_MATERIALS = ["emax", "zircon", "gold", "gradia", "metal", "telescope", "temporary"];
   if(raw.toothSelection === "implant"
      && (raw.restorationType === undefined || raw.restorationType === "none")
@@ -5421,12 +5495,12 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
     raw.restorationMaterial = raw.crownMaterial === "metal" ? "metal-ceramic" : raw.crownMaterial;
     raw.crownMaterial = "natural";
   }
-  // SP3b field-move: migrate the legacy implant-attachment (`crownMaterial` on an
-  // implant tooth) and removable/bar-denture (`bridgeUnit` on a gap tooth) values
-  // onto the new `prosthesis` axis when no explicit `prosthesis` was supplied —
-  // whether this payload is old-format (migrated above) or was written by the
-  // interim SP3a/SP3b-foundation engine (restorationType already defined, but
-  // `prosthesis` never serialized before this task). Gated by the SAME context
+  // Migrate the legacy implant-attachment (`crownMaterial` on an implant tooth)
+  // and removable/bar-denture (`bridgeUnit` on a gap tooth) values onto the
+  // `prosthesis` axis when no explicit `prosthesis` was supplied — whether this
+  // payload is old-format (migrated above) or was written by an engine that
+  // defined restorationType but never serialized `prosthesis`. Gated by the SAME
+  // context
   // the legacy render branches required (isImplant / isNone): an attachment value
   // sitting on an unrelated toothSelection (only reachable via crafted/imported
   // payloads, never the UI) must not gain a `prosthesis` value it never rendered.
@@ -5450,27 +5524,26 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
     }
   }
   s.toothSelection = validateEnum(raw.toothSelection, VALID_TOOTH_SELECTION, s.toothSelection);
-  // SP4 Task 3: pulpInflam (boolean) retired in favor of pulpDx (enum).
-  // Legacy true -> "irreversible-pulpitis" (the only condition state the
-  // old boolean could represent); false/absent -> "normal". A modern
-  // payload's own pulpDx (if present and valid) wins over the migrated
-  // legacy value.
+  // Migrate the legacy `pulpInflam` boolean to `pulpDx`: true ->
+  // "irreversible-pulpitis" (the only condition state the old boolean could
+  // represent); false/absent -> "normal". A modern payload's own pulpDx (if
+  // present and valid) wins over the migrated legacy value.
   const migratedPulpDx = raw.pulpInflam ? "irreversible-pulpitis" : "normal";
   s.pulpDx = validateEnum(raw.pulpDx, VALID_PULP_DX, migratedPulpDx);
-  // SP4 Task 5: pulpLatin (practical-Latin subtype) round-trips independently of
-  // the pulp-detail level. It has no legacy predecessor, so absent/invalid -> "none".
+  // pulpLatin (practical-Latin subtype) round-trips independently of the
+  // pulp-detail level. It has no legacy predecessor, so absent/invalid -> "none".
   s.pulpLatin = validateEnum(raw.pulpLatin, VALID_PULP_LATIN, "none");
   s.endoResection = !!raw.endoResection;
-  // SP4 Task 2: rootResorption (boolean) retired in favor of resorptionType
-  // (enum). Legacy true -> "external-cervical" (the only subtype the old
-  // boolean could represent); false/absent -> "none". A modern payload's own
-  // resorptionType (if present and valid) wins over the migrated legacy value.
+  // Migrate the legacy `rootResorption` boolean to `resorptionType`: true ->
+  // "external-cervical" (the only subtype the old boolean could represent);
+  // false/absent -> "none". A modern payload's own resorptionType (if present and
+  // valid) wins over the migrated legacy value.
   const migratedResorptionType = raw.rootResorption ? "external-cervical" : "none";
   s.resorptionType = validateEnum(raw.resorptionType, VALID_RESORPTION_TYPE, migratedResorptionType);
   s.mods = filterSet(raw.mods, VALID_MODS);
   s.periapicalType = validateEnum(raw.periapicalType, VALID_PERIAPICAL_TYPE, "none");
-  // SP4 Task 4: `apicalDx` (enum) drives the periapical glyph on a PRESENT
-  // tooth, decoupled from `mods.inflammation`. Derive it from the legacy
+  // `apicalDx` (enum) drives the periapical glyph on a PRESENT tooth, decoupled
+  // from `mods.inflammation`. Derive it from the legacy
   // pairing of mods.inflammation + periapicalType: on a present tooth, a set
   // `inflammation` mod meant an apical lesion — the "abscess" subtype maps to
   // acute-apical-abscess, every other subtype (granuloma / cyst / unset) to
@@ -5487,7 +5560,7 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
     s.mods.delete("inflammation");
   }
   s.apicalDx = validateEnum(raw.apicalDx, VALID_APICAL_DX, migratedApicalDx);
-  // SP7: enforce the lesion-subtype invariant on read. On a PRESENT tooth the
+  // Enforce the lesion-subtype invariant on read. On a PRESENT tooth the
   // granuloma/cyst subtype (including the legacy `abscess` subtype) is valid
   // only under symptomatic/asymptomatic apical periodontitis; otherwise it is
   // cleared to "none". Non-present teeth are left untouched (their stored
@@ -5499,7 +5572,7 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
     }
   }
   s.endo = validateEnum(raw.endo, VALID_ENDO, s.endo);
-  // SP7: enforce the endo/pulp mutual-exclusion invariant on read. A tooth with
+  // Enforce the endo/pulp mutual-exclusion invariant on read. A tooth with
   // any endodontic treatment (endo !== "none") has no vital pulp, so it cannot
   // carry a pulpitis/necrosis diagnosis. Normalize to "normal" (also clears any
   // Latin subtype). Runs unconditionally — a conformant payload never violates
@@ -5522,11 +5595,11 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
     return null;
   };
   s.cariesActiveDepth = toIcdas(raw.cariesActiveDepth) ?? 2;
-  // SP6 Task 1 migration inputs. The unified `cariesSeverity` is built AFTER
+  // Caries-severity migration inputs. The unified `cariesSeverity` is built AFTER
   // `fillingSurfaceMaterials` (below), merging three raw sources per surface:
-  //   - `raw.cariesSeverity` (native 2.4 unified field) — always wins,
-  //   - `raw.cariesDepths`   (retired SP5 ICDAS map)    — primary fallback,
-  //   - `raw.secondaryCaries` (retired SP5 CARS map)    — recurrent fallback.
+  //   - `raw.cariesSeverity` (native unified field)    — always wins,
+  //   - `raw.cariesDepths`   (legacy ICDAS map)        — primary fallback,
+  //   - `raw.secondaryCaries` (legacy CARS map)        — recurrent fallback.
   // These are parsed into locals here; only `cariesSeverity` survives on state.
   const rawSeverity = new Map<string, number>();
   if(raw.cariesSeverity && typeof raw.cariesSeverity === "object"){
@@ -5549,31 +5622,27 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       if(VALID_FILLING_SURFACES.has(surf) && VALID_CARS.has(num)) rawSecondary.set(surf, num);
     }
   }
-  // SP5 Task 1: `rootCaries` is a normal enum. `radiographicDepth` is a
-  // per-surface scalar map, independent of the unified visual severity.
+  // `rootCaries` is a normal enum. `radiographicDepth` is a per-surface scalar
+  // map, independent of the unified visual severity.
   s.rootCaries = validateEnum(raw.rootCaries, VALID_ROOT_CARIES, "none");
-  // SP8 Task 3: peri-implant disease (enum, implant-only). Additive axis — a
-  // legacy payload never had this field, so absent/invalid -> "none" (no
-  // change in render for pre-SP8 payloads).
+  // Peri-implant disease (enum, implant-only). Absent/invalid -> "none".
   s.periImplant = validateEnum(raw.periImplant, VALID_PERI_IMPLANT, "none");
-  // SP8 Task 4: migrate pre-SP8 implant signals. An implant tooth that carried
+  // Migrate legacy implant signals. An implant tooth that carried
   // mods.inflammation or mods.parodontal recorded soft-tissue inflammation with
   // no bone-loss grade, so it becomes peri-implant mucositis and the mod is
   // removed (non-implant teeth keep their mods). Runs unconditionally — a modern
-  // 2.6 payload never has those mods on an implant, so it's a no-op there.
+  // payload never has those mods on an implant, so it's a no-op there.
   if(s.toothSelection === "implant" && s.periImplant === "none"){
     if(s.mods.has("inflammation")){ s.periImplant = "mucositis"; s.mods.delete("inflammation"); }
     if(s.mods.has("parodontal")){ s.periImplant = "mucositis"; s.mods.delete("parodontal"); }
   }
-  // SP-perio PG-C Task 2: cejVisibility/rootConcavity (additive enum axes). A
-  // legacy payload (<=2.13) never carried these fields, so absent/invalid ->
+  // cejVisibility/rootConcavity enum axes. Absent/legacy payloads have no key ->
   // "none". No migration needed.
   s.cejVisibility = validateEnum(raw.cejVisibility, VALID_CEJ_VISIBILITY, "none");
   s.rootConcavity = validateEnum(raw.rootConcavity, VALID_ROOT_CONCAVITY, "none");
-  // SP-perio PG-D Task 3: gingivalThickness/millerClass (additive enum axes).
-  // Absent/legacy payloads have no key -> stays the default (no throw); an
-  // unrecognized value self-heals to the default, same tolerant-hydrate
-  // policy as every other axis above.
+  // gingivalThickness/millerClass enum axes. Absent/legacy payloads have no key
+  // -> the default (no throw); an unrecognized value self-heals to the default,
+  // same tolerant-hydrate policy as every other axis above.
   s.gingivalThickness = validateEnum(raw.gingivalThickness, VALID_GINGIVAL_THICKNESS, "unknown");
   s.millerClass = validateEnum(raw.millerClass, VALID_MILLER_CLASS, "none");
   s.radiographicDepth = new Map();
@@ -5582,7 +5651,7 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       if(VALID_FILLING_SURFACES.has(surf) && typeof val === "string" && VALID_RADIOGRAPHIC_DEPTH.has(val)) s.radiographicDepth.set(surf, val);
     }
   }
-  // SP10: per-surface filling defect (additive; legacy payloads have none).
+  // Per-surface filling defect (legacy payloads have none).
   s.fillingDefect = new Map();
   if(raw.fillingDefect && typeof raw.fillingDefect === "object"){
     for(const [surf, val] of Object.entries(raw.fillingDefect)){
@@ -5608,8 +5677,8 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
   }
   // keep fillingSurfaces in sync with the map keys
   s.fillingSurfaces = new Set(s.fillingSurfaceMaterials.keys());
-  // SP6 Task 1 migration: build the unified per-surface `cariesSeverity` from
-  // the three raw sources (parsed above), now that `caries` and
+  // Build the unified per-surface `cariesSeverity` from the three raw sources
+  // (parsed above), now that `caries` and
   // `fillingSurfaceMaterials` are finalized. Per surface the value is resolved
   // by the state machine:
   //   - a native `raw.cariesSeverity` value ALWAYS wins (round-trips 2.4),
@@ -5620,8 +5689,8 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
   // with no source resolves to the render/summary default (2) via `?? 2`, so
   // omitting it is render-identical and preserves byte-compat.
   //
-  // FIX 1 (data integrity, carried from SP5): the legacy caries∩filling → score
-  // inference (there is no stored recurrent value on a <2.3 payload) fires ONLY
+  // The legacy caries∩filling → score inference (there is no stored recurrent
+  // value on a <2.3 payload) fires ONLY
   // for legacy callers. `inferLegacySecondaryCaries` defaults to `true`
   // (internal seams/presets/version-less callers, preserving goldens), while the
   // JSON/FHIR import path passes `false` for native ≥2.3 payloads where a caried
@@ -5647,8 +5716,8 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       if(rawDepths.has(surf)){ s.cariesSeverity.set(surf, rawDepths.get(surf)!); }
     }
   }
-  // FIX 2 (final review, minor): normalize a contradictory legacy input — a
-  // surface that's both in `caries` and filled (i.e. recurrent) but whose
+  // Normalize a contradictory legacy input — a surface that's both in `caries`
+  // and filled (i.e. recurrent) but whose
   // resolved severity is an explicit CARS 0 (Sound). That combination is only
   // reachable via a raw payload (the popup can't produce it — picking CARS 0
   // there already removes the caries via `applyRecurrentCariesScore`), and
@@ -5669,16 +5738,16 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
   s.calculus = !!raw.calculus;
   s.contactMesial = !!raw.contactMesial;
   s.contactDistal = !!raw.contactDistal;
-  // SP11: bruxismWear/bruxismNeckWear (booleans) retired in favor of the
-  // wearEdge/wearCervical type enums. Legacy edge boolean -> attrition (dominant
-  // bruxism edge wear); cervical boolean -> abrasion (generic cervical wear);
+  // Migrate the legacy bruxismWear/bruxismNeckWear booleans to the
+  // wearEdge/wearCervical type enums. Edge boolean -> attrition (dominant bruxism
+  // edge wear); cervical boolean -> abrasion (generic cervical wear);
   // false/absent -> none. A modern payload's own valid value wins.
   const migratedWearEdge = raw.bruxismWear ? "attrition" : "none";
   s.wearEdge = validateEnum(raw.wearEdge, VALID_WEAR_EDGE, migratedWearEdge);
   const migratedWearCervical = raw.bruxismNeckWear ? "abrasion" : "none";
   s.wearCervical = validateEnum(raw.wearCervical, VALID_WEAR_CERVICAL, migratedWearCervical);
   s.discoloration = validateEnum(raw.discoloration, VALID_DISCOLORATION, "none");
-  // SP14 Task 1: orthodontic axes foundation (additive; no legacy fields to migrate).
+  // Orthodontic axes (no legacy fields to migrate).
   s.orthoAppliance = validateEnum(raw.orthoAppliance, VALID_ORTHO_APPLIANCE, "none");
   s.orthoDrift = validateEnum(raw.orthoDrift, VALID_ORTHO_DRIFT, "none");
   s.orthoVertical = validateEnum(raw.orthoVertical, VALID_ORTHO_VERTICAL, "none");
@@ -5698,20 +5767,20 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
   s.toothSubstrate = validateEnum(raw.toothSubstrate, VALID_TOOTH_SUBSTRATE, s.toothSubstrate);
   s.restorationType = validateEnum(raw.restorationType, VALID_RESTORATION_TYPE, s.restorationType);
   s.restorationMaterial = validateEnum(raw.restorationMaterial, VALID_RESTORATION_MATERIAL, s.restorationMaterial);
-  // SP15 wholebranch fix: a radix substrate (broken root remnant) can't carry
-  // a fixed restoration — restorationRowHidden() hides the restoration
-  // control for it (B7), and syncControlsFromState's reset block clears a
-  // LIVE crown/bridge when the substrate select changes to radix. Mirror that
-  // guard here too so a crafted/imported/directly-hydrated radix+crown payload
-  // self-heals on hydrate, the same way FIX 4 below self-heals a
-  // crown+prosthesis payload — a stale crown must never render over a
-  // tooth-radix layer nor appear alongside "Radix" in the summary.
+  // A radix substrate (broken root remnant) can't carry a fixed restoration —
+  // restorationRowHidden() hides the restoration control for it, and
+  // syncControlsFromState's reset block clears a LIVE crown/bridge when the
+  // substrate select changes to radix. Mirror that guard here so a
+  // crafted/imported/directly-hydrated radix+crown payload self-heals on hydrate,
+  // the same way the crown+prosthesis coherence guard below does — a stale crown
+  // must never render over a tooth-radix layer nor appear alongside "Radix" in
+  // the summary.
   if(s.toothSubstrate === "radix" && s.restorationType !== "none"){
     s.restorationType = "none";
     s.restorationMaterial = "none";
   }
-  // SP3b Task 6 (spec §9 gap): the two fields above are validated independently
-  // against their own enums, so a hand-edited/imported payload can still pair a
+  // The two fields above are validated independently against their own enums, so
+  // a hand-edited/imported payload can still pair a
   // legal type with a material that type never supports (e.g. inlay+metal — the
   // matrix only allows inlay in emax/gold/gradia/zircon/temporary). Guard the
   // (type, material) PAIR here so an invalid combo never reaches state/render —
@@ -5735,7 +5804,7 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       s.restorationMaterial = "none";
     }
   }
-  // SP3b FIX 4: cross-field coherence — a tooth has EITHER a fixed restoration OR a
+  // Cross-field coherence — a tooth has EITHER a fixed restoration OR a
   // prosthesis, never both. A crafted/imported payload can pair both; keep the
   // restoration and clear the prosthesis (restoration wins, matching render
   // precedence). Never throws.
@@ -5743,8 +5812,8 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
     s.prosthesis = "none";
   }
   s.crownLeakage = !!raw.crownLeakage;
-  // SP-perio P1 Task 1: restore the per-site perio sub-record. Absent/legacy
-  // (<=2.11) payloads have no `perio` key at all -> stays the empty default
+  // Restore the per-site perio sub-record. Absent/legacy payloads have no `perio`
+  // key at all -> stays the empty default
   // (no throw). Every raw value is independently validated: `pd` is charted
   // only through clampPerio's own rules (out-of-range/non-integer/unknown
   // site dropped, never orphaning a bad entry); `gm`/`bop`/`sup` are ONLY
@@ -5779,9 +5848,9 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       }
     }
   }
-  // SP-perio P2b Task 2: restore the per-entrance furcation grade map.
-  // Absent/legacy (<=2.12) payloads have no `furcation` key -> stays the
-  // empty default (no throw). Validated against the tooth-independent
+  // Restore the per-entrance furcation grade map. Absent/legacy payloads have no
+  // `furcation` key -> stays the empty default (no throw). Validated against the
+  // tooth-independent
   // VALID_FURCATION_ENTRANCE/VALID_FURCATION_GRADE sets (see their doc
   // comment above) — hydrateState has no toothNo to call
   // furcationEntrances(toothNo) itself; a crafted/foreign entrance for a
@@ -5795,8 +5864,8 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       if(Number.isInteger(num) && VALID_FURCATION_GRADE.has(num)) s.furcation.set(entrance, num);
     }
   }
-  // SP-perio P2b Task 3: restore the O'Leary plaque-surface presence set.
-  // Absent/legacy payloads have no `plaque` key -> stays the empty default
+  // Restore the O'Leary plaque-surface presence set. Absent/legacy payloads have
+  // no `plaque` key -> stays the empty default
   // (no throw). Validated against VALID_PLAQUE_SURFACE — an unrecognized
   // entry (foreign/crafted string) is silently dropped, never throws.
   const rawPlaque = raw.plaque;
@@ -5805,9 +5874,9 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       if(typeof surface === "string" && VALID_PLAQUE_SURFACE.has(surface)) s.plaque.add(surface);
     }
   }
-  // SP-perio PG-D Task 1: restore the graded PI/GI surface maps. Absent/legacy
-  // (<=2.14) payloads have no `pi`/`gi` key -> stays the empty default (no
-  // throw). Validated against VALID_PLAQUE_SURFACE (same fixed 4-surface set
+  // Restore the graded PI/GI surface maps. Absent/legacy payloads have no
+  // `pi`/`gi` key -> stays the empty default (no throw). Validated against
+  // VALID_PLAQUE_SURFACE (same fixed 4-surface set
   // `plaque` uses) + grade in {1,2,3} — an unrecognized surface or an
   // out-of-range/non-integer grade (including a stored 0, which should never
   // happen but is tolerated as "drop it") is silently dropped, never throws.
@@ -5821,8 +5890,8 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       if(VALID_PLAQUE_SURFACE.has(surface) && (g === 1 || g === 2 || g === 3)) s.gi.set(surface, g);
     }
   }
-  // SP-perio PG-E Task 1: restore the peri-implant mPI/mBI graded surface
-  // maps, same tolerant parsing as pi/gi above. Hydrate is a non-interactive
+  // Restore the peri-implant mPI/mBI graded surface maps, same tolerant parsing
+  // as pi/gi above. Hydrate is a non-interactive
   // path (not gated) — the implant-only restriction is enforced only by the
   // SETTER, not by hydrate/import, matching every other axis's hydrate
   // tolerance policy in this file.
@@ -5836,7 +5905,7 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
       if(VALID_PLAQUE_SURFACE.has(surface) && (g === 1 || g === 2 || g === 3)) s.mbi.set(surface, g);
     }
   }
-  // SP-perio PG-D Task 2: restore keratinized gingiva width. Absent/legacy
+  // Restore keratinized gingiva width. Absent/legacy
   // payloads have no `kg` key -> stays the default null (no throw).
   // `clampKg` tolerates any input (non-numeric/out-of-range) and returns
   // null for it, same tolerant-hydrate policy as every other axis above.
@@ -5855,7 +5924,7 @@ function hydrateState(raw: Any, inferLegacySecondaryCaries = true){
   return s;
 }
 
-/** R2-A Task 2: per-tooth serialize loop, parameterized over a chart map so
+/** Per-tooth serialize loop, parameterized over a chart map so
  *  the same collection logic serves the STATUS export, the PLAN export
  *  (getPlanChart()), and the plan-vs-status diff check in
  *  collectExportPayload() below — instead of three copies of the loop. */
@@ -5882,21 +5951,20 @@ function collectGlobals(){
 }
 
 /**
- * R2-A Task 2 (D3, RATIFIED): export/import stay STATUS-PRIMARY — `teeth`
- * is always built from `charts.status` explicitly (NOT the active-chart
+ * Export/import stay STATUS-PRIMARY — `teeth` is always built from
+ * `charts.status` explicitly (NOT the active-chart
  * alias `toothState`), so exporting while in PLAN mode still yields the
- * STATUS as the primary payload. The `plan` section is a NEW, additive,
+ * STATUS as the primary payload. The `plan` section is an additive,
  * separately-addressable layer: it is only appended when the plan chart has
  * actually been initialized AND differs from status, so a status-only case
- * (the overwhelming majority, including every existing caller/golden) stays
- * byte-identical apart from the version bump.
+ * stays byte-identical apart from the version field.
  */
 function collectExportPayload(){
   const statusTeeth = collectTeeth(charts.status);
   const planTeeth = planInitialized ? collectTeeth(charts.plan) : null;
   const planDiffers = planTeeth !== null && JSON.stringify(planTeeth) !== JSON.stringify(statusTeeth);
   return {
-    version: "2.19",
+    version: "2.20",
     globals: collectGlobals(),
     teeth: statusTeeth,
     ...(caseMetaIsEmpty(caseMeta) ? {} : { case: serializeCaseMeta(caseMeta) }),
@@ -5926,7 +5994,7 @@ export function getStatusChart(): Any {
  */
 export function getPlanChart(): Any {
   return {
-    version: "2.19",
+    version: "2.20",
     globals: collectGlobals(),
     teeth: collectTeeth(charts.plan),
     ...(caseMetaIsEmpty(caseMeta) ? {} : { case: serializeCaseMeta(caseMeta) }),
@@ -5950,11 +6018,11 @@ export function setPlanChart(payload: Any): void {
     charts.plan.set(toothNo, hydrateState(raw, inferLegacySecondaryCaries));
   }
   planInitialized = true;
-  // DS-1: replacing the plan chart wholesale resets any runtime plan-edits.
+  // Replacing the plan chart wholesale resets any runtime plan-edits.
   planEditedTeeth.clear();
-  // DS-1 (review Fix 2): drop any pending dual-state confirm — its deferred
-  // `applyFn` was captured against the pre-replace plan and must not run against
-  // the freshly-hydrated plan chart via a later acceptDualStateConfirm().
+  // Drop any pending dual-state confirm — its deferred `applyFn` was captured
+  // against the pre-replace plan and must not run against the freshly-hydrated
+  // plan chart via a later acceptDualStateConfirm().
   pendingDualStateConfirm = null;
   if(getChartMode() === "plan"){
     for(const toothNo of ALL_TEETH){
@@ -5967,7 +6035,7 @@ export function setPlanChart(payload: Any): void {
   }
 }
 
-// R2-B Task 1: pure, read-only status->plan diff engine. Reuses the SAME
+// Pure, read-only status->plan diff engine. Reuses the SAME
 // summary-label helpers the tooltip (getStateSummary) and whole-mouth panel
 // (getOdontogramSummary) already use for these axes, so a diff entry never
 // invents new copy — it just reports "the same label the UI would already
@@ -5986,8 +6054,8 @@ const TOOTH_SELECT_LABEL_KEY: Record<string, string> = Object.fromEntries(
   optionsFor("toothSelection").map((o) => [o.value, o.labelKey])
 );
 
-/** SP-perio P1 Task 1: SUMMARY-level (never per-site) perio label for a
- *  SINGLE tooth's state, used only by DIFF_AXES' `perio` entry below — so a
+/** SUMMARY-level (never per-site) perio label for a SINGLE tooth's state, used
+ *  only by DIFF_AXES' `perio` entry below — so a
  *  status->plan perio edit narrates as ONE diff entry per tooth ("3 sites,
  *  BOP 33.3%, worst CAL 8") instead of exploding into up to 6 per-site
  *  entries. "Nothing charted" renders the same `planChange.none` sentinel
@@ -6006,8 +6074,8 @@ function perioSummaryLabel(s: Any): string {
   return t("planChange.perioSummary", { sites: perio.pd.size, bop: bopPct, cal: worstCal ?? 0 });
 }
 
-/** SP-perio P2b Task 4: SUMMARY-level (never per-entrance) furcation label
- *  for a SINGLE tooth's state, used only by DIFF_AXES' `furcation` entry
+/** SUMMARY-level (never per-entrance) furcation label for a SINGLE tooth's
+ *  state, used only by DIFF_AXES' `furcation` entry
  *  below — mirrors {@link perioSummaryLabel}'s "one line per tooth, not one
  *  per site/entrance" shape. Reports only the tooth's HIGHEST Glickman grade
  *  (reusing the exact same `furcation.grade.N` copy the furcation picker
@@ -6023,8 +6091,8 @@ function furcationSummaryLabel(s: Any): string {
   return maxGrade > 0 ? t(`furcation.grade.${maxGrade}`) : t("planChange.none");
 }
 
-/** SP-perio P2b Task 4: SUMMARY-level (never per-surface) O'Leary plaque
- *  label for a SINGLE tooth's state, used only by DIFF_AXES' `plaque` entry
+/** SUMMARY-level (never per-surface) O'Leary plaque label for a SINGLE tooth's
+ *  state, used only by DIFF_AXES' `plaque` entry
  *  below — reports a compact "N/4 surfaces" count rather than exploding
  *  into up to 4 per-surface entries. "Nothing charted" renders the shared
  *  `planChange.none` sentinel every other axis uses. */
@@ -6100,20 +6168,20 @@ const DIFF_AXES: { key: string; labelKey: string; label: (s: Any) => string }[] 
     label: (s) => apicalDiagnosisLabel(s) ?? t("planChange.none"),
   },
   {
-    // SP-perio P1 Task 1: ONE summary-level entry per tooth (see
-    // perioSummaryLabel above) — never 6 per-site entries.
+    // ONE summary-level entry per tooth (see perioSummaryLabel above) — never 6
+    // per-site entries.
     key: "perio", labelKey: "planChange.axis.perio",
     label: (s) => perioSummaryLabel(s),
   },
   {
-    // SP-perio P2b Task 4: ONE summary-level entry per tooth (see
-    // furcationSummaryLabel above) — never one per entrance.
+    // ONE summary-level entry per tooth (see furcationSummaryLabel above) —
+    // never one per entrance.
     key: "furcation", labelKey: "planChange.axis.furcation",
     label: (s) => furcationSummaryLabel(s),
   },
   {
-    // SP-perio P2b Task 4: ONE summary-level entry per tooth (see
-    // plaqueSummaryLabel above) — never one per surface.
+    // ONE summary-level entry per tooth (see plaqueSummaryLabel above) — never
+    // one per surface.
     key: "plaque", labelKey: "planChange.axis.plaque",
     label: (s) => plaqueSummaryLabel(s),
   },
@@ -6150,13 +6218,12 @@ export function getPlanChanges(): PlanChange[] {
   return out;
 }
 
-// ---- SP-perio P1 Task 1: periodontal data-core public API ----
+// ---- Periodontal data-core public API ----
 // All five functions below operate on the ACTIVE-chart `toothState` alias
-// (not `charts.status` directly), exactly like every pre-existing per-tooth
-// getter/setter in this file — so they transparently participate in the
-// Status/Plan dual-state model (R2-A): called while `chartMode === "plan"`
-// they read/write the plan chart, and vice versa. Pure data — no SVG/DOM
-// touched, no render triggered (parity-safe: perio has no chart layer yet).
+// (not `charts.status` directly), like every other per-tooth getter/setter in
+// this file — so they transparently participate in the Status/Plan dual-state
+// model: called while `chartMode === "plan"` they read/write the plan chart, and
+// vice versa. Pure data — no SVG/DOM touched, no render triggered.
 
 type PerioSitePatch = { pd?: number | null; gm?: number; bop?: boolean; sup?: boolean };
 type PlainPerio = { pd: Record<string, number>; gm: Record<string, number>; bop: string[]; sup: string[] };
@@ -6185,10 +6252,10 @@ export function setPerioSite(toothNo: number, site: string, patch: PerioSitePatc
   if(!(PERIO_SITES as readonly string[]).includes(site)) return;
   let s = toothState.get(toothNo);
   if(!s){ s = defaultState(); toothState.set(toothNo, s); }
-  // DS-1: route the actual mutation through the status->plan gate. The closure
-  // returns whether it changed state so a rejected/no-op edit neither marks the
-  // tooth plan-edited nor mirrors it (preserving the "notify only on change"
-  // contract). The lazy vivify above stays OUTSIDE the gate (not a user edit).
+  // Route the actual mutation through the status->plan gate. The closure returns
+  // whether it changed state so a rejected/no-op edit neither marks the tooth
+  // plan-edited nor mirrors it (preserving the "notify only on change" contract).
+  // The lazy vivify above stays OUTSIDE the gate (not a user edit).
   gateToothEdit(toothNo, () => {
     const perio = s.perio;
     let changed = false;
@@ -6249,11 +6316,10 @@ export function getToothPerio(toothNo: number): PlainPerio {
   };
 }
 
-// ---- SP-perio P2b Task 2: furcation involvement (Glickman I-IV, per
-// entrance) public API. Operates on the ACTIVE-chart `toothState` alias,
-// exactly like the perio-site API above — transparently Status/Plan
-// dual-state aware. Pure data — no SVG/DOM touched, no render triggered
-// (parity-safe: furcation has no chart layer yet, that's Task 4).
+// ---- Furcation involvement (Glickman I-IV, per entrance) public API ----
+// Operates on the ACTIVE-chart `toothState` alias, like the perio-site API
+// above — transparently Status/Plan dual-state aware. Pure data — no SVG/DOM
+// touched, no render triggered.
 
 /**
  * Set/clear one furcation entrance's Glickman grade on the active chart's
@@ -6274,7 +6340,7 @@ export function setFurcation(toothNo: number, entrance: string, grade: number | 
   if(!furcationEntrances(toothNo).includes(entrance)) return;
   let s = toothState.get(toothNo);
   if(!s){ s = defaultState(); toothState.set(toothNo, s); }
-  // DS-1: gate the mutation (see setPerioSite). Returns whether it changed so a
+  // Gate the mutation (see setPerioSite). Returns whether it changed so a
   // rejected/no-op edit is neither marked plan-edited nor mirrored.
   gateToothEdit(toothNo, () => {
     const furcation = s.furcation as Map<string, number>;
@@ -6299,11 +6365,10 @@ export function getToothFurcation(toothNo: number): Record<string, number> {
   return Object.fromEntries(furcation);
 }
 
-// ---- SP-perio P2b Task 3: O'Leary plaque-index (per-surface presence)
-// public API. Operates on the ACTIVE-chart `toothState` alias, exactly like
-// the perio-site/furcation APIs above — transparently Status/Plan dual-state
-// aware. Pure data — no SVG/DOM touched, no render triggered (parity-safe:
-// plaque has no chart layer yet, that's Task 4).
+// ---- O'Leary plaque-index (per-surface presence) public API ----
+// Operates on the ACTIVE-chart `toothState` alias, like the perio-site/furcation
+// APIs above — transparently Status/Plan dual-state aware. Pure data — no
+// SVG/DOM touched, no render triggered.
 
 /**
  * Set/clear one O'Leary plaque-index surface's presence on the active
@@ -6323,7 +6388,7 @@ export function setPlaque(toothNo: number, surface: string, present: boolean): v
   if(!VALID_PLAQUE_SURFACE.has(surface)) return;
   let s = toothState.get(toothNo);
   if(!s){ s = defaultState(); toothState.set(toothNo, s); }
-  // DS-1: gate the mutation (see setPerioSite). Returns whether it changed so a
+  // Gate the mutation (see setPerioSite). Returns whether it changed so a
   // no-op edit is neither marked plan-edited nor mirrored.
   gateToothEdit(toothNo, () => {
     const plaque = s.plaque as Set<string>;
@@ -6346,14 +6411,13 @@ export function getToothPlaque(toothNo: number): string[] {
   return Array.from(plaque);
 }
 
-// ---- SP-perio PG-D Task 1: Silness-Löe Plaque Index (PI) + Löe-Silness
-// Gingival Index (GI) public API. Both are per-surface GRADED (1-3) axes over
-// the SAME fixed 4-surface set as O'Leary `plaque` above, but a separate
-// sub-record — this coexists intentionally with `plaque` (different clinical
-// instrument), never merged with it. Operates on the ACTIVE-chart `toothState`
-// alias, exactly like the perio-site/furcation/plaque APIs above —
-// transparently Status/Plan dual-state aware. Pure data — no SVG/DOM touched,
-// no render triggered (parity-safe: neither axis has a chart layer).
+// ---- Silness-Löe Plaque Index (PI) + Löe-Silness Gingival Index (GI) public API ----
+// Both are per-surface GRADED (1-3) axes over the SAME fixed 4-surface set as
+// O'Leary `plaque` above, but a separate sub-record — this coexists
+// intentionally with `plaque` (different clinical instrument), never merged with
+// it. Operates on the ACTIVE-chart `toothState` alias, like the
+// perio-site/furcation/plaque APIs above — transparently Status/Plan dual-state
+// aware. Pure data — no SVG/DOM touched, no render triggered.
 
 /** Read one graded surface off a Map, defaulting an absent/invalid entry to 0. */
 function getSurfaceGrade(map: Map<string, number>, surface: string): 0|1|2|3 {
@@ -6363,7 +6427,7 @@ function getSurfaceGrade(map: Map<string, number>, surface: string): 0|1|2|3 {
 
 /**
  * Set/clear one graded surface (PI or GI, selected by `mapKey`) on the
- * active chart's tooth, through the DS-1 gate.
+ * active chart's tooth, through the edit gate.
  *
  * - `surface` must be one of {@link VALID_PLAQUE_SURFACE}; any other value
  *   is a silent no-op.
@@ -6372,13 +6436,13 @@ function getSurfaceGrade(map: Map<string, number>, surface: string): 0|1|2|3 {
  *
  * Fires {@link notifyStateChange} whenever it actually mutates state; never
  * on a rejected/no-op call — `gateToothEdit`'s `applyFn` returns `false` for
- * a no-op so the DS-1 protocol never marks/mirrors a tooth that didn't change.
+ * a no-op so the gate protocol never marks/mirrors a tooth that didn't change.
  */
 function setSurfaceGrade(toothNo: number, mapKey: "pi"|"gi"|"mpi"|"mbi", surface: string, grade: number): void {
   if(!VALID_PLAQUE_SURFACE.has(surface)) return;
   let s = toothState.get(toothNo);
   if(!s){ s = defaultState(); toothState.set(toothNo, s); }
-  // PG-E: mPI/mBI are peri-implant indices — only settable on implant teeth.
+  // mPI/mBI are peri-implant indices — only settable on implant teeth.
   if((mapKey === "mpi" || mapKey === "mbi") && s.toothSelection !== "implant") return;
   gateToothEdit(toothNo, () => {
     const map = s[mapKey] as Map<string, number>;
@@ -6419,8 +6483,8 @@ export function setGingivalIndex(toothNo: number, surface: string, grade: number
   setSurfaceGrade(toothNo, "gi", surface, grade);
 }
 
-// ---- SP-perio PG-E Task 1: peri-implant Mombelli indices (mPI/mBI) public
-// API. Reuse the exact same per-surface graded machinery as PI/GI above
+// ---- Peri-implant Mombelli indices (mPI/mBI) public API ----
+// Reuse the exact same per-surface graded machinery as PI/GI above
 // (`setSurfaceGrade`), with one additional guard: mPI/mBI are implant-only —
 // the setter is a silent no-op on any tooth that isn't `toothSelection ===
 // "implant"` (including a never-touched tooth number, which lazily vivifies
@@ -6456,15 +6520,14 @@ export function setPeriImplantBleeding(toothNo: number, surface: string, grade: 
   setSurfaceGrade(toothNo, "mbi", surface, grade);
 }
 
-// ---- SP-perio PG-D Task 2: keratinized gingiva width (KG) public API.
+// ---- Keratinized gingiva width (KG) public API ----
 // A single per-tooth BUCCAL mm scalar (integer, clamped 0-15) — deliberately
 // NOT per-site/per-surface, unlike pi/gi above or the 6-site perio-probing
 // record. `null` = not charted, never a stored 0 (mirrors every other
 // "absence means not charted" axis in this file). Operates on the ACTIVE-chart
 // `toothState` alias, transparently Status/Plan dual-state aware. Interactive
-// edits route through the DS-1 gate `gateToothEdit`. Pure data — no SVG/DOM
-// touched, no render triggered (no svgLayer for this axis -> parity byte-
-// identical).
+// edits route through the edit gate `gateToothEdit`. Pure data — no SVG/DOM
+// touched, no render triggered (no svgLayer for this axis).
 
 /** Clamp an arbitrary input to an integer 0-15, or `null` for anything that
  *  isn't a finite number (including `null`/`undefined`) — used by both the
@@ -6494,7 +6557,7 @@ export function getKeratinizedWidth(toothNo: number): number | null {
  *
  * Fires {@link notifyStateChange} whenever it actually mutates state; never
  * on a rejected/no-op call — `gateToothEdit`'s `applyFn` returns `false` for
- * a no-op so the DS-1 protocol never marks/mirrors a tooth that didn't change.
+ * a no-op so the gate protocol never marks/mirrors a tooth that didn't change.
  */
 export function setKeratinizedWidth(toothNo: number, mm: number | null): void {
   let s = toothState.get(toothNo);
@@ -6508,14 +6571,13 @@ export function setKeratinizedWidth(toothNo: number, mm: number | null): void {
   });
 }
 
-// ---- SP-perio PG-C Task 2: cejVisibility + rootConcavity public API.
-// Two per-tooth categorical DATA axes (data + registry + FHIR + payload only;
-// the Dental Chart rows/UI are PG-C Task 3). Both operate on the ACTIVE-chart
-// `toothState` alias like the perio/furcation/plaque APIs above — transparently
-// Status/Plan dual-state aware. Interactive per-tooth edits, so they route
-// through the DS-1 gate `gateToothEdit` exactly like setFurcation/setPlaque.
-// Pure data — no SVG/DOM touched, no render triggered (neither axis has a chart
-// layer: NO svgLayer → parity byte-identical).
+// ---- cejVisibility + rootConcavity public API ----
+// Two per-tooth categorical DATA axes (data + registry + FHIR + payload only).
+// Both operate on the ACTIVE-chart `toothState` alias like the
+// perio/furcation/plaque APIs above — transparently Status/Plan dual-state
+// aware. Interactive per-tooth edits, so they route through the edit gate
+// `gateToothEdit` like setFurcation/setPlaque. Pure data — no SVG/DOM touched,
+// no render triggered (neither axis has an svgLayer).
 
 /**
  * Set a tooth's CEJ-visibility on the active chart. `value` must be one of
@@ -6527,8 +6589,8 @@ export function setCejVisibility(toothNo: number, value: string): void {
   if(!VALID_CEJ_VISIBILITY.has(value)) return;
   let s = toothState.get(toothNo);
   if(!s){ s = defaultState(); toothState.set(toothNo, s); }
-  // DS-1: gate the mutation (see setFurcation/setPlaque). Returns whether it
-  // changed so a no-op edit is neither marked plan-edited nor mirrored.
+  // Gate the mutation (see setFurcation/setPlaque). Returns whether it changed so
+  // a no-op edit is neither marked plan-edited nor mirrored.
   gateToothEdit(toothNo, () => {
     if(s.cejVisibility === value) return false;
     s.cejVisibility = value;
@@ -6569,14 +6631,13 @@ export function getRootConcavity(toothNo: number): string {
   return (s?.rootConcavity as string) ?? "none";
 }
 
-// ---- SP-perio PG-D Task 3: gingivalThickness + millerClass public API.
-// Two per-tooth categorical DATA axes (data + registry + FHIR + payload only;
-// the Dental Chart rows/UI land in later PG-D tasks). Both operate on the
-// ACTIVE-chart `toothState` alias like the cejVisibility/rootConcavity APIs
-// above — transparently Status/Plan dual-state aware. Interactive per-tooth
-// edits, so they route through the DS-1 gate `gateToothEdit`. Pure data — no
-// SVG/DOM touched, no render triggered (neither axis has a chart layer: NO
-// svgLayer → parity byte-identical).
+// ---- gingivalThickness + millerClass public API ----
+// Two per-tooth categorical DATA axes (data + registry + FHIR + payload only).
+// Both operate on the ACTIVE-chart `toothState` alias like the
+// cejVisibility/rootConcavity APIs above — transparently Status/Plan dual-state
+// aware. Interactive per-tooth edits, so they route through the edit gate
+// `gateToothEdit`. Pure data — no SVG/DOM touched, no render triggered (neither
+// axis has an svgLayer).
 
 /**
  * Set a tooth's gingival-thickness on the active chart. `value` must be one
@@ -6643,8 +6704,8 @@ export function getToothCal(toothNo: number): Map<string, number> {
   return cal;
 }
 
-/** Cairo RT1 interproximal-CAL "approximately zero" threshold, in mm (SP-perio
- *  PG-C Task 1 — see {@link getToothRecessionType}). Below this the
+/** Cairo RT1 interproximal-CAL "approximately zero" threshold, in mm (see
+ *  {@link getToothRecessionType}). Below this the
  *  interproximal papilla is considered clinically intact (no measurable
  *  attachment loss). Small, explicit, and tunable by a maintainer — Cairo
  *  2011 does not itself prescribe a numeric epsilon for "zero". */
@@ -6654,8 +6715,8 @@ const CAIRO_RT1_INTERPROX_THRESHOLD_MM = 1;
 export type RecessionType = "none" | "rt1" | "rt2" | "rt3";
 
 /**
- * SP-perio PG-C Task 1: the Cairo 2011 recession-TYPE classification,
- * DERIVED purely from the already-charted per-site CAL ({@link getToothCal})
+ * The Cairo 2011 recession-TYPE classification, DERIVED purely from the
+ * already-charted per-site CAL ({@link getToothCal})
  * plus the buccal gingival margin (`perio.gm.get("B")`) — never stored, no
  * new state/payload/FHIR axis (parity byte-identical). Pure + read-only:
  * this is the single source of truth for a tooth's RT, mirroring how
@@ -6701,13 +6762,13 @@ export function getToothRecessionType(toothNo: number): RecessionType {
  * so this ratio can never exceed 100%. Returns zeros/nulls (never `NaN`)
  * when nothing has been charted anywhere.
  *
- * `maxFurcation` (SP-perio P2b Task 2): the single highest Glickman grade
+ * `maxFurcation`: the single highest Glickman grade
  * (1-4) recorded on ANY furcation entrance anywhere in the mouth, `null`
  * when nothing has been graded. Deliberately its own pass over `ALL_TEETH`
  * (not folded into the pd-site loop above) since a tooth can carry furcation
  * data independently of whether it has any charted perio site.
  *
- * `plaquePercent` (SP-perio P2b Task 3): whole-mouth O'Leary Plaque Index —
+ * `plaquePercent`: whole-mouth O'Leary Plaque Index —
  * `(total plaque surfaces charted across present teeth) / (present-teeth *
  * 4) * 100`, one decimal (same rounding as `bopPercent` above), `0` when
  * there are no present teeth (NOT `null` — matches `bopPercent`'s
@@ -6727,7 +6788,7 @@ export function getToothRecessionType(toothNo: number): RecessionType {
  * (no entry in the active chart map) is skipped entirely, same convention
  * `maxFurcation`'s loop and `getOdontogramSummary()` use.
  *
- * SP-perio PG-D Task 5 additions (own pass over `ALL_TEETH`, same "absence =
+ * Additional graded-index stats (own pass over `ALL_TEETH`, same "absence =
  * not charted" convention as `maxFurcation`/`plaquePercent` above):
  *   - `piScore`/`giScore`: mean of ALL charted PI/GI surface grades across
  *     the whole mouth (sum of grades / number of CHARTED surfaces, one
@@ -6743,7 +6804,7 @@ export function getToothRecessionType(toothNo: number): RecessionType {
  *     `none` respectively) — mirrors how `maxFurcation`'s loop only counts
  *     graded entrances.
  *
- * SP-perio PG-E Task 3 addition (own pass, same convention):
+ * Peri-implant additions (own pass, same convention):
  *   - `mpiScore`/`mbiScore`: mean of ALL charted mPI/mBI surface grades
  *     across implant teeth (sum of grades / number of CHARTED surfaces, one
  *     decimal) — `null` when nothing is charted anywhere, mirrors
@@ -6761,8 +6822,8 @@ export function getPerioSummary(): {
   piScore: number | null; giScore: number | null; kgDeficientTeeth: number;
   gtDistribution: { thin: number; medium: number; thick: number };
   millerDistribution: { i: number; ii: number; iii: number; iv: number };
-  // SP-perio PG-E Task 3: mPI/mBI whole-mouth mean, implant-only — mirrors
-  // piScore/giScore's mean-of-charted-grades definition above.
+  // mPI/mBI whole-mouth mean, implant-only — mirrors piScore/giScore's
+  // mean-of-charted-grades definition above.
   mpiScore: number | null; mbiScore: number | null;
 } {
   let chartedSites = 0, bleedingSites = 0;
@@ -6799,8 +6860,8 @@ export function getPerioSummary(): {
     }
   }
 
-  // SP-perio P2b Task 3: O'Leary whole-mouth Plaque Index (see doc comment
-  // above for the present-tooth definition/rationale).
+  // O'Leary whole-mouth Plaque Index (see doc comment above for the
+  // present-tooth definition/rationale).
   let presentTeeth = 0, plaqueSurfaces = 0;
   for(const toothNo of ALL_TEETH){
     const s = toothState.get(toothNo);
@@ -6811,8 +6872,8 @@ export function getPerioSummary(): {
   }
   const plaquePercent = presentTeeth > 0 ? Math.round((plaqueSurfaces / (presentTeeth * 4)) * 1000) / 10 : 0;
 
-  // SP-perio PG-D Task 5: PI/GI whole-mouth mean, KG-deficient tooth count,
-  // GT/Miller distributions — deliberately their own pass over `ALL_TEETH`
+  // PI/GI whole-mouth mean, KG-deficient tooth count, GT/Miller distributions —
+  // deliberately their own pass over `ALL_TEETH`
   // (not folded into the pd-site loop above), same reasoning as
   // `maxFurcation`/`plaquePercent`: these axes are charted independently of
   // whether a tooth has any charted perio site.
@@ -6837,9 +6898,8 @@ export function getPerioSummary(): {
   const piScore = piCount > 0 ? Math.round((piSum / piCount) * 10) / 10 : null;
   const giScore = giCount > 0 ? Math.round((giSum / giCount) * 10) / 10 : null;
 
-  // SP-perio PG-E Task 3: mPI/mBI whole-mouth mean, implant-only — own pass
-  // over ALL_TEETH, same reasoning as the PI/GI pass above (mirrors it
-  // exactly, just gated to implant teeth per the doc comment above).
+  // mPI/mBI whole-mouth mean, implant-only — own pass over ALL_TEETH, same
+  // reasoning as the PI/GI pass above, just gated to implant teeth.
   let mpiSum = 0, mpiCount = 0, mbiSum = 0, mbiCount = 0;
   for(const toothNo of ALL_TEETH){
     const s = toothState.get(toothNo);
@@ -6858,8 +6918,8 @@ export function getPerioSummary(): {
   };
 }
 
-/** UI-3b: true iff ANY periodontal axis has been charted anywhere in the
- *  mouth. Used to auto-skip the perio section of an export and to disable the
+/** True iff ANY periodontal axis has been charted anywhere in the mouth. Used
+ *  to auto-skip the perio section of an export and to disable the
  *  perio image-export menu items on a blank chart. Derived entirely from
  *  `getPerioSummary()` — no new traversal. */
 export function hasAnyPerioData(): boolean {
@@ -6891,6 +6951,18 @@ export function hasAnyPerioData(): boolean {
   return false;
 }
 
+/** `true` iff at least one tooth on the ACTIVE chart carries a non-blank
+ *  free-text note AND the notes feature is enabled — mirrors the
+ *  same gate the tooltip / whole-mouth summary use. Drives the PDF export
+ *  dialog's "individual notes" checkbox (disabled when this is false). */
+export function hasAnyToothNote(): boolean {
+  if(!notesEnabled) return false;
+  for(const s of toothState.values()){
+    if(s.note && s.note.trim() !== "") return true;
+  }
+  return false;
+}
+
 /** Per-tooth perio for every tooth on the active chart that has at least one
  *  charted site (an uncharted tooth is OMITTED, not present with empty
  *  maps — mirrors the same "absence = not charted" convention the payload's
@@ -6913,10 +6985,10 @@ export function getPerioChart(): Record<string, PlainPerio> {
 }
 
 /**
- * SP-perio P4b Task 1: state adapter for the pure 2017 periodontal
- * classification derivation core (`derivePerioClassification` in
- * `perioClassification.ts`). Reduces the active chart's per-tooth CAL/PD +
- * the P4a case metadata into the pure {@link PerioDerivationInput} struct —
+ * State adapter for the pure 2017 periodontal classification derivation core
+ * (`derivePerioClassification` in `perioClassification.ts`). Reduces the active
+ * chart's per-tooth CAL/PD + the case metadata into the pure
+ * {@link PerioDerivationInput} struct —
  * this is the ONLY place engine state is read for classification purposes;
  * `derivePerioClassification` itself never touches `toothState`/`caseMeta`
  * directly, so it stays callable from an arbitrary serialized snapshot (the
@@ -6981,8 +7053,8 @@ export function buildDerivationInputFromState(): PerioDerivationInput {
 
 /** Final result of {@link getPerioClassification} — one axis result per axis,
  *  each either the clinician's override (when set) or the pure-derived value,
- *  plus the raw derivation and an `overridden` flag per axis so callers (T3's
- *  FHIR evidence, T4's UI) can tell which. */
+ *  plus the raw derivation and an `overridden` flag per axis so callers (FHIR
+ *  evidence, UI) can tell which. */
 export interface PerioClassificationResult {
   diagnosis: string;
   stage: string;
@@ -6993,10 +7065,10 @@ export interface PerioClassificationResult {
 }
 
 /**
- * SP-perio P4b Task 2: the final periodontal classification — per-axis
- * clinician override (`caseMeta.<axis>Override`) when set, else the pure
- * `derivePerioClassification` result (fed via `buildDerivationInputFromState`,
- * the same state adapter T1 built). Overrides never feed back into the
+ * The final periodontal classification — per-axis clinician override
+ * (`caseMeta.<axis>Override`) when set, else the pure
+ * `derivePerioClassification` result (fed via `buildDerivationInputFromState`).
+ * Overrides never feed back into the
  * derivation itself — `derived` is always the untouched computed value, so
  * callers can always see both what the engine computed and what the
  * clinician actually chose.
@@ -7018,7 +7090,7 @@ export function getPerioClassification(): PerioClassificationResult {
   };
 }
 
-/** P4b Task 4: `"molar-incisor"` (the derived/override enum value, hyphenated)
+/** `"molar-incisor"` (the derived/override enum value, hyphenated)
  *  maps to the camelCase `perio.class.extent.molarIncisor` i18n key segment;
  *  every other extent value is used as-is. */
 function extentI18nSegment(extent: string): string {
@@ -7026,8 +7098,8 @@ function extentI18nSegment(extent: string): string {
 }
 
 /**
- * P4b Task 4: builds the FINAL (override-aware) periodontal classification
- * fragment appended to `getOdontogramSummary()`'s `periodontalText` — e.g.
+ * Builds the FINAL (override-aware) periodontal classification fragment
+ * appended to `getOdontogramSummary()`'s `periodontalText` — e.g.
  * "Dx: periodontitis · Stage III · Grade B · generalized" for periodontitis,
  * "Dx: gingivitis" for gingivitis (2017 stage/grade/extent only apply once
  * periodontitis is the diagnosis), or "Dx: periodontally healthy" whenever a
@@ -7037,8 +7109,8 @@ function extentI18nSegment(extent: string): string {
  *
  * Returns `""` (nothing appended) for the ordinary untouched case — final
  * diagnosis health AND no override on any axis — leaving `periodontalText`
- * byte-identical to its pre-P4b "healthy" wording for every existing
- * fixture/test that never touches perio data or the classification axes.
+ * byte-identical to its "healthy" wording for every existing fixture/test that
+ * never touches perio data or the classification axes.
  */
 function classificationSummaryFragment(cls: PerioClassificationResult): string {
   const anyOverride = cls.overridden.diagnosis || cls.overridden.stage || cls.overridden.grade || cls.overridden.extent;
@@ -7055,7 +7127,7 @@ function classificationSummaryFragment(cls: PerioClassificationResult): string {
   return parts.join(" · ");
 }
 
-// ---- Periodontal-arc sub-project P2, Task 3: keyboard charting order ----
+// ---- Keyboard charting order ----
 // Explicit, pure charting-order table driving the full-mouth grid's keyboard
 // auto-advance (PerioChart.tsx). There are two "rows" — pd, then gm. WITHIN
 // a row: the buccal sites (MB,B,DB) are charted tooth-by-tooth across the
@@ -7126,7 +7198,7 @@ export function prevPerioCell(cur: { toothNo: number; site: string; row: "pd" | 
   return PERIO_CELL_ORDER[idx - 1] ?? null;
 }
 
-// ---- Periodontal-arc sub-project P2, Task 2: full-mouth grid support ----
+// ---- Full-mouth perio grid support ----
 // Two small production (non-test) reads/writes the perio-chart overlay's grid
 // (PerioChart.tsx, a separate React component/module) needs, since it lives
 // outside odontogram.ts and can't reach the private `toothState` map,
@@ -7136,7 +7208,7 @@ export function prevPerioCell(cur: { toothNo: number; site: string; row: "pd" | 
  *  active chart — the SAME gate {@link perioRowHidden} applies to the
  *  tooth-info panel's `#perioRow` (missing/implant/under-gum/extraction-
  *  socket teeth have no probing site to chart). The full-mouth perio-chart
- *  overlay grid (P2 Task 2) disables a tooth's entire column (site cells +
+ *  overlay grid disables a tooth's entire column (site cells +
  *  mobility cell) on this same predicate — a tooth never touched (no stored
  *  state yet) reads as present/chartable, mirroring every other per-tooth
  *  default read here. */
@@ -7156,6 +7228,20 @@ export function isToothImplant(toothNo: number): boolean {
   return toothState.get(toothNo)?.toothSelection === "implant";
 }
 
+/** The perio-chart artwork kind for a tooth, read from the ACTIVE chart so the
+ *  perio graphic tracks the odontogram.
+ *  A missing tooth (`none`) or an extraction socket renders no crown; a milk
+ *  tooth uses the deciduous artwork; an implant uses the fixture body. Injected
+ *  into the arch builders (`buildBuccalArchSvg`/`buildPalatalArchSvg`) by both
+ *  `PerioChart` (UI) and `buildPerioSvg` (PDF), so the two stay in sync. */
+export function getPerioToothKind(toothNo: number): "missing" | "milktooth" | "implant" | "normal" {
+  const sel = toothState.get(toothNo)?.toothSelection;
+  if(sel === "implant") return "implant";
+  if(sel === "milktooth") return "milktooth";
+  if(sel === "none" || sel === "no-tooth-after-extraction") return "missing";
+  return "normal";
+}
+
 /** Read tooth `toothNo`'s Miller mobility grade from the active chart
  *  ("none" for a never-touched tooth, matching {@link defaultState}). */
 export function getToothMobility(toothNo: number): string {
@@ -7167,7 +7253,7 @@ export function getToothMobility(toothNo: number): string {
  * OUTSIDE the tooth-info panel. The panel's own `#mobilitySelect` writes
  * mobility through `applyToSelected()`, which applies to the bulk
  * `selectedTeeth` set — unusable here, since the full-mouth perio-chart
- * overlay grid (P2 Task 2) edits one specific tooth at a time that is not
+ * overlay grid edits one specific tooth at a time that is not
  * necessarily `activeTooth` or selected on the base chart. This reuses the
  * EXACT SAME mutation + render + notify steps that path takes
  * (`applyStateToSvg`, `updateToothTileNumber`, re-syncing the panel when
@@ -7191,7 +7277,7 @@ export function setToothMobility(toothNo: number, value: string): void {
   });
 }
 
-// ---- Periodontal-arc sub-project P2, Task 1: perio-chart overlay open/close ----
+// ---- Perio-chart overlay open/close ----
 // Separately-invocable imperative API so a host dental application can call up
 // the perio overlay independently of the base odontogram (e.g. from its own
 // menu/shortcut, without going through any odontogram-specific UI). The flag
@@ -7218,12 +7304,12 @@ export function isPerioOverlayOpen(): boolean {
   return perioOverlayOpen;
 }
 
-// ---- Periodontal "Dental Chart" graphical redesign, Task 1: presentation ----
-// Session-level UI preference (no payload/FHIR change) governing how the P2
-// perio content is HOUSED: "toggle" (default) shows an Odontogram | Dental
+// ---- Perio-chart presentation mode ----
+// Session-level UI preference (no payload/FHIR change) governing how the perio
+// content is HOUSED: "toggle" (default) shows an Odontogram | Dental
 // Chart segmented control that renders <PerioChart inline/> in the chart
-// area (odontogram hidden via CSS, never unmounted); "popup" keeps P2's
-// classic launch-button + modal-overlay housing. Lives alongside
+// area (odontogram hidden via CSS, never unmounted); "popup" keeps the classic
+// launch-button + modal-overlay housing. Lives alongside
 // `perioOverlayOpen` (same session-state precedent) and reuses the existing
 // `onStateChange` subscription — App.tsx mirrors it into React state exactly
 // like `perioOpen` mirrors `isPerioOverlayOpen()`.
@@ -7235,23 +7321,23 @@ export function getPerioViewMode(): PerioViewMode {
   return perioViewMode;
 }
 
-/** Switch the perio-chart housing mode. No-op (still notifies) if unchanged. */
+/** Switch the perio-chart housing mode. No-op (does not notify) if unchanged. */
 export function setPerioViewMode(mode: PerioViewMode): void {
+  if(mode === perioViewMode) return;
   perioViewMode = mode;
   notifyStateChange();
 }
 
-// ---- UI-2 Task 1: Settings -> Periodontal tab app-level preferences ----
+// ---- Settings -> Periodontal tab app-level preferences ----
 // Two session-level UI preferences (no payload/FHIR change), mirroring the
 // `perioViewMode` precedent immediately above: a module `let` + getter +
 // setter that calls `notifyStateChange()`. Neither is part of the tooth
 // state, so neither is ever serialized (`collectExportPayload`/
-// `getPlanChart`/hydrate never reference these) — round-trip/FHIR/SVG
-// goldens are unaffected. `perioRowVisibility` drives which perio-chart
-// index rows the Dental Chart renders (T2); `perioIndexNameMode` drives
-// whether index row labels show the localized name or a static
-// English/Latin canonical name (T3). Both are wired into the Settings ->
-// Periodontal tab via `SettingsState` in `SettingsModal.tsx`.
+// `getPlanChart`/hydrate never reference these). `perioRowVisibility` drives
+// which perio-chart index rows the Dental Chart renders; `perioIndexNameMode`
+// drives whether index row labels show the localized name or a static
+// English/Latin canonical name. Both are wired into the Settings -> Periodontal
+// tab via `SettingsState` in `SettingsModal.tsx`.
 
 /** The 16 toggleable periodontal index rows the Dental Chart can show/hide. */
 export type PerioRowId =
@@ -7290,8 +7376,9 @@ export function getPerioRowVisibility(): Record<PerioRowId, boolean> {
   return perioRowVisibility;
 }
 
-/** Show/hide one perio-chart index row. No-op (still notifies) if unchanged. */
+/** Show/hide one perio-chart index row. No-op (does not notify) if unchanged. */
 export function setPerioRowVisibility(id: PerioRowId, visible: boolean): void {
+  if(perioRowVisibility[id] === visible) return;
   perioRowVisibility = { ...perioRowVisibility, [id]: visible };
   notifyStateChange();
 }
@@ -7305,13 +7392,14 @@ export function getPerioIndexNameMode(): PerioIndexNameMode {
   return perioIndexNameMode;
 }
 
-/** Switch the perio index-name display mode. No-op (still notifies) if unchanged. */
+/** Switch the perio index-name display mode. No-op (does not notify) if unchanged. */
 export function setPerioIndexNameMode(mode: PerioIndexNameMode): void {
+  if(mode === perioIndexNameMode) return;
   perioIndexNameMode = mode;
   notifyStateChange();
 }
 
-// ---- Periodontal "Dental Chart" PG-B Task 2: the index-switcher overlay ----
+// ---- Dental Chart index-switcher overlay ----
 // Session-level UI preference (no payload/FHIR change) selecting WHICH
 // clinical index is highlighted OVER the Dental Chart arch graphic, on top of
 // the always-drawn PD/GM curve. Purely a DISPLAY selector over existing perio
@@ -7321,19 +7409,19 @@ export function setPerioIndexNameMode(mode: PerioIndexNameMode): void {
 //   - "plaque"  : marks on O'Leary plaque surfaces (getToothPlaque).
 //   - "bop"     : dots on bleeding-on-probing sites (perio.bop).
 //   - "pd5"/"pd6": highlight sites whose probing depth >= 5 / >= 6 mm.
-//   - "pd"/"cal"/"gr": reserved for T3's continuous heat (no-op stubs here).
+//   - "pd"/"cal"/"gr": continuous heat ramps over probing depth / CAL / recession.
 //   - "cairo"   : per-tooth Cairo (2011) recession TYPE (RT1-3), derived
 //     from CAL (see getToothRecessionType) — a whole-tooth classification,
-//     not a per-site reading (PG-C Task 1).
+//     not a per-site reading.
 //   - "pi"/"gi" : per-surface graded Silness-Löe Plaque Index / Löe-Silness
 //     Gingival Index (0-3, mesial/distal/buccal/lingual — getPlaqueIndex/
-//     getGingivalIndex), heat-bucketed like the mm ramps (PG-D Task 4).
+//     getGingivalIndex), heat-bucketed like the mm ramps.
 //   - "kg"      : per-tooth keratinized gingiva width in mm (getKeratinizedWidth),
-//     heat-bucketed on a mucogingival-risk ramp (thin = severe) (PG-D Task 4).
+//     heat-bucketed on a mucogingival-risk ramp (thin = severe).
 //   - "mpi"/"mbi": per-surface graded Mombelli modified Plaque Index / modified
 //     sulcus Bleeding Index (0-3, mesial/distal/buccal/lingual —
 //     getPeriImplantPlaque/getPeriImplantBleeding), heat-bucketed like pi/gi.
-//     IMPLANT-ONLY data, so marks only ever appear on implant teeth (PG-E).
+//     IMPLANT-ONLY data, so marks only ever appear on implant teeth.
 // Lives alongside `perioViewMode` (same session-state precedent) and reuses
 // the existing `onStateChange` subscription — PerioChart mirrors it into React
 // state (for the active-button/read-out) and redraws the overlay on notify.
@@ -7345,9 +7433,9 @@ export function getPerioOverlayLayer(): PerioOverlayLayer {
   return perioOverlayLayer;
 }
 
-/** Select the Dental Chart overlay layer. Always notifies (so the overlay
- *  redraws + the switcher's active state updates) even when unchanged. */
+/** Select the Dental Chart overlay layer. No-op (does not notify) if unchanged. */
 export function setPerioOverlayLayer(layer: PerioOverlayLayer): void {
+  if(layer === perioOverlayLayer) return;
   perioOverlayLayer = layer;
   notifyStateChange();
 }
@@ -7458,9 +7546,36 @@ export function namespaceIds(root: Element, prefix: string){
  * `<svg>` at its laid-out position; tooth number labels are emitted as `<text>`.
  * Returns null if the grid is not present.
  */
-export function buildOdontogramSvg(): { xml: string; width: number; height: number } | null {
+export function buildOdontogramSvg(opts: { labelFontScale?: number; packFactor?: number } = {}): { xml: string; width: number; height: number } | null {
   const grid = document.querySelector("#toothGrid, .tooth-grid") as HTMLElement | null;
   if(!grid) return null;
+  // In the Periodontal Status view the whole `.chart-column` carries an inline
+  // `display:none` (App.tsx), so the grid + every tooth SVG measure 0×0 and the
+  // export comes out blank. Temporarily clear the inline display on any hidden
+  // ancestor (reverting to its stylesheet display) so getBoundingClientRect
+  // returns real geometry, then restore. This whole function is synchronous —
+  // reading a rect forces layout but never a paint — so there is no visible
+  // flash on screen.
+  const displayRestores: Array<() => void> = [];
+  for(let el: HTMLElement | null = grid; el; el = el.parentElement){
+    if(el.style.display === "none"){
+      const target = el;
+      const prev = target.style.display;
+      target.style.display = "";
+      displayRestores.push(() => { target.style.display = prev; });
+    }
+  }
+  try{
+    return buildOdontogramSvgMeasured(grid, opts);
+  }finally{
+    for(const restore of displayRestores) restore();
+  }
+}
+
+/** The measurement + serialization body of {@link buildOdontogramSvg}, split
+ *  out so the caller can wrap it in a temporary un-hide/restore of any
+ *  `display:none` ancestor (see there). */
+function buildOdontogramSvgMeasured(grid: HTMLElement, opts: { labelFontScale?: number; packFactor?: number } = {}): { xml: string; width: number; height: number } | null {
   const gridRect = grid.getBoundingClientRect();
   const W = Math.max(1, Math.round(gridRect.width));
   const H = Math.max(1, Math.round(gridRect.height));
@@ -7477,6 +7592,14 @@ export function buildOdontogramSvg(): { xml: string; width: number; height: numb
   bg.setAttribute("fill", "#ffffff");
   out.appendChild(bg);
 
+  // PDF tooth-spacing — pack the tiles horizontally toward the start (each
+  // x-position * packFactor) while keeping their WIDTH, so the teeth
+  // move closer / overlap and the whole chart narrows → it scales up bigger to
+  // fill the PDF page width. packFactor 1 (default, and PNG/SVG exports) is a
+  // no-op. `packedRight` tracks the compressed content width for the viewBox.
+  const pack = opts.packFactor ?? 1;
+  let packedRight = 0;
+
   // Tooth SVGs, positioned by their rendered box.
   let tileIndex = 0;
   grid.querySelectorAll(".tooth-svg > svg").forEach((svgEl) => {
@@ -7486,7 +7609,9 @@ export function buildOdontogramSvg(): { xml: string; width: number; height: numb
     pruneHiddenClone(svgEl, clone);
     namespaceIds(clone, `t${tileIndex++}-`);
     const wrap = document.createElementNS(SVG_NS, "svg");
-    wrap.setAttribute("x", String(r.left - gridRect.left));
+    const px = (r.left - gridRect.left) * pack;
+    packedRight = Math.max(packedRight, px + r.width);
+    wrap.setAttribute("x", String(px));
     wrap.setAttribute("y", String(r.top - gridRect.top));
     wrap.setAttribute("width", String(r.width));
     wrap.setAttribute("height", String(r.height));
@@ -7506,7 +7631,9 @@ export function buildOdontogramSvg(): { xml: string; width: number; height: numb
   if(bridgeSpans.length){
     const rectFor = (toothNo: number) => tileRectFor(grid, gridRect, toothNo);
     const bars = computeBridgeBars(bridgeSpans, bridgeStateFor, rectFor, defaultMaterialColor);
-    for(const bar of bars) out.appendChild(barRect(bar));
+    // Pack bridge bars with the teeth (x + width * packFactor) so connectors
+    // stay aligned to the compressed columns.
+    for(const bar of bars) out.appendChild(barRect(pack === 1 ? bar : { ...bar, x: bar.x * pack, width: bar.width * pack }));
   }
 
   // Tooth number labels as text.
@@ -7517,30 +7644,94 @@ export function buildOdontogramSvg(): { xml: string; width: number; height: numb
     if(r.width === 0 || r.height === 0) return;
     const cs = window.getComputedStyle(cell);
     const txt = document.createElementNS(SVG_NS, "text");
-    txt.setAttribute("x", String(r.left - gridRect.left + r.width / 2));
+    const lx = (r.left - gridRect.left) * pack + r.width / 2;
+    packedRight = Math.max(packedRight, lx + r.width / 2);
+    txt.setAttribute("x", String(lx));
     txt.setAttribute("y", String(r.top - gridRect.top + r.height / 2));
     txt.setAttribute("text-anchor", "middle");
     txt.setAttribute("dominant-baseline", "central");
     txt.setAttribute("font-family", cs.fontFamily);
-    txt.setAttribute("font-size", cs.fontSize);
+    // PDF tooth-number size — scale the emitted label font (default scale 1
+    // leaves PNG/SVG exports unchanged).
+    const baseFs = parseFloat(cs.fontSize) || 12;
+    txt.setAttribute("font-size", `${baseFs * (opts.labelFontScale ?? 1)}px`);
     txt.setAttribute("font-weight", cs.fontWeight);
     txt.setAttribute("fill", cs.color);
     txt.textContent = text;
     out.appendChild(txt);
   });
 
+  // When packed (packFactor < 1), tighten the output viewBox/background to the
+  // compressed content width so the narrower chart scales up in the PDF.
+  const outW = pack < 1 ? Math.max(1, Math.ceil(packedRight)) : W;
+  if(outW !== W){
+    out.setAttribute("width", String(outW));
+    out.setAttribute("viewBox", `0 0 ${outW} ${H}`);
+    bg.setAttribute("width", String(outW));
+  }
+
   const xml = new XMLSerializer().serializeToString(out);
-  return { xml: `<?xml version="1.0" encoding="UTF-8"?>\n${xml}`, width: W, height: H };
+  return { xml: `<?xml version="1.0" encoding="UTF-8"?>\n${xml}`, width: outW, height: H };
 }
 
 /** Export the odontogram as a downloadable, scalable SVG file. */
+// The Export Settings apply to the IMAGE exports (PNG/JPG/SVG) too, not just the
+// PDF. Border thickness in SVG-image px (the PDF uses mm).
+const PDF_BORDER_WIDTH_PX: Record<PdfBorderThickness, number> = { thin: 2, medium: 3.5, thick: 6 };
+
+/** Build the odontogram export SVG with the current Export Settings applied —
+ *  bone/healthy-pulp layer visibility, tooth spacing
+ *  (packFactor) and tooth-number size. When `withBorder` is true, a chart-border
+ *  rect (theme-accent colour) is drawn into the SVG for the image exports; the
+ *  PDF passes false and draws its own border in mm via jsPDF. Shared by
+ *  exportSvg/exportImage and exportPdf so all three honour the same settings. */
+function buildOdontogramSvgForExport(withBorder: boolean): { xml: string; width: number; height: number } | null {
+  const settings = getPdfSettings();
+  const prevBase = showBase, prevPulp = showHealthyPulp;
+  if(settings.showBone !== showBase) setShowBase(settings.showBone);
+  if(settings.showHealthyPulp !== showHealthyPulp) setHealthyPulpVisible(settings.showHealthyPulp);
+  let built: { xml: string; width: number; height: number } | null;
+  try{
+    built = buildOdontogramSvg({
+      labelFontScale: TOOTH_NUMBER_SCALE[settings.toothNumberSize],
+      packFactor: ODONTO_PACK[settings.toothSpacing],
+    });
+  }finally{
+    if(showBase !== prevBase) setShowBase(prevBase);
+    if(showHealthyPulp !== prevPulp) setHealthyPulpVisible(prevPulp);
+  }
+  if(built && withBorder && settings.border){
+    const w = PDF_BORDER_WIDTH_PX[settings.borderThickness];
+    const [r, g, b] = PDF_PALETTES[settings.colorTheme].header;
+    const inset = w / 2;
+    const rect = `<rect x="${inset}" y="${inset}" width="${built.width - w}" height="${built.height - w}" fill="none" stroke="rgb(${r},${g},${b})" stroke-width="${w}"/>`;
+    built = { ...built, xml: built.xml.replace("</svg>", `${rect}</svg>`) };
+  }
+  return built;
+}
+
+/** Build the perio export SVG with the current Export Settings applied (perio
+ *  font size, tooth spacing, empty-row skipping, label
+ *  placement). Shared by exportPerioSvg/exportPerioImage and exportPdf. */
+function buildPerioSvgForExport(): Promise<{ xml: string; width: number; height: number } | null> {
+  const settings = getPdfSettings();
+  const pf = PERIO_FONT_SIZE[settings.perioFontSize];
+  return buildPerioSvg({
+    fontSize: pf.fontSize,
+    rowHeight: pf.rowHeight,
+    toothGap: PERIO_SPACING_GAP[settings.perioToothSpacing],
+    showEmptyRows: settings.perioShowEmptyRows,
+    labelPlacement: settings.perioLabelPlacement,
+  });
+}
+
 export async function exportSvg(){
   if(exportInProgress) return;
   exportInProgress = true;
   showExportOverlay();
   setExportProgress(30, "export.progress.preparing");
   try{
-    const built = buildOdontogramSvg();
+    const built = buildOdontogramSvgForExport(true);
     if(!built) throw new Error("Odontogram grid not found");
     setExportProgress(90, "export.progress.encoding");
     const blob = new Blob([built.xml], { type: "image/svg+xml;charset=utf-8" });
@@ -7562,8 +7753,8 @@ export async function exportSvg(){
 }
 
 /**
- * UI-3b Task 6: shared SVG→raster core — loads a serialized SVG (as a data
- * URI) into an off-screen `<canvas>` at `scale`×, painted over a white
+ * Shared SVG→raster core — loads a serialized SVG (as a data URI) into an
+ * off-screen `<canvas>` at `scale`×, painted over a white
  * background first (charts have transparent gaps), and returns the canvas so
  * callers can encode it as PNG or JPEG at whatever quality they need.
  * Extracted out of `exportImage`/`exportPerioImage`'s previously-duplicated
@@ -7590,7 +7781,7 @@ async function rasterizeSvgToCanvas(xml: string, width: number, height: number, 
 }
 
 /**
- * UI-3b Task 6: SVG → PNG data URL, built on {@link rasterizeSvgToCanvas}.
+ * SVG → PNG data URL, built on {@link rasterizeSvgToCanvas}.
  * Used by `exportImage`'s/`exportPerioImage`'s PNG branch AND by
  * `exportPdf`'s chart-embedding path (jsPDF `.addImage` needs a PNG/JPEG
  * data URL, never raw SVG — see the module doc comment on `exportPdf`).
@@ -7611,7 +7802,7 @@ export async function exportImage(format: "png" | "jpg" = "png"){
   showExportOverlay();
   setExportProgress(10, "export.progress.preparing");
   try{
-    const built = buildOdontogramSvg();
+    const built = buildOdontogramSvgForExport(true);
     if(!built) throw new Error("Odontogram grid not found");
     setExportProgress(40, "export.progress.rendering");
     const canvas = await rasterizeSvgToCanvas(built.xml, built.width, built.height);
@@ -7630,14 +7821,14 @@ export async function exportImage(format: "png" | "jpg" = "png"){
   }
 }
 
-/** UI-3b: export the full perio chart as a standalone vector SVG file. */
+/** Export the full perio chart as a standalone vector SVG file. */
 export async function exportPerioSvg(): Promise<void> {
   if(exportInProgress) return;
   exportInProgress = true;
   showExportOverlay();
   setExportProgress(10, "export.progress.preparing");
   try{
-    const built = await buildPerioSvg();
+    const built = await buildPerioSvgForExport();
     if(!built) throw new Error("Perio chart could not be built");
     const blob = new Blob([built.xml], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -7651,7 +7842,7 @@ export async function exportPerioSvg(): Promise<void> {
   }finally{ hideExportOverlay(); exportInProgress = false; }
 }
 
-/** UI-3b: export the full perio chart as PNG/JPG (SVG → canvas @2×, via the
+/** Export the full perio chart as PNG/JPG (SVG → canvas @2×, via the
  *  shared {@link rasterizeSvgToCanvas} raster core). */
 export async function exportPerioImage(format: "png" | "jpg" = "png"): Promise<void> {
   if(exportInProgress) return;
@@ -7659,7 +7850,7 @@ export async function exportPerioImage(format: "png" | "jpg" = "png"): Promise<v
   showExportOverlay();
   setExportProgress(10, "export.progress.preparing");
   try{
-    const built = await buildPerioSvg();
+    const built = await buildPerioSvgForExport();
     if(!built) throw new Error("Perio chart could not be built");
     setExportProgress(40, "export.progress.rendering");
     const canvas = await rasterizeSvgToCanvas(built.xml, built.width, built.height);
@@ -7672,9 +7863,213 @@ export async function exportPerioImage(format: "png" | "jpg" = "png"): Promise<v
   }finally{ hideExportOverlay(); exportInProgress = false; }
 }
 
+// ---------------------------------------------------------------------------
+// PDF export settings (session-only app-level state — like perioViewMode; NOT
+// part of the export payload). Drives the PDF report's
+// defaults, formatting and colour theme. The Settings modal's "PDF Settings"
+// tab reads/writes these; `exportPdf` applies them.
+// ---------------------------------------------------------------------------
+export type PdfDateFormat = "iso" | "dmy" | "mdy";
+export type PdfToothSpacing = "wide" | "medium" | "close";
+export type PdfBorderThickness = "thin" | "medium" | "thick";
+export type PdfToothNumberSize = "small" | "normal" | "xlarge";
+export type PdfPerioLabelPlacement = "center" | "edge";
+export type PdfPerioFontSize = "small" | "normal" | "xlarge";
+export type PdfSummaryGrouping = "whole" | "jaw" | "quadrant" | "sextant";
+export interface PdfSettings {
+  // --- General ---
+  /** Placeholder patient name when the case has none (default "John Doe"). */
+  defaultName: string;
+  /** Placeholder DOB (ISO `YYYY-MM-DD`) when the case has none. */
+  defaultDob: string;
+  /** Show the patient's age (in parentheses) after the DOB. */
+  showAge: boolean;
+  /** Date order for DOB / exam date / generation timestamp. */
+  dateFormat: PdfDateFormat;
+  /** Report colour theme. */
+  colorTheme: PdfColorTheme;
+  // --- Odontogram — applied to the PDF only ---
+  /** Show the bone/gum base layer on the dental chart. */
+  showBone: boolean;
+  /** Show the healthy-pulp layer on the dental chart. */
+  showHealthyPulp: boolean;
+  /** How close the teeth sit — closer spacing yields a taller chart image. */
+  toothSpacing: PdfToothSpacing;
+  /** Draw a frame around the dental-chart image. */
+  border: boolean;
+  borderThickness: PdfBorderThickness;
+  /** Frame colour (CSS hex, default black). */
+  borderColor: string;
+  /** Tooth-number label size. */
+  toothNumberSize: PdfToothNumberSize;
+  /** Include the whole-mouth prose description of the chart. */
+  includeOdontogramText: boolean;
+  /** Include the tabular findings/prosthetic summary. */
+  includeOdontogramTable: boolean;
+  // --- Periodontal chart — applied to the PDF only ---
+  /** Perio-chart tooth spacing (closer → taller chart image). */
+  perioToothSpacing: PdfToothSpacing;
+  /** Show numeric rows that have no charted value anywhere. */
+  perioShowEmptyRows: boolean;
+  /** Buccal / Lingual-Palatal band-label placement. */
+  perioLabelPlacement: PdfPerioLabelPlacement;
+  /** Perio-chart row/label font size. */
+  perioFontSize: PdfPerioFontSize;
+  /** Include the periodontal metrics + classification table. */
+  includePerioTable: boolean;
+  /** Include the abbreviation glossary. */
+  includePerioAbbrev: boolean;
+  // --- Footer ---
+  /** Show the medical disclaimer at the bottom of the report. */
+  showDisclaimer: boolean;
+  /** Custom disclaimer text; empty = use the localized default. Editable only
+   *  while `showDisclaimer` is on. */
+  disclaimerText: string;
+  /** Show the generation / version / attribution stamp. */
+  showGenerator: boolean;
+  // --- Summary ---
+  /** How the dentition overview table is grouped (also drives the on-screen
+   *  Tooth-information panel table). */
+  summaryGrouping: PdfSummaryGrouping;
+}
+const VALID_PDF_DATE_FORMAT = new Set<PdfDateFormat>(["iso", "dmy", "mdy"]);
+const VALID_PDF_TOOTH_SPACING = new Set<PdfToothSpacing>(["wide", "medium", "close"]);
+const VALID_PDF_BORDER_THICKNESS = new Set<PdfBorderThickness>(["thin", "medium", "thick"]);
+const VALID_PDF_TOOTH_NUMBER_SIZE = new Set<PdfToothNumberSize>(["small", "normal", "xlarge"]);
+const VALID_PDF_PERIO_PLACEMENT = new Set<PdfPerioLabelPlacement>(["center", "edge"]);
+const VALID_PDF_PERIO_FONT_SIZE = new Set<PdfPerioFontSize>(["small", "normal", "xlarge"]);
+const VALID_PDF_SUMMARY_GROUPING = new Set<PdfSummaryGrouping>(["whole", "jaw", "quadrant", "sextant"]);
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+const pdfSettings: PdfSettings = {
+  defaultName: "John Doe",
+  defaultDob: "1980-01-01",
+  showAge: true,
+  dateFormat: "iso",
+  colorTheme: DEFAULT_PDF_THEME,
+  showBone: true,
+  showHealthyPulp: true,
+  toothSpacing: "medium",
+  border: false,
+  borderThickness: "medium",
+  borderColor: "#000000",
+  toothNumberSize: "normal",
+  includeOdontogramText: true,
+  includeOdontogramTable: true,
+  perioToothSpacing: "medium",
+  perioShowEmptyRows: false,
+  perioLabelPlacement: "center",
+  perioFontSize: "normal",
+  includePerioTable: true,
+  includePerioAbbrev: true,
+  showDisclaimer: true,
+  disclaimerText: "",
+  showGenerator: true,
+  summaryGrouping: "jaw",
+};
+export function getPdfSettings(): PdfSettings { return { ...pdfSettings }; }
+export function setPdfSettings(patch: Partial<PdfSettings>): void {
+  let changed = false;
+  const setStr = (k: "defaultName" | "defaultDob" | "disclaimerText") => { if(typeof patch[k] === "string" && patch[k] !== pdfSettings[k]){ pdfSettings[k] = patch[k] as string; changed = true; } };
+  const setBool = (k: "showAge" | "showBone" | "showHealthyPulp" | "border" | "includeOdontogramText" | "includeOdontogramTable" | "perioShowEmptyRows" | "includePerioTable" | "includePerioAbbrev" | "showDisclaimer" | "showGenerator") => { if(typeof patch[k] === "boolean" && patch[k] !== pdfSettings[k]){ pdfSettings[k] = patch[k] as boolean; changed = true; } };
+  setStr("defaultName"); setStr("defaultDob"); setStr("disclaimerText");
+  setBool("showAge"); setBool("showBone"); setBool("showHealthyPulp"); setBool("border"); setBool("includeOdontogramText"); setBool("includeOdontogramTable");
+  setBool("perioShowEmptyRows"); setBool("includePerioTable"); setBool("includePerioAbbrev");
+  setBool("showDisclaimer"); setBool("showGenerator");
+  if(patch.dateFormat && VALID_PDF_DATE_FORMAT.has(patch.dateFormat) && patch.dateFormat !== pdfSettings.dateFormat){ pdfSettings.dateFormat = patch.dateFormat; changed = true; }
+  if(patch.colorTheme && (patch.colorTheme in PDF_PALETTES) && patch.colorTheme !== pdfSettings.colorTheme){ pdfSettings.colorTheme = patch.colorTheme; changed = true; }
+  if(patch.toothSpacing && VALID_PDF_TOOTH_SPACING.has(patch.toothSpacing) && patch.toothSpacing !== pdfSettings.toothSpacing){ pdfSettings.toothSpacing = patch.toothSpacing; changed = true; }
+  if(patch.borderThickness && VALID_PDF_BORDER_THICKNESS.has(patch.borderThickness) && patch.borderThickness !== pdfSettings.borderThickness){ pdfSettings.borderThickness = patch.borderThickness; changed = true; }
+  if(patch.toothNumberSize && VALID_PDF_TOOTH_NUMBER_SIZE.has(patch.toothNumberSize) && patch.toothNumberSize !== pdfSettings.toothNumberSize){ pdfSettings.toothNumberSize = patch.toothNumberSize; changed = true; }
+  if(typeof patch.borderColor === "string" && HEX_COLOR.test(patch.borderColor) && patch.borderColor !== pdfSettings.borderColor){ pdfSettings.borderColor = patch.borderColor; changed = true; }
+  if(patch.perioToothSpacing && VALID_PDF_TOOTH_SPACING.has(patch.perioToothSpacing) && patch.perioToothSpacing !== pdfSettings.perioToothSpacing){ pdfSettings.perioToothSpacing = patch.perioToothSpacing; changed = true; }
+  if(patch.perioLabelPlacement && VALID_PDF_PERIO_PLACEMENT.has(patch.perioLabelPlacement) && patch.perioLabelPlacement !== pdfSettings.perioLabelPlacement){ pdfSettings.perioLabelPlacement = patch.perioLabelPlacement; changed = true; }
+  if(patch.perioFontSize && VALID_PDF_PERIO_FONT_SIZE.has(patch.perioFontSize) && patch.perioFontSize !== pdfSettings.perioFontSize){ pdfSettings.perioFontSize = patch.perioFontSize; changed = true; }
+  if(patch.summaryGrouping && VALID_PDF_SUMMARY_GROUPING.has(patch.summaryGrouping) && patch.summaryGrouping !== pdfSettings.summaryGrouping){ pdfSettings.summaryGrouping = patch.summaryGrouping; changed = true; }
+  if(changed) notifyStateChange();
+}
+
+/** Reorder an ISO `YYYY-MM-DD` per the PDF date-format setting. Non-ISO input
+ *  (e.g. already-empty) is returned unchanged. */
+function formatPdfDate(iso: string, fmt: PdfDateFormat): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if(!m) return iso;
+  const [, y, mo, d] = m;
+  if(fmt === "dmy") return `${d}-${mo}-${y}`;
+  if(fmt === "mdy") return `${mo}-${d}-${y}`;
+  return `${y}-${mo}-${d}`;
+}
+/** Whole-years age from two ISO dates (birth → reference). `null` if malformed. */
+function computeAge(dobIso: string, refIso: string): number | null {
+  const d = dobIso.split("-").map(Number);
+  const r = refIso.split("-").map(Number);
+  if(d.length !== 3 || r.length !== 3 || [...d, ...r].some((n) => !Number.isFinite(n))) return null;
+  let age = r[0] - d[0];
+  if(r[1] < d[1] || (r[1] === d[1] && r[2] < d[2])) age--;
+  return age >= 0 && age <= 200 ? age : null;
+}
+
+// Odontogram PDF-setting → concrete value maps.
+// Odontogram tooth-spacing → horizontal pack factor (1 = as laid out; <1 packs
+// teeth closer / overlapping so the chart scales up bigger).
+const ODONTO_PACK: Record<PdfToothSpacing, number> = { wide: 0.85, medium: 0.72, close: 0.6 };
+const TOOTH_NUMBER_SCALE: Record<PdfToothNumberSize, number> = { small: 1.5, normal: 2, xlarge: 2.6 };
+const PDF_BORDER_WIDTH_MM: Record<PdfBorderThickness, number> = { thin: 0.3, medium: 0.7, thick: 1.2 };
+// Perio-chart font size → {row font, row height} + tooth spacing → gap.
+const PERIO_FONT_SIZE: Record<PdfPerioFontSize, { fontSize: number; rowHeight: number }> = {
+  small: { fontSize: 10, rowHeight: 16 }, normal: { fontSize: 13, rowHeight: 21 }, xlarge: { fontSize: 16, rowHeight: 26 },
+};
+// Perio-chart tooth spacing → inter-tooth gap (svg user units), applied to BOTH
+// the arch artwork and the numeric-row columns (one shared geometry — see
+// perioExport's appendArchGraphic). "close" overlaps the teeth, shrinking the
+// chart width so it scales up taller. Values stay ≥ ~0 so the per-tooth M/D/B/L
+// surface letters
+// (spread across each ~40-unit tooth) of adjacent teeth never overlap; the
+// narrower total width scales the whole width-fit chart up proportionally.
+const PERIO_SPACING_GAP: Record<PdfToothSpacing, number> = { wide: 8, medium: 2, close: -2 };
 /**
- * UI-3b Task 6: assemble a printable PDF report (jsPDF-native — vector text
- * + raster chart PNGs, no svg2pdf.js). Gathers all `data` (SVG→PNG
+ * Build the ADDITIONAL perio abbreviation-glossary entries for the PDF
+ * report — one per perio axis/code ACTUALLY charted somewhere in the mouth, so a
+ * report only explains the abbreviations it actually shows. The base
+ * PD/GM/CAL/BOP/ICDAS/CARS come from the static `pdf.footer.legend`; this adds
+ * the graded/coded indices (PI/GI/mPI/mBI/KG/GT/CEJ/root-concavity/furcation/
+ * Miller/mobility). All descriptions reuse existing i18n keys (the `perio.info.*`
+ * full names + the enum-value labels for coded faces), so no new i18n is needed.
+ */
+function buildPerioAbbreviations(): { term: string; desc: string }[] {
+  const sum = getPerioSummary();
+  const anyTooth = (fn: (n: number) => boolean) => ALL_TEETH.some(fn);
+  const out: { term: string; desc: string }[] = [];
+  const gt = sum.gtDistribution, ml = sum.millerDistribution;
+  if(sum.plaquePercent > 0) out.push({ term: "Plaque", desc: t("perio.info.plaque") });
+  if(sum.piScore !== null) out.push({ term: "PI", desc: t("perio.info.pi") });
+  if(sum.giScore !== null) out.push({ term: "GI", desc: t("perio.info.gi") });
+  if(sum.mpiScore !== null) out.push({ term: "mPI", desc: t("perio.info.mpi") });
+  if(sum.mbiScore !== null) out.push({ term: "mBI", desc: t("perio.info.mbi") });
+  if(anyTooth((n) => getKeratinizedWidth(n) !== null)) out.push({ term: "KG", desc: t("perio.info.kg") });
+  if(gt.thin + gt.medium + gt.thick > 0){
+    out.push({ term: "GT (Tn/Md/Tk)", desc: `${t("perio.info.gt")} — Tn: ${t("perio.gt.thin")}, Md: ${t("perio.gt.medium")}, Tk: ${t("perio.gt.thick")}` });
+  }
+  if(anyTooth((n) => getCejVisibility(n) !== "none")){
+    out.push({ term: "CEJ (D/ND)", desc: `${t("perio.info.cej")} — D: ${t("perio.cej.detectable")}, ND: ${t("perio.cej.notDetectable")}` });
+  }
+  if(anyTooth((n) => getRootConcavity(n) !== "none")){
+    out.push({ term: "Mi / Dp", desc: `${t("perio.info.rootConcavity")} — Mi: ${t("perio.rootConcavity.mild")}, Dp: ${t("perio.rootConcavity.deep")}` });
+  }
+  if(sum.maxFurcation !== null) out.push({ term: "Furcation (I–IV)", desc: t("perio.info.furcation") });
+  if(ml.i + ml.ii + ml.iii + ml.iv > 0) out.push({ term: "Miller (I–IV)", desc: t("perio.info.miller") });
+  if(anyTooth((n) => getToothMobility(n) !== "none")) out.push({ term: "Mobility (1–3)", desc: t("perio.info.mobility") });
+  return out;
+}
+
+/** Test seam for {@link buildPerioAbbreviations} (the fn is module-private; the
+ *  real caller `exportPdf` can't run under jsdom — jsPDF needs canvas). */
+export function __buildPerioAbbreviationsForTest(): { term: string; desc: string }[] {
+  return buildPerioAbbreviations();
+}
+
+/**
+ * Assemble a printable PDF report (jsPDF-native — vector text + raster chart
+ * PNGs, no svg2pdf.js). Gathers all `data` (SVG→PNG
  * rasterization via {@link rasterizeSvgToPng}, summary/classification text,
  * `hasAnyPerioData()`), drives the export-progress overlay, then hands off
  * to the PURE `assemblePdf()` (`src/perioPdf.ts`), which decides section
@@ -7684,8 +8079,8 @@ export async function exportPerioImage(format: "png" | "jpg" = "png"): Promise<v
  * browser canvas/font internals jsdom doesn't fully provide, so this
  * wrapper is NOT unit-tested directly — `assemblePdf`'s section-gating IS
  * thoroughly unit-tested with an injectable fake doc (see
- * `ui3b-export-pdf.test.ts`). This wrapper's own raster→layout→save path is
- * a browser-verify item (see the task report).
+ * `ui3b-export-pdf.test.ts`). This wrapper's own raster→layout→save path is a
+ * browser-verify item.
  */
 export async function exportPdf(opts: PdfExportOptions): Promise<void> {
   if(exportInProgress) return;
@@ -7693,8 +8088,15 @@ export async function exportPdf(opts: PdfExportOptions): Promise<void> {
   showExportOverlay();
   setExportProgress(10, "export.progress.preparing");
   try{
-    const odontoBuilt = opts.odontogram ? buildOdontogramSvg() : null;
-    if(opts.odontogram && !odontoBuilt) throw new Error("Odontogram grid not found");
+    const settings = getPdfSettings();
+    // Apply the Export Settings via the shared buildOdontogramSvgForExport
+    // helper (bone/pulp/spacing/number-size) — the PDF draws its OWN border in mm
+    // (jsPDF), so it passes withBorder=false.
+    let odontoBuilt: { xml: string; width: number; height: number } | null = null;
+    if(opts.odontogramChart){
+      odontoBuilt = buildOdontogramSvgForExport(false);
+      if(!odontoBuilt) throw new Error("Odontogram grid not found");
+    }
     setExportProgress(30, "export.progress.rendering");
     const odontogramPng = odontoBuilt
       ? await rasterizeSvgToPng(odontoBuilt.xml, odontoBuilt.width, odontoBuilt.height)
@@ -7706,7 +8108,7 @@ export async function exportPdf(opts: PdfExportOptions): Promise<void> {
     let perioImageSize: { width: number; height: number } | undefined;
     if(perioNeeded){
       setExportProgress(50, "export.progress.rendering");
-      const perioBuilt = await buildPerioSvg();
+      const perioBuilt = await buildPerioSvgForExport();
       if(!perioBuilt) throw new Error("Perio chart could not be built");
       perioPng = await rasterizeSvgToPng(perioBuilt.xml, perioBuilt.width, perioBuilt.height);
       perioImageSize = { width: perioBuilt.width, height: perioBuilt.height };
@@ -7715,57 +8117,153 @@ export async function exportPdf(opts: PdfExportOptions): Promise<void> {
 
     const odontoSummary = getOdontogramSummary();
     const perioSum = getPerioSummary();
+
+    // Dental-chart caption (overview) + findings table (non-empty per-axis
+    // sections + implants). The prose text and the findings table are
+    // independently toggleable — an empty string / empty array makes the
+    // assembler skip that part. Only the one-sentence overview is used as the
+    // caption; the grouped dentition table below carries the per-tooth lists.
+    const odontogramCaption = settings.includeOdontogramText ? odontoSummary.overview : "";
+    const odontogramFindings: { label: string; value: string }[] = [];
+    if(settings.includeOdontogramTable){
+      for(const section of odontoSummary.sections){
+        if(section.items.length) odontogramFindings.push({ label: section.heading, value: section.items.join(", ") });
+      }
+      // Implants are already listed in the grouped dentition table's "Implants"
+      // column, so they are not duplicated as a findings row.
+      // Surface the odontogram-markable periodontal findings (inflammation,
+      // mobility, calculus, …) here when there is no dedicated perio section (no
+      // perio module charted) — otherwise they'd be invisible.
+      if(!hasPerio && odontoSummary.periodontalHasFindings){
+        odontogramFindings.push({ label: odontoSummary.periodontalTitle, value: odontoSummary.periodontalText });
+      }
+    }
+
+    // Per-tooth notes as {tooth, note} rows (summary items are "<tooth>: <note>").
+    const individualNotes = (odontoSummary.individualNotes?.items ?? []).map((s) => {
+      const idx = s.indexOf(": ");
+      return idx > 0 ? { label: s.slice(0, idx), value: s.slice(idx + 2) } : { label: "", value: s };
+    });
+
+    // Periodontal metrics + 2017 classification as table rows (labels + values
+    // localized via the SAME i18n keys the on-screen panel / perio export use, so
+    // the report honors the active language).
     const worstCalText = perioSum.worstCal === null
       ? "–"
       : `${perioSum.worstCal}${perioSum.worstCalTooth !== null ? ` (${formatToothLabel(perioSum.worstCalTooth)})` : ""}`;
-    const perioSummaryText = [
-      `${t("perio.bopPercent")}: ${perioSum.bopPercent}%`,
-      `${t("perio.summary.worstCal")}: ${worstCalText}`,
-      `${t("perio.summary.maxPd")}: ${perioSum.maxPd === null ? "–" : perioSum.maxPd}`,
-      `${odontoSummary.periodontalTitle}: ${odontoSummary.periodontalText}`,
-    ].join("\n");
+    const cls = getPerioClassification();
+    const dxLabel = (v: string) => t(`perio.class.dx.${v}`);
+    const stageLabel = (v: string) =>
+      v === "na" ? t("perio.class.stage.na") : v === "indeterminate" ? t("perio.class.stage.indeterminate") : t(`perio.class.stage.${v}`);
+    const gradeLabel = (v: string) =>
+      v === "indeterminate" ? t("perio.class.grade.indeterminate") : t(`perio.class.grade.${v}`);
+    const extentLabel = (v: string) =>
+      v === "na" ? t("perio.class.extent.na") : v === "molar-incisor" ? t("perio.class.extent.molarIncisor") : t(`perio.class.extent.${v}`);
+    // The perio metrics/classification table + abbreviation glossary are each
+    // independently toggleable (empty → assembler skips it).
+    const perioMetrics = settings.includePerioTable ? [
+      { label: t("perio.bopPercent"), value: `${perioSum.bopPercent}%` },
+      { label: t("perio.summary.worstCal"), value: worstCalText },
+      { label: t("perio.summary.maxPd"), value: perioSum.maxPd === null ? "–" : String(perioSum.maxPd) },
+      { label: t("perio.class.diagnosis"), value: dxLabel(cls.diagnosis) },
+      { label: t("perio.class.stage"), value: stageLabel(cls.stage) },
+      { label: t("perio.class.grade"), value: gradeLabel(cls.grade) },
+      { label: t("perio.class.extent"), value: extentLabel(cls.extent) },
+    ] : [];
+
+    // Abbreviation glossary parsed from the localized legend ("TERM – desc; …").
+    const abbreviations = settings.includePerioAbbrev ? [
+      ...t("pdf.footer.legend")
+        .split(";")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((part) => {
+          const m = part.split(/\s[–-]\s/);
+          return m.length >= 2 ? { term: m[0].trim(), desc: m.slice(1).join(" – ").trim() } : { term: "", desc: part };
+        }),
+      // Append every ADDITIONAL perio abbreviation/code actually charted in this
+      // case (PI/GI/KG/GT/CEJ/root-concavity/furcation/Miller/mobility/mPI/mBI) —
+      // the base PD/GM/CAL/BOP/ICDAS/CARS come from the legend above.
+      ...buildPerioAbbreviations(),
+    ] : [];
+
+    // Apply the PDF settings — placeholder name/DOB, age toggle, date format,
+    // colour theme (`settings` captured above, before the chart build).
+    const palette = PDF_PALETTES[settings.colorTheme];
+    const cm = getCaseMeta();
+    const now = new Date();
+    const pad2 = (n: number) => String(n).padStart(2, "0");
+    const todayIsoStr = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    const nameVal = (cm.patientName && cm.patientName.trim() !== "") ? cm.patientName : settings.defaultName;
+    const dobIso = cm.patientDob ?? settings.defaultDob;
+    const examIso = cm.examDate ?? todayIsoStr;
+    const dobDisp = formatPdfDate(dobIso, settings.dateFormat);
+    const age = computeAge(dobIso, examIso);
+    const patient = [
+      { label: t("pdf.field.patientName"), value: nameVal },
+      { label: t("pdf.field.patientDob"), value: (settings.showAge && age !== null) ? `${dobDisp} (${age})` : dobDisp },
+      { label: t("pdf.field.examDate"), value: formatPdfDate(examIso, settings.dateFormat) },
+    ];
+
+    // Document title + end-of-document footer (disclaimer + generation timestamp
+    // / app version / attribution). __APP_VERSION__ is injected from package.json
+    // at build time (see the vite/vitest `define`).
+    const genStamp = `${formatPdfDate(todayIsoStr, settings.dateFormat)} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+    // Disclaimer (toggle + optional custom text; empty custom = localized
+    // default) and generator/attribution (toggle) are independently shown; an
+    // empty string makes the assembler skip that footer part.
+    const footer = {
+      disclaimer: settings.showDisclaimer ? (settings.disclaimerText.trim() || t("pdf.disclaimer")) : "",
+      generated: settings.showGenerator ? t("pdf.generatedWith", { date: genStamp, app: "Angular Advanced Odontogram", version: __APP_VERSION__ }) : "",
+      repoUrl: settings.showGenerator ? "https://github.com/ZoliQua/Angular-Advanced-Odontogram" : "",
+      doi: settings.showGenerator ? "https://doi.org/10.5281/zenodo.21156787" : "",
+    };
 
     const data: PdfAssembleData = {
       hasPerio,
-      caseMeta: getCaseMeta(),
+      reportTitle: t("pdf.reportTitle"),
+      footer,
+      palette,
+      patient,
       odontogramPng,
-      odontogramSummaryText: buildOdontogramProseText(odontoSummary),
+      odontogramCaption,
+      toothTable: settings.includeOdontogramTable ? odontoSummary.toothTable : null,
+      odontogramFindings,
+      individualNotes,
       odontogramImageSize: odontoBuilt ? { width: odontoBuilt.width, height: odontoBuilt.height } : undefined,
+      // The border colour always uses the active theme's accent (palette.header)
+      // so it matches the report.
+      odontogramBorder: (settings.border && opts.odontogramChart)
+        ? { widthMm: PDF_BORDER_WIDTH_MM[settings.borderThickness], color: palette.header }
+        : null,
       perioPng,
-      perioSummaryText,
+      perioMetrics,
       perioImageSize,
+      abbreviations,
     };
 
     // Lazy-load jsPDF only when a PDF is actually exported, so it (and its
     // html2canvas/dompurify deps) stays out of consumers' main bundle.
     const { jsPDF } = await import("jspdf");
-    assemblePdf(opts, data, () => new jsPDF() as unknown as PdfDocLike);
+    // Load the Unicode font for the active language (Latin/Cyrillic, Arabic, or
+    // CJK) — dynamically imported so only the needed font
+    // enters the export, and registered on each created doc. `shapeText` applies
+    // Arabic joining/bidi; identity for the others.
+    const { loadPdfFont } = await import("./fonts/loader");
+    const pdfFont = await loadPdfFont(getI18nLanguage());
+    data.fontFamily = pdfFont.family;
+    data.shapeText = pdfFont.transform;
+    assemblePdf(opts, data, () => {
+      const d = new jsPDF() as unknown as PdfDocLike;
+      pdfFont.register(d);
+      return d;
+    });
     setExportProgress(100, "export.progress.done");
     await new Promise((r) => window.setTimeout(r, 300));
   }finally{
     hideExportOverlay();
     exportInProgress = false;
   }
-}
-
-/**
- * UI-3b Task 6: multi-paragraph prose built from {@link getOdontogramSummary}
- * for the PDF odontogram section — overview sentence, permanent/missing
- * tooth lists, implants, and every non-empty per-axis section (caries,
- * fillings, endo, ...), each on its own line. Kept internal to `exportPdf`'s
- * data-gathering (not part of the public summary API) since it's just a
- * PDF-specific flattening of fields `OdontogramSummary` already exposes
- * structurally.
- */
-function buildOdontogramProseText(summary: OdontogramSummary): string {
-  const parts: string[] = [summary.overview];
-  if(summary.permanentList) parts.push(summary.permanentList);
-  if(summary.missingList) parts.push(summary.missingList);
-  if(summary.implants) parts.push(`${summary.implants.heading}: ${summary.implants.text}`);
-  for(const section of summary.sections){
-    if(section.items.length) parts.push(`${section.heading}: ${section.items.join("; ")}`);
-  }
-  return parts.join("\n");
 }
 
 export function exportStatus(){
@@ -7783,13 +8281,12 @@ export function exportFhir(options?: FhirExportOptions){
 }
 
 /**
- * R2-A Task 2 (D3, RATIFIED): the DATA-ONLY half of the import path — no
- * DOM/UI calls, so it is directly unit-testable without a live
- * initOdontogram() mount (mirrors why other module-state tests use
- * `__setToothStateForTest` instead of calling importStatus() itself: several
- * of importStatus()'s UI-sync tail calls, e.g. syncControlsFromState() via
- * updateSelectionUI(), assume a live control-panel DOM and are not part of
- * this task's scope to change).
+ * The DATA-ONLY half of the import path — no DOM/UI calls, so it is directly
+ * unit-testable without a live initOdontogram() mount (mirrors why other
+ * module-state tests use `__setToothStateForTest` instead of calling
+ * importStatus() itself: several of importStatus()'s UI-sync tail calls, e.g.
+ * syncControlsFromState() via updateSelectionUI(), assume a live control-panel
+ * DOM).
  *
  * Hydrates `data.teeth` into `charts.status` EXPLICITLY (never the
  * active-chart alias), so importing a payload while in PLAN mode still loads
@@ -7801,8 +8298,8 @@ export function exportFhir(options?: FhirExportOptions){
  * over from before this import.
  */
 function hydrateImportedCharts(data: Any): void {
-  // FIX 1: only re-infer the legacy caries∩filling recurrent-caries intersection
-  // for pre-2.3 payloads. A native ≥2.3 payload (including any FHIR bundle, which
+  // Only re-infer the legacy caries∩filling recurrent-caries intersection for
+  // pre-2.3 payloads. A native ≥2.3 payload (including any FHIR bundle, which
   // parseFhirBundle tags "2.3") carries explicit `secondaryCaries` scores, so an
   // unscored caried+filled surface stays PRIMARY. A missing version → legacy.
   const inferLegacySecondaryCaries = isLegacyPayloadVersion(data.version);
@@ -7811,7 +8308,7 @@ function hydrateImportedCharts(data: Any): void {
     const raw = teeth[toothNo];
     charts.status.set(toothNo, hydrateState(raw, inferLegacySecondaryCaries));
   }
-  // P4a: shared case-level metadata — mirrors `globals`, hydrated once here
+  // Shared case-level metadata — mirrors `globals`, hydrated once here
   // regardless of status/plan, self-healing any bad/missing values.
   hydrateCaseMeta(data.case);
   if(data.plan && typeof data.plan === "object"){
@@ -7824,19 +8321,19 @@ function hydrateImportedCharts(data: Any): void {
     charts.plan.clear();
     planInitialized = false;
   }
-  // DS-1: an import replaces the whole case — a freshly imported plan carries
-  // no runtime plan-edits (they are never serialized), so drop any stale marks
+  // An import replaces the whole case — a freshly imported plan carries no
+  // runtime plan-edits (they are never serialized), so drop any stale marks
   // regardless of whether the import brought a `plan` section.
   planEditedTeeth.clear();
-  // DS-1 (review Fix 2): also drop any pending dual-state confirm. Its deferred
-  // `applyFn` was captured against the PRE-import state; a later
+  // Also drop any pending dual-state confirm. Its deferred `applyFn` was captured
+  // against the PRE-import state; a later
   // acceptDualStateConfirm() must never run it against freshly-hydrated charts.
   pendingDualStateConfirm = null;
 }
 
 /**
- * R2-A whole-branch review fix: force the active chart back to STATUS
- * immediately after an import hydrates `charts`. An import is status-primary
+ * Force the active chart back to STATUS immediately after an import hydrates
+ * `charts`. An import is status-primary
  * and replaces the whole case, so it must always land the user on the
  * STATUS chart — even if Plan mode was active before the import. Without
  * this, importing a payload while in Plan mode left `chartMode` on "plan"
@@ -7887,18 +8384,16 @@ export function importStatus(data: Any){
   syncChartModeUi();
 }
 
-/** TEST-ONLY (R2-A Task 2 seam): exercise the DATA-ONLY import hydrate
- *  (status-primary teeth + conditional plan restore + planInitialized),
- *  without requiring a live DOM/initOdontogram() token. Not part of the
- *  public API. */
+/** TEST-ONLY: exercise the DATA-ONLY import hydrate (status-primary teeth +
+ *  conditional plan restore + planInitialized), without requiring a live
+ *  DOM/initOdontogram() token. Not part of the public API. */
 export function __hydrateImportedChartsForTest(data: Any): void {
   hydrateImportedCharts(data);
 }
 
-/** TEST-ONLY (whole-branch review fix seam): exercise the DATA-ONLY half of
- *  the import path's chart-mode fix — `hydrateImportedCharts()` followed by
- *  the new `resetActiveChartToStatusAfterImport()` step `importStatus()`
- *  now runs — without requiring a live DOM/initOdontogram() token.
+/** TEST-ONLY: exercise the DATA-ONLY half of the import path's chart-mode fix —
+ *  `hydrateImportedCharts()` followed by the `resetActiveChartToStatusAfterImport()`
+ *  step `importStatus()` runs — without requiring a live DOM/initOdontogram() token.
  *  `importStatus()`'s own DOM-dependent UI-sync tail (`updateSelectionUI()`
  *  -> `syncControlsFromState()`) assumes a live control-panel DOM and is out
  *  of scope for this seam, same as `__hydrateImportedChartsForTest`. Not
@@ -7925,23 +8420,18 @@ function applyStatusExtra(option: Any){
   const archTeeth = (arch)=> meta?.[arch] || [];
   const archWisdom = (arch)=> meta?.wisdom?.[arch] || [];
 
-  // DS-1 (review Fix 1+2): a Statuses preset is a SINGLE atomic interactive edit
-  // over a SET of teeth — it MUST go through the batch gate exactly once (like
-  // setEdentulous / the dentition presets), NOT a per-tooth `gateToothEdit` loop.
-  // Per-tooth gating was doubly broken: (1) a preset touching >=2 already
-  // plan-edited teeth hit the confirm's single-slot guard on the 2nd+ tooth, so
-  // that tooth's edit was silently discarded even after Accept (data loss);
-  // (2) a preset touching a planned + an unplanned tooth applied the unplanned
-  // tooth immediately (before the user answered the confirm), so Cancel left a
-  // partial apply. The fix: PRECOMPUTE the set of teeth the preset will ACTUALLY
-  // change (same skip/predicate/unchanged-value detection the per-tooth path
-  // used, via a serialized before/after comparison, computed on a CLONE so
-  // nothing is committed before the gate resolves), then apply ALL of them in
-  // ONE `gateToothEditBatch` closure — ONE confirm if any changed tooth is
-  // plan-edited, apply-all-or-none, and mark/mirror only the actually-changed
-  // teeth. `changes` accumulates across the (possibly several) `collect()` calls
-  // a single preset makes (bar-denture makes three), so the WHOLE preset is one
-  // atomic batch. Uninitialized plan stays a pure passthrough (byte-identical).
+  // A Statuses preset is a SINGLE atomic interactive edit over a SET of teeth —
+  // it goes through the batch gate exactly once (like setEdentulous / the
+  // dentition presets), NOT a per-tooth `gateToothEdit` loop, so a preset
+  // touching several plan-edited teeth confirms once and applies all-or-none.
+  // PRECOMPUTE the set of teeth the preset will ACTUALLY change (same
+  // skip/predicate/unchanged-value detection via a serialized before/after
+  // comparison, computed on a CLONE so nothing is committed before the gate
+  // resolves), then apply ALL of them in ONE `gateToothEditBatch` closure — ONE
+  // confirm if any changed tooth is plan-edited, and mark/mirror only the
+  // actually-changed teeth. `changes` accumulates across the (possibly several)
+  // `collect()` calls a single preset makes (bar-denture makes three), so the
+  // WHOLE preset is one atomic batch. Uninitialized plan stays a pure passthrough.
   const changes = new Map<number, Any>(); // toothNo -> precomputed next state
   const collect = (teeth, fn)=>{
     for(const toothNo of teeth){
@@ -7972,8 +8462,8 @@ function applyStatusExtra(option: Any){
         syncControlsFromState(toothState.get(activeTooth));
       }
       updateSelectionFilterButtons();
-      // B9: applyStateToSvg only touches per-tooth SVG; notifyStateChange() is
-      // what drives updateBridgeOverlay() (the bridge-span connector) + every
+      // applyStateToSvg only touches per-tooth SVG; notifyStateChange() is what
+      // drives updateBridgeOverlay() (the bridge-span connector) + every
       // listener. Fire it ONCE here, after all changed teeth are applied — and
       // INSIDE the gated closure so it runs when the batch actually applies
       // (synchronously on the immediate path; on Accept for a deferred confirm),
@@ -7987,8 +8477,8 @@ function applyStatusExtra(option: Any){
   const toRestorationMaterial = (material: Any) => material === "metal" ? "metal-ceramic" : material;
 
   // Pillar (abutment) tooth: a present tooth gets a crown restoration, flagged
-  // as a bridge pillar. Full multi-tooth bridge-span rendering on a tooth-base
-  // pillar is an SP3b concern; this only sets the new-model fields.
+  // as a bridge pillar. This only sets the new-model fields; the multi-tooth
+  // bridge-span overlay is rendered separately.
   const setBridgeCrown = (s, material)=>{
     s.toothSubstrate = "crownprep";
     s.restorationType = "crown";
@@ -8355,9 +8845,9 @@ function wireControls(){
     setEdentulous(false);
   });
 
-  // SP7 Task 4: merged pulp/endo status. Custom-built (optgroups) rather than
-  // via buildSelect; the change handler routes to pulpEndoOnSelect, which
-  // enforces the mutual-exclusion invariant (endo <-> vital pulpDx).
+  // Merged pulp/endo status. Custom-built (optgroups) rather than via
+  // buildSelect; the change handler routes to pulpEndoOnSelect, which enforces
+  // the mutual-exclusion invariant (endo <-> vital pulpDx).
   {
     const sel = $("#pulpEndoSelect");
     sel.addEventListener("change", () => {
@@ -8370,7 +8860,7 @@ function wireControls(){
   buildSelect($("#apicalDxSelect"), getApicalDxOptions(), (value)=>{
     applyToSelected((s)=>{
       s.apicalDx = value;
-      // SP7: granuloma/cyst is a refinement of apical periodontitis only.
+      // granuloma/cyst is a refinement of apical periodontitis only.
       if(value !== "symptomatic-apical-periodontitis" && value !== "asymptomatic-apical-periodontitis"){
         s.periapicalType = "none";
       }
@@ -8391,14 +8881,14 @@ function wireControls(){
     });
   });
 
-  // Root resorption (SP4 Task 5: resorptionType enum — none / internal /
-  // external-cervical picker; both subtypes render identically).
+  // Root resorption (resorptionType enum — none / internal / external-cervical
+  // picker; both subtypes render identically).
   buildSelect($("#resorptionSelect"), getResorptionOptions(), (value)=>{
     applyToSelected((s)=>{ s.resorptionType = value; });
   });
 
-  // Peri-implant status (SP8 Task 5: implants only — supersedes the parodontal/
-  // inflammation mods there).
+  // Peri-implant status (implants only — supersedes the parodontal/inflammation
+  // mods there).
   buildSelect($("#periImplantSelect"), getPeriImplantOptions(), (value)=>{
     applyToSelected((s)=>{ applyPeriImplantSelection(s, value); });
   });
@@ -8452,8 +8942,8 @@ function wireControls(){
     });
   });
 
-  // SP-perio P1 Task 2: the 6-site PD/GM/BOP/SUP grid — built once here
-  // (site identities are static), values synced per-tooth by syncPerioRow()
+  // The 6-site PD/GM/BOP/SUP grid — built once here (site identities are
+  // static), values synced per-tooth by syncPerioRow()
   // inside syncControlsFromState(). See buildPerioGrid's own doc comment.
   buildPerioGrid($("#perioGrid"));
 
@@ -8469,8 +8959,8 @@ function wireControls(){
 
   // Caries surfaces in a cross layout; subcrown stays as a separate row.
   // Toggling a surface on records its severity (from the active-depth dropdown);
-  // toggling off clears it. Subcrown carries no per-surface severity. SP6 Task 1:
-  // the single unified `cariesSeverity` map (was `cariesDepths`).
+  // toggling off clears it. Subcrown carries no per-surface severity. Records
+  // into the single unified `cariesSeverity` map.
   const cariesOnToggle = (id: Any, on: Any)=>{
     applyToSelected((s)=>{
       if(on){
@@ -8510,9 +9000,9 @@ function wireControls(){
   buildSelect($("#cariesDepthSelect"), getCariesDepthOptions(), (val)=>{
     applyToSelected((s)=>{ s.cariesActiveDepth = Number(val); });
   });
-  // SP5 Task 5: per-tooth root-caries picker. On change the selected value is
-  // the canonical rootCaries enum (simple mode's "present" already maps to
-  // "active-cavitated" — SP6 Task 3), so it writes straight to state.
+  // Per-tooth root-caries picker. On change the selected value is the canonical
+  // rootCaries enum (simple mode's "present" already maps to "active-cavitated"),
+  // so it writes straight to state.
   buildSelect($("#rootCariesSelect"), rootCariesOptions(), (value)=>{
     applyToSelected((s)=>{ s.rootCaries = value; });
   });
@@ -8549,8 +9039,8 @@ function wireControls(){
       }
     });
   });
-  // SP6 Task 2 (step 2): mirror the caries-cell per-surface indicator onto each
-  // FILLING-surface cell. It signposts (and, via the contextual popup, authors)
+  // Mirror the caries-cell per-surface indicator onto each FILLING-surface cell.
+  // It signposts (and, via the contextual popup, authors)
   // recurrent caries on a filled surface — CSS shows it only when the filling
   // checkbox is checked, and the dark border (`.has-subcaries`) is toggled in
   // syncFillingSubcariesIndicator when the surface actually has caries.
@@ -8567,7 +9057,7 @@ function wireControls(){
     });
     cell.appendChild(ind);
   });
-  // SP10: LEFT-side per-surface filling-defect indicator (the RIGHT-side .surf-depth
+  // LEFT-side per-surface filling-defect indicator (the RIGHT-side .surf-depth
   // authors recurrent caries; this authors the structural defect). Shown by CSS only
   // when the filling checkbox is checked; the dark border (.has-defect) is toggled in
   // syncFillingDefectIndicator when the surface actually carries a defect.
@@ -8578,10 +9068,36 @@ function wireControls(){
     const ind = el("span", { class: "surf-defect", title: t("fillingDefect.label") }, [ el("i") ]);
     ind.addEventListener("click", (e: Any)=>{
       e.preventDefault(); e.stopPropagation();
-      if(!input.checked || readOnly) return;
+      // no-op when the filling-defect feature is disabled.
+      if(!input.checked || readOnly || !fillingDefectEnabled) return;
       showFillingDefectPopup(surface, ind, activeTooth);
     });
     cell.insertBefore(ind, cell.firstChild); // LEFT side
+  });
+
+  // "simple" filling complexity — one filled/not-filled toggle applying the
+  // current material to ALL surfaces (or clearing them).
+  $("#fillingSimpleToggle")?.addEventListener("change", (e)=>{
+    const on = (e.target as HTMLInputElement).checked;
+    applyToSelected((s)=>{
+      if(on){
+        const mat = s.fillingMaterial !== "none" ? s.fillingMaterial : "composite";
+        for(const surf of ["buccal", "mesial", "occlusal", "distal", "lingual"]){ s.fillingSurfaceMaterials.set(surf, mat); s.fillingSurfaces.add(surf); }
+      }else{
+        s.fillingSurfaceMaterials.clear();
+        s.fillingSurfaces.clear();
+        s.fillingDefect.clear();
+      }
+    });
+  });
+  // simple-mode filling-defect button — applies a defect to ALL filled surfaces.
+  $("#fillingSimpleDefectSelect")?.addEventListener("change", (e: Any)=>{
+    const value = String((e.target as HTMLSelectElement).value);
+    applyToSelected((s)=>{
+      for(const surf of (s.fillingSurfaceMaterials as Map<string, string>).keys()){
+        applyFillingDefect(s.fillingDefect, surf, value);
+      }
+    });
   });
 
   // Fissure sealing
@@ -8608,8 +9124,8 @@ function wireControls(){
     });
   });
 
-  // Wear (SP11 Task 3: wearEdge/wearCervical enum pickers — replaces the
-  // bruxism checkboxes; mirrors the #resorptionSelect buildSelect wiring).
+  // Wear (wearEdge/wearCervical enum pickers; mirrors the #resorptionSelect
+  // buildSelect wiring).
   buildSelect($("#wearEdgeSelect"), getWearEdgeOptions(), (value)=>{
     applyToSelected((s)=>{ s.wearEdge = value; });
   });
@@ -8617,9 +9133,9 @@ function wireControls(){
     applyToSelected((s)=>{ s.wearCervical = value; });
   });
 
-  // Wear simple-mode toggles (SP13 Task 2: yes/no checkboxes shown instead of
-  // the selects above when wearDetailLevel === "simple"; write the canonical
-  // simple value on check, "none" on uncheck).
+  // Wear simple-mode toggles (yes/no checkboxes shown instead of the selects
+  // above when wearDetailLevel === "simple"; write the canonical simple value on
+  // check, "none" on uncheck).
   $("#wearEdgeToggle").addEventListener("change", (e)=>{
     const on = (e.target as HTMLInputElement).checked;
     applyToSelected((s)=>{ s.wearEdge = on ? "attrition" : "none"; });
@@ -8629,22 +9145,21 @@ function wireControls(){
     applyToSelected((s)=>{ s.wearCervical = on ? "abrasion" : "none"; });
   });
 
-  // Discoloration (SP12 Task 3: discoloration enum picker — mirrors the
-  // wearEdge/wearCervical buildSelect wiring above).
+  // Discoloration (enum picker — mirrors the wearEdge/wearCervical buildSelect
+  // wiring above).
   buildSelect($("#discolorationSelect"), getDiscolorationOptions(), (value)=>{
     applyToSelected((s)=>{ s.discoloration = value; });
   });
 
-  // Discoloration simple-mode toggle (SP13 Task 2: mirrors the wear toggles
-  // above; independent discolorationDetailLevel setting).
+  // Discoloration simple-mode toggle (mirrors the wear toggles above;
+  // independent discolorationDetailLevel setting).
   $("#discolorationToggle").addEventListener("change", (e)=>{
     const on = (e.target as HTMLInputElement).checked;
     applyToSelected((s)=>{ s.discoloration = on ? "other" : "none"; });
   });
 
-  // Ortho (SP14 Task 3: appliance/drift/vertical enum pickers + rotation
-  // boolean toggle — mirrors the discoloration buildSelect/toggle wiring
-  // above).
+  // Ortho (appliance/drift/vertical enum pickers + rotation boolean toggle —
+  // mirrors the discoloration buildSelect/toggle wiring above).
   buildSelect($("#orthoApplianceSelect"), getOrthoApplianceOptions(), (value)=>{
     applyToSelected((s)=>{ s.orthoAppliance = value; });
   });
@@ -8805,8 +9320,8 @@ function wireControls(){
     updateSelectionUI();
   });
 
-  // R2-A Task 3: Status | Plan chart-mode toggle (chart-header, separate from
-  // both the topbar and the right Controls panel).
+  // Status | Plan chart-mode toggle (chart-header, separate from both the topbar
+  // and the right Controls panel).
   $("#chartModeStatus").addEventListener("click", ()=>setChartMode("status"));
   $("#chartModePlan").addEventListener("click", ()=>setChartMode("plan"));
 
@@ -8928,8 +9443,8 @@ export async function initOdontogram(){
   }
   setupBridgeOverlayResize();
   notifyStateChange();
-  // R2-A Task 3: reflect the initial chart mode ("status") in the toggle UI
-  // on first mount, same as any other setChartMode()-driven sync.
+  // Reflect the initial chart mode ("status") in the toggle UI on first mount,
+  // same as any other setChartMode()-driven sync.
   syncChartModeUi();
 }
 
@@ -8981,10 +9496,9 @@ export function destroyOdontogram(){
   if(fillings) fillings.innerHTML = "";
   const statusExtra = $("#statusExtraSelect") as HTMLSelectElement | null;
   if(statusExtra) statusExtra.innerHTML = "";
-  // R2-A Task 1: a full teardown resets the whole case — BOTH charts, not
-  // just the active one — and drops back to "status" mode so a subsequent
-  // initOdontogram() starts clean (mirrors the pre-dual-state behavior of a
-  // single cleared toothState).
+  // A full teardown resets the whole case — BOTH charts, not just the active one
+  // — and drops back to "status" mode so a subsequent initOdontogram() starts
+  // clean.
   charts.status.clear();
   charts.plan.clear();
   planInitialized = false;
@@ -9077,27 +9591,54 @@ export type OdontogramSummarySection = {
   emptyText: string;
 };
 
+/** Per-tooth status in the grouped dentition table — `empty`
+ *  (nothing charted), `content` (has some finding/treatment — shown bold/accent),
+ *  `problem` (caries / root inflammation / diagnosis / wear / discoloration —
+ *  shown bold-italic in a warning colour). */
+export type ToothTableStatus = "empty" | "content" | "problem";
+export interface ToothTableCell { toothNo: number; label: string; status: ToothTableStatus; }
+/** A grouped dentition overview: category columns (only non-empty ones) ×
+ *  anatomical group rows (whole mouth / jaw / quadrant / sextant), each cell a
+ *  list of that group's teeth of that category, tagged with a status. */
+export interface OdontogramToothTable {
+  columns: { key: string; label: string }[];
+  rows: { key: string; label: string; cells: Record<string, ToothTableCell[]> }[];
+  /** Localized note explaining the bold / bold-italic emphasis. */
+  legend: string;
+}
+
 /** Structured, already-localized textual summary of the whole odontogram. */
 export type OdontogramSummary = {
   overview: string;
   permanentList: string | null;
   missingList: string | null;
+  /** Grouped dentition table (the flat permanent/missing lists stay for
+   *  back-compat). */
+  toothTable: OdontogramToothTable;
+  /** True when any odontogram-markable periodontal finding
+   *  (inflammation, mobility, calculus, …) exists — drives showing the perio
+   *  summary line in the PDF's odontogram section even with no perio module. */
+  periodontalHasFindings: boolean;
   sections: OdontogramSummarySection[];
   /** Implants heading + list — only present when at least one implant exists. */
   implants: { heading: string; text: string } | null;
   periodontalTitle: string;
   periodontalText: string;
-  /** R2-B Task 2: the status->plan diff (see {@link getPlanChanges}), verbatim.
+  /** The status->plan diff (see {@link getPlanChanges}), verbatim.
    *  `[]` whenever the plan chart hasn't been initialized or plan === status —
    *  a distinct field, not a section, since it's a diff rather than a status
    *  list. The "What changes" box in App.tsx renders from this field only
    *  when it's non-empty. */
   plannedChanges: PlanChange[];
+  /** Per-tooth free-text notes — one "&lt;tooth&gt;: &lt;note&gt;" line per tooth
+   *  that carries a note (gated on the notes-enabled setting, like the tooltip).
+   *  `null` when no tooth has a note, so the panel/PDF omit the section entirely. */
+  individualNotes: { heading: string; items: string[] } | null;
 };
 
 const SUMMARY_SURFACE_ORDER = ["buccal", "mesial", "occlusal", "distal", "lingual", "subcrown"];
-/** SP6 Task 4 (§8) / SP16 Task 2: the letter used for `surface` in a
- *  per-tooth "(...)" summary — delegates to {@link surfaceLetter}, which is
+/** The letter used for `surface` in a per-tooth "(...)" summary — delegates to
+ *  {@link surfaceLetter}, which is
  *  position-aware (incisal/labial/palatal) in "full" notation mode (the
  *  default) and respects the `surfaceNotation` setting. Shared by
  *  {@link subcariesLettersForTooth} and {@link getOdontogramSummary}'s
@@ -9113,7 +9654,7 @@ const SUMMARY_ENDO_KEY: Record<string, string> = {
   "endo-glass-pin": "endo.option.glassPin",
   "endo-metal-pin": "endo.option.metalPin",
 };
-// FIX 3: map the `rootCaries` enum value ("active-cavitated") to its i18n key
+// Map the `rootCaries` enum value ("active-cavitated") to its i18n key
 // ("rootCaries.activeCavitated") so a root-caries-only tooth isn't summary-invisible.
 const SUMMARY_ROOT_CARIES_KEY: Record<string, string> = {
   active: "rootCaries.active",
@@ -9137,8 +9678,101 @@ export function formatToothLabel(toothNo: number): string {
  * system. Intended for the optional "tooth information" panel; call
  * {@link onStateChange} to refresh it on edits.
  */
+// Per-tooth status for the grouped dentition table.
+// PROBLEM = caries / root inflammation / any diagnosis / wear / discoloration.
+function toothTableHasProblem(s: Any): boolean {
+  return !!(
+    (s.caries && s.caries.size > 0) ||
+    (s.rootCaries && s.rootCaries !== "none") ||
+    (s.pulpDx && s.pulpDx !== "normal") ||
+    (s.apicalDx && s.apicalDx !== "normal") ||
+    (s.periapicalType && s.periapicalType !== "none") ||
+    (s.resorptionType && s.resorptionType !== "none") ||
+    (s.mods && typeof s.mods.has === "function" && s.mods.has("inflammation")) ||
+    (s.periImplant && s.periImplant !== "none") ||
+    (s.mobility && s.mobility !== "none") ||
+    (s.wearEdge && s.wearEdge !== "none") ||
+    (s.wearCervical && s.wearCervical !== "none") ||
+    (s.discoloration && s.discoloration !== "none")
+  );
+}
+// CONTENT = any problem OR any treatment/finding (restoration, prosthesis,
+// filling, endo, calculus, planned crown/extraction, ortho, non-natural substrate).
+function toothTableHasContent(s: Any): boolean {
+  return toothTableHasProblem(s) || !!(
+    (s.restorationType && s.restorationType !== "none") ||
+    (s.prosthesis && s.prosthesis !== "none") ||
+    (s.fillingSurfaceMaterials && s.fillingSurfaceMaterials.size > 0) ||
+    (s.fillingMaterial && s.fillingMaterial !== "none") ||
+    (s.endo && s.endo !== "none") ||
+    s.calculus || s.crownNeeded || s.crownReplace || s.extractionPlan || s.orthoRotation ||
+    (s.orthoAppliance && s.orthoAppliance !== "none") ||
+    (s.orthoDrift && s.orthoDrift !== "none") ||
+    (s.orthoVertical && s.orthoVertical !== "none") ||
+    (s.toothSubstrate && s.toothSubstrate !== "natural")
+  );
+}
+function toothTableStatus(s: Any): ToothTableStatus {
+  return toothTableHasProblem(s) ? "problem" : toothTableHasContent(s) ? "content" : "empty";
+}
+function toothTableCategory(sel: string): string {
+  return sel === "none" ? "missing" : sel === "implant" ? "implant" : sel === "milktooth" ? "primary" : "permanent";
+}
+function toothTableGroupKey(toothNo: number, grouping: PdfSummaryGrouping): string {
+  const q = Math.floor(toothNo / 10);
+  const p = toothNo % 10;
+  if(grouping === "whole") return "whole";
+  if(grouping === "jaw") return (q === 1 || q === 2) ? "upper" : "lower";
+  if(grouping === "quadrant") return `q${q}`;
+  const posterior = p >= 4; // premolars + molars
+  if(q === 1) return posterior ? "s_ur" : "s_ua";
+  if(q === 2) return posterior ? "s_ul" : "s_ua";
+  if(q === 4) return posterior ? "s_lr" : "s_la";
+  return posterior ? "s_ll" : "s_la"; // q === 3
+}
+const TOOTH_TABLE_GROUPS: Record<PdfSummaryGrouping, { key: string; labelKey: string }[]> = {
+  whole: [{ key: "whole", labelKey: "summary.group.wholeMouth" }],
+  jaw: [
+    { key: "upper", labelKey: "summary.group.upperJaw" },
+    { key: "lower", labelKey: "summary.group.lowerJaw" },
+  ],
+  quadrant: [
+    { key: "q1", labelKey: "summary.group.upperRight" },
+    { key: "q2", labelKey: "summary.group.upperLeft" },
+    { key: "q3", labelKey: "summary.group.lowerLeft" },
+    { key: "q4", labelKey: "summary.group.lowerRight" },
+  ],
+  sextant: [
+    { key: "s_ur", labelKey: "summary.group.upperRightPost" },
+    { key: "s_ua", labelKey: "summary.group.upperAnterior" },
+    { key: "s_ul", labelKey: "summary.group.upperLeftPost" },
+    { key: "s_lr", labelKey: "summary.group.lowerRightPost" },
+    { key: "s_la", labelKey: "summary.group.lowerAnterior" },
+    { key: "s_ll", labelKey: "summary.group.lowerLeftPost" },
+  ],
+};
+const TOOTH_TABLE_CATEGORIES = ["primary", "permanent", "implant", "missing"];
+function buildToothTable(
+  perTooth: { toothNo: number; category: string; status: ToothTableStatus }[],
+  grouping: PdfSummaryGrouping,
+): OdontogramToothTable {
+  const used = new Set(perTooth.map(pt => pt.category));
+  const columns = TOOTH_TABLE_CATEGORIES.filter(c => used.has(c)).map(c => ({ key: c, label: t(`summary.col.${c}`) }));
+  const rows = TOOTH_TABLE_GROUPS[grouping].map(g => {
+    const cells: Record<string, ToothTableCell[]> = {};
+    for(const col of columns) cells[col.key] = [];
+    for(const pt of perTooth){
+      if(toothTableGroupKey(pt.toothNo, grouping) !== g.key) continue;
+      (cells[pt.category] ??= []).push({ toothNo: pt.toothNo, label: formatToothLabel(pt.toothNo), status: pt.status });
+    }
+    return { key: g.key, label: t(g.labelKey), cells };
+  }).filter(row => columns.some(c => (row.cells[c.key] ?? []).length > 0));
+  return { columns, rows, legend: t("summary.legend") };
+}
+
 export function getOdontogramSummary(): OdontogramSummary {
   const lbl = formatToothLabel;
+  const perTooth: { toothNo: number; category: string; status: ToothTableStatus }[] = [];
 
   const permanent: number[] = [];
   const missing: number[] = [];
@@ -9153,10 +9787,15 @@ export function getOdontogramSummary(): OdontogramSummary {
   const wear: string[] = [];
   const discoloration: string[] = [];
   const orthodontics: string[] = [];
+  const notes: string[] = [];
 
   for(const toothNo of ALL_TEETH){
     const s = toothState.get(toothNo);
     if(!s) continue;
+    // Per-tooth free-text note — gated on the notes-enabled setting, mirroring
+    // the hover tooltip so a disabled feature never surfaces notes.
+    if(notesEnabled && s.note && s.note.trim() !== "")
+      notes.push(`${formatToothLabel(toothNo)}: ${s.note.trim()}`);
     const sel = s.toothSelection;
     const isMissing = sel === "none";
     const isImplant = sel === "implant";
@@ -9165,9 +9804,11 @@ export function getOdontogramSummary(): OdontogramSummary {
     else if(isImplant) implants.push(toothNo);
     else if(isMilk) milkCount++;
     else permanent.push(toothNo);
+    // Per-tooth category + status for the grouped table.
+    perTooth.push({ toothNo, category: toothTableCategory(sel), status: toothTableStatus(s) });
 
-    // Caries (primary vs. secondary). SP6 Task 1: a surface is RECURRENT
-    // (secondary) caries when it also carries a filling — recurrence is DERIVED
+    // Caries (primary vs. secondary). A surface is RECURRENT (secondary) caries
+    // when it also carries a filling — recurrence is DERIVED
     // from `caries ∩ fillingSurfaceMaterials` (the state machine), not from a
     // separate stored flag. The unified `cariesSeverity` is read as CARS there
     // and ICDAS on the primary (no-filling) surfaces.
@@ -9189,17 +9830,17 @@ export function getOdontogramSummary(): OdontogramSummary {
       }
     }
 
-    // Root caries (FIX 3) — a present-tooth finding independent of surface
-    // caries, so a tooth with ONLY root caries would otherwise never appear in
+    // Root caries — a present-tooth finding independent of surface caries, so a
+    // tooth with ONLY root caries would otherwise never appear in
     // the caries section. Follows the surface-caries "label (detail)" style.
     if(s.rootCaries && s.rootCaries !== "none"){
       const rootKey = SUMMARY_ROOT_CARIES_KEY[s.rootCaries];
       if(rootKey) caries.push(`${lbl(toothNo)} (${t(rootKey)})`);
     }
 
-    // Radiographic caries depth (FIX 3) — per-surface, independent of the
-    // visual caries layer; surface any recorded depth so it isn't summary-
-    // invisible. Style: "16 (M: Dentin, outer third (D1))".
+    // Radiographic caries depth — per-surface, independent of the visual caries
+    // layer; surface any recorded depth so it isn't summary-invisible. Style:
+    // "16 (M: Dentin, outer third (D1))".
     if(s.radiographicDepth && s.radiographicDepth.size > 0){
       const depths = SUMMARY_SURFACE_ORDER
         .filter((surface) => s.radiographicDepth.has(surface))
@@ -9213,19 +9854,18 @@ export function getOdontogramSummary(): OdontogramSummary {
         .filter((surface) => s.fillingSurfaceMaterials.has(surface))
         .map((surface) => summarySurfaceLetter(surface, toothNo));
       if(letters.length){
-        // SP10: defect suffix gated on !hasCrown to match the render
+        // Defect suffix gated on !hasCrown to match the render
         // (applyStateToSvgSingle), which suppresses fillings/defects entirely
-        // under a crown/bridge; the base filling-presence line above stays
-        // unchanged (pre-existing behavior, out of scope for this fix).
+        // under a crown/bridge.
         const defects = s.restorationType === "none"
           ? SUMMARY_SURFACE_ORDER
               .filter((surface) => s.fillingDefect?.has(surface) && s.fillingSurfaceMaterials.has(surface))
               .map((surface) => `${summarySurfaceLetter(surface, toothNo)}: ${t("fillingDefect." + s.fillingDefect.get(surface))}`)
           : [];
-        // SP15 Task 5 (B3): name the finding explicitly with the
-        // fillingDefect.label qualifier, the same way secondary caries always
-        // names itself (toothInfo.secondary) on the Caries line — a bare
-        // "surface: type" suffix read as generic filling info, not a defect.
+        // Name the finding explicitly with the fillingDefect.label qualifier, the
+        // same way secondary caries always names itself (toothInfo.secondary) on
+        // the Caries line — a bare "surface: type" suffix reads as generic filling
+        // info, not a defect.
         const suffix = defects.length ? ` – ${t("fillingDefect.label")}: ${defects.join(", ")}` : "";
         fillings.push(`${lbl(toothNo)} (${letters.join(", ")})${suffix}`);
       }
@@ -9247,10 +9887,9 @@ export function getOdontogramSummary(): OdontogramSummary {
     if(s.prosthesis && s.prosthesis !== "none"){
       prosthetics.push(`${lbl(toothNo)}: ${t(PROSTHESIS_SUMMARY_KEY[s.prosthesis] || s.prosthesis)}`);
     }
-    // SP17 Task 1 Fix #2 (gate-parity follow-up): same FULL gate as
-    // getStateSummary above — mirrors the #crownLeakageRow control's own
-    // visibility gate in full (!restorationRowHidden(s) AND crown/bridge),
-    // not just the crown/bridge half.
+    // Same FULL gate as getStateSummary above — mirrors the #crownLeakageRow
+    // control's own visibility gate in full (!restorationRowHidden(s) AND
+    // crown/bridge), not just the crown/bridge half.
     if(s.crownLeakage && !restorationRowHidden(s) && (s.restorationType === "crown" || s.restorationType === "bridge")) prosthetics.push(`${lbl(toothNo)} (${t("crownLeakage.label")})`);
 
     // Periodontal / periapical inflammation
@@ -9263,28 +9902,28 @@ export function getOdontogramSummary(): OdontogramSummary {
       inflamed.push(`${lbl(toothNo)} (${type})`);
     }
 
-    // SP9: clinical diagnoses (pulp / apical / resorption / peri-implant).
+    // Clinical diagnoses (pulp / apical / resorption / peri-implant).
     const dxs = diagnosisSummaryLabels(s);
     if(dxs.length) diagnoses.push(`${lbl(toothNo)} (${dxs.join("; ")})`);
-    // SP11: wear (edge/cervical) type-per-location whole-mouth section.
-    // Review fix (post-SP11): gate on wearRowAllowed, same as the tooltip and
-    // the render/UI row — suppresses stored wear on a crowned/non-natural-
-    // substrate tooth that the chart itself no longer shows.
+    // Wear (edge/cervical) type-per-location whole-mouth section. Gate on
+    // wearRowAllowed, same as the tooltip and the render/UI row — suppresses
+    // stored wear on a crowned/non-natural-substrate tooth that the chart itself
+    // no longer shows.
     if(wearRowAllowed(s)){
       const parts: string[] = [];
       if(s.wearEdge !== "none") parts.push(`${t("tooth.bruxism.edgeWear")}: ${t("wearType." + s.wearEdge)}`);
       if(s.wearCervical !== "none") parts.push(`${t("tooth.bruxism.neckWear")}: ${t("wearType." + s.wearCervical)}`);
       if(parts.length) wear.push(`${lbl(toothNo)} (${parts.join(", ")})`);
     }
-    // SP12 Task 4: gate discoloration on the same discolorationAllowed predicate
-    // the render tint, tooltip, and UI row use — suppresses stored discoloration
-    // on a crowned/non-natural-substrate tooth that the chart itself no longer tints.
+    // Gate discoloration on the same discolorationAllowed predicate the render
+    // tint, tooltip, and UI row use — suppresses stored discoloration on a
+    // crowned/non-natural-substrate tooth that the chart itself no longer tints.
     if(discolorationAllowed(s) && s.discoloration !== "none"){
       discoloration.push(`${lbl(toothNo)} (${t("discoloration." + s.discoloration)})`);
     }
-    // SP14 Task 4: orthodontic findings — gate on the same orthoAllowed
-    // predicate the render glyphs and the Ortho UI card use, so the summary
-    // never claims a finding on a tooth the chart itself doesn't show it on.
+    // Orthodontic findings — gate on the same orthoAllowed predicate the render
+    // glyphs and the Ortho UI card use, so the summary never claims a finding on a
+    // tooth the chart itself doesn't show it on.
     if(orthoAllowed(s)){
       const orthoParts: string[] = [];
       if(s.orthoAppliance !== "none") orthoParts.push(t("ortho.appliance." + s.orthoAppliance));
@@ -9293,34 +9932,31 @@ export function getOdontogramSummary(): OdontogramSummary {
       if(s.orthoRotation === true) orthoParts.push(t("ortho.rotation.label"));
       if(orthoParts.length) orthodontics.push(`${lbl(toothNo)} (${orthoParts.join(", ")})`);
     }
-    // SP9: calculus + mobility join the periodontal findings.
-    // SP15 wholebranch fix: gate mobility on the same !isImplant condition as
-    // the render/tooltip — an implant has no PDL (mobilityRowHidden hides the
-    // control there), so the whole-mouth panel must not contradict that.
+    // Calculus + mobility join the periodontal findings. Gate mobility on the
+    // same !isImplant condition as the render/tooltip — an implant has no PDL
+    // (mobilityRowHidden hides the control there), so the whole-mouth panel must
+    // not contradict that.
     if(s.calculus) inflamed.push(`${lbl(toothNo)} (${t("calculus.label")})`);
     if(s.mobility && s.mobility !== "none" && s.toothSelection !== "implant") inflamed.push(`${lbl(toothNo)} (${t("inflammation.mobilityLabel")} ${t("mobility." + s.mobility)})`);
-    // FIX 1(c): peri-implant status is a periodontal finding, not a diagnosis —
-    // route it into `inflamed` (periodontalText) instead of `diagnoses`, so an
-    // implant with peri-implantitis is no longer reported "healthy" there.
+    // Peri-implant status is a periodontal finding, not a diagnosis — route it
+    // into `inflamed` (periodontalText) instead of `diagnoses`, so an implant with
+    // peri-implantitis is no longer reported "healthy" there.
     { const pi = periImplantSummaryLabel(s); if(pi) inflamed.push(`${lbl(toothNo)} (${pi})`); }
-    // SP-perio PG-C Task 1: derived Cairo recession TYPE — same periodontal
-    // "inflamed" bucket as calculus/mobility/peri-implant status above.
+    // Derived Cairo recession TYPE — same periodontal "inflamed" bucket as
+    // calculus/mobility/peri-implant status above.
     { const rt = getToothRecessionType(toothNo); if(rt !== "none") inflamed.push(`${lbl(toothNo)} (${t(`perio.recession.${rt}`)})`); }
-    // SP-perio PG-C Task 3: CEJ visibility / root concavity — same
-    // periodontal "inflamed" bucket as calculus/mobility/peri-implant/
-    // recession-type above.
+    // CEJ visibility / root concavity — same periodontal "inflamed" bucket as
+    // calculus/mobility/peri-implant/recession-type above.
     { const cej = cejVisibilitySummaryLabel(s); if(cej) inflamed.push(`${lbl(toothNo)} (${cej})`); }
     { const rc = rootConcavitySummaryLabel(s); if(rc) inflamed.push(`${lbl(toothNo)} (${rc})`); }
-    // SP-perio PG-D Task 5: PI/GI/KG/GT/Miller — same periodontal "inflamed"
-    // bucket as calculus/mobility/peri-implant/recession-type/CEJ/root-
-    // concavity above.
+    // PI/GI/KG/GT/Miller — same periodontal "inflamed" bucket as
+    // calculus/mobility/peri-implant/recession-type/CEJ/root-concavity above.
     { const pi = plaqueIndexSummaryLine(toothNo); if(pi) inflamed.push(`${lbl(toothNo)} (${pi})`); }
     { const gi = gingivalIndexSummaryLine(toothNo); if(gi) inflamed.push(`${lbl(toothNo)} (${gi})`); }
     { const kg = keratinizedWidthSummaryLine(toothNo); if(kg) inflamed.push(`${lbl(toothNo)} (${kg})`); }
     { const gt = gingivalThicknessSummaryLabel(toothNo); if(gt) inflamed.push(`${lbl(toothNo)} (${gt})`); }
     { const mc = millerClassSummaryLabel(toothNo); if(mc) inflamed.push(`${lbl(toothNo)} (${mc})`); }
-    // SP-perio PG-E Task 3: mPI/mBI — same periodontal "inflamed" bucket as
-    // PI/GI/KG/GT/Miller above.
+    // mPI/mBI — same periodontal "inflamed" bucket as PI/GI/KG/GT/Miller above.
     { const mpi = periImplantPlaqueSummaryLine(toothNo); if(mpi) inflamed.push(`${lbl(toothNo)} (${mpi})`); }
     { const mbi = periImplantBleedingSummaryLine(toothNo); if(mbi) inflamed.push(`${lbl(toothNo)} (${mbi})`); }
   }
@@ -9362,15 +9998,15 @@ export function getOdontogramSummary(): OdontogramSummary {
   let periodontalText = inflamed.length
     ? t("toothInfo.periodontalInflamed", { list: inflamed.join(", ") })
     : t("toothInfo.periodontalHealthy");
-  // P4a Task 2: append the labelled case-context fragment (age/smoking/
-  // diabetes/HbA1c/RBL/tooth-loss) when any case metadata was charted; skip
-  // entirely on an empty case so a chart with no case data reads unchanged.
+  // Append the labelled case-context fragment (age/smoking/diabetes/HbA1c/RBL/
+  // tooth-loss) when any case metadata was charted; skip entirely on an empty
+  // case so a chart with no case data reads unchanged.
   if(!caseMetaIsEmpty(caseMeta)){
     const fragment = caseContextSummaryFragment(caseMeta);
     if(fragment) periodontalText = `${periodontalText} – ${fragment}`;
   }
-  // P4b Task 4: append the FINAL (override-aware) 2017 classification —
-  // separate from the case-context fragment above (that one only fires when
+  // Append the FINAL (override-aware) 2017 classification — separate from the
+  // case-context fragment above (that one only fires when
   // caseMeta itself is non-empty; classification can be non-trivial purely
   // from charted perio data, with no case metadata set at all).
   {
@@ -9382,15 +10018,22 @@ export function getOdontogramSummary(): OdontogramSummary {
     ? { heading: t("toothInfo.implants"), text: implants.map(lbl).join(", ") }
     : null;
 
+  const individualNotes = notes.length
+    ? { heading: t("toothInfo.notes"), items: notes }
+    : null;
+
   return {
     overview,
     permanentList,
     missingList,
+    toothTable: buildToothTable(perTooth, getPdfSettings().summaryGrouping),
+    periodontalHasFindings: inflamed.length > 0,
     sections,
     implants: implantInfo,
     periodontalTitle: t("toothInfo.periodontalTitle"),
     periodontalText,
     plannedChanges: getPlanChanges(),
+    individualNotes,
   };
 }
 
@@ -9407,10 +10050,8 @@ export function setReadOnly(value: boolean){
   if(grid) grid.classList.toggle("read-only", readOnly);
   const panel = $(".panel") as HTMLElement | null;
   if(panel) panel.classList.toggle("read-only", readOnly);
-  // Deferred fix (perio P2 follow-up, Task 1): toggling readOnly while the
-  // perio chart is open used to be a no-op — the grid's own disabled state
-  // is baked in at open/resync, and this function never touched the perio
-  // container. Extend the same live `.read-only` lock to whichever perio
+  // The perio chart's grid disabled state is baked in at open/resync, so extend
+  // the same live `.read-only` lock to whichever perio
   // container is currently mounted: `#perioOverlay` (popup chrome) or
   // `#perioInlinePanel` (inline "Dental Chart" housing). Both are queried
   // defensively (only one is ever mounted at a time, and neither may be

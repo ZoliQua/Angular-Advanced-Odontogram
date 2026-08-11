@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // UI-3b Task 7: `ExportOptionsModal` — PDF export-settings dialog. Mirrors
@@ -45,9 +45,23 @@ describe("UI-3b T7: export options modal", () => {
     render(createElement(ExportOptionsModal, { open: true, t, onClose: () => {} }));
     fireEvent.click(screen.getByText("export.options.export"));
     expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ patientData: true, odontogram: true, perioStatus: true, perioDescription: true }),
+      expect.objectContaining({
+        patientData: true,
+        odontogramChart: true,
+        odontogramDescription: true,
+        // no tooth has a note in this fixture → forced off regardless of checkbox
+        individualNotes: false,
+        perioStatus: true,
+        perioDescription: true,
+      }),
     );
     spy.mockRestore();
+  });
+
+  it("2.2.1: disables the individual-notes checkbox when no tooth has a note", () => {
+    render(createElement(ExportOptionsModal, { open: true, t, onClose: () => {} }));
+    const notes = screen.getByLabelText("toothInfo.notes") as HTMLInputElement;
+    expect(notes.disabled).toBe(true);
   });
 
   it("forces perio opts off when there is no perio data, even if the checkboxes were left checked", () => {
@@ -55,7 +69,7 @@ describe("UI-3b T7: export options modal", () => {
     render(createElement(ExportOptionsModal, { open: true, t, onClose: () => {} }));
     fireEvent.click(screen.getByText("export.options.export"));
     expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ perioStatus: false, perioDescription: false }),
+      expect.objectContaining({ perioStatus: false, perioDescription: false, individualNotes: false }),
     );
     spy.mockRestore();
   });

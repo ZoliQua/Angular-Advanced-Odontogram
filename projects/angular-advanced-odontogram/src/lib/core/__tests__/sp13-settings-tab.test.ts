@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP13 Task 3: "Tooth details" settings tab (wear/discoloration detail level).
@@ -21,6 +21,22 @@ function stubSettings(): SettingsState {
     onToggleDark: vi.fn(),
     toothInfo: false,
     onToothInfo: vi.fn(),
+    fillingDefectEnabled: true, onFillingDefectEnabled: vi.fn(),
+    fillingComplexity: "complex", onFillingComplexity: vi.fn(),
+    fillingMaterials: { amalgam: true, composite: true, gic: true, temporary: true }, onFillingMaterial: vi.fn(),
+    fissureSealingEnabled: true, onFissureSealingEnabled: vi.fn(),
+    selectionColor: "#3b7bff", onSelectionColor: vi.fn(),
+    selectionBorderStyle: "dashed", onSelectionBorderStyle: vi.fn(),
+    perioChartAvailable: true, onPerioChartAvailable: vi.fn(),
+    planModeAvailable: true, onPlanModeAvailable: vi.fn(),
+    screenToothSpacing: "normal", onScreenToothSpacing: vi.fn(),
+    screenToothNumberSize: "normal", onScreenToothNumberSize: vi.fn(),
+    exportPng: true, onExportPng: vi.fn(),
+    exportJpg: true, onExportJpg: vi.fn(),
+    exportSvg: true, onExportSvg: vi.fn(),
+    exportPdf: true, onExportPdf: vi.fn(),
+    importStatus: true, onImportStatus: vi.fn(),
+    importFhir: true, onImportFhir: vi.fn(),
     secondaryCariesMode: "standard",
     onSecondaryCariesMode: vi.fn(),
     icdas: false,
@@ -55,27 +71,28 @@ function stubSettings(): SettingsState {
     onPerioRowVisibility: vi.fn(),
     perioIndexNameMode: "translated",
     onPerioIndexNameMode: vi.fn(),
+    pdfSettings: { defaultName: "John Doe", defaultDob: "1980-01-01", showAge: true, dateFormat: "iso", colorTheme: "blue", showBone: true, showHealthyPulp: true, toothSpacing: "wide", border: false, borderThickness: "medium", borderColor: "#000000", toothNumberSize: "normal", includeOdontogramText: true, includeOdontogramTable: true, perioToothSpacing: "wide", perioShowEmptyRows: true, perioLabelPlacement: "center", perioFontSize: "normal", includePerioTable: true, includePerioAbbrev: true, showDisclaimer: true, disclaimerText: "", summaryGrouping: "jaw", showGenerator: true },
+    onPdfSettings: vi.fn(),
   };
 }
 
 describe("SP13 Task 3: toothDetails settings tab", () => {
-  // SP15 Task 4 (B1/B2) inserted the "panels" tab immediately after "general"
-  // and removed the standalone "secondaryCaries" tab (merged into "caries"),
-  // so toothDetails is now general+2 rather than general+1. See
-  // sp15-settings.test.ts for the panels-tab and merged-caries assertions.
-  it("exists in SETTINGS_TABS after the general and panels tabs", () => {
+  // Round 2 restructure: tabs are now general, odontogram, periodontalChart,
+  // toothDetails, … — so toothDetails is general+3. Tooth details also gained the
+  // Pulp-detail select (moved from the removed Pulp tab) first and the Notes
+  // toggle (moved from the removed Notes tab) last → 5 controls.
+  it("exists in SETTINGS_TABS after general/odontogram/periodontalChart", () => {
     const generalIdx = SETTINGS_TABS.findIndex((tab) => tab.id === "general");
-    const panelsIdx = SETTINGS_TABS.findIndex((tab) => tab.id === "panels");
+    const odontogramIdx = SETTINGS_TABS.findIndex((tab) => tab.id === "odontogram");
     const toothDetailsIdx = SETTINGS_TABS.findIndex((tab) => tab.id === "toothDetails");
 
     expect(generalIdx).toBe(0);
-    expect(panelsIdx).toBe(generalIdx + 1);
-    expect(toothDetailsIdx).toBeGreaterThan(-1);
-    expect(toothDetailsIdx).toBe(panelsIdx + 1);
+    expect(odontogramIdx).toBe(generalIdx + 1);
+    expect(toothDetailsIdx).toBe(generalIdx + 3);
     expect(SETTINGS_TABS[toothDetailsIdx].titleKey).toBe("settings.tab.toothDetails");
   });
 
-  it("renders three controls bound to wearDetailLevel, discolorationDetailLevel, and surfaceNotation", () => {
+  it("renders selection color/border, pulp-detail, wear, discoloration, surface-notation and notes controls", () => {
     const tab = SETTINGS_TABS.find((tab) => tab.id === "toothDetails")!;
     const s = stubSettings();
     const node = tab.render({ t, s });
@@ -83,9 +100,11 @@ describe("SP13 Task 3: toothDetails settings tab", () => {
     const children = Children.toArray((node as ReactElement).props.children).filter(
       isValidElement,
     ) as ReactElement<any>[];
-    expect(children).toHaveLength(3);
+    // Round 2 (Stage 5): selection color + border prepended → 7 controls, order:
+    // selection-color, selection-border, pulp, wear, discoloration, notation, notes.
+    expect(children).toHaveLength(7);
 
-    const [wearRow, discoRow, notationRow] = children;
+    const [, , , wearRow, discoRow, notationRow] = children;
 
     expect(wearRow.props.value).toBe(s.wearDetailLevel);
     expect(wearRow.props.descKey).toBe("settings.wearDetail.desc");
@@ -118,7 +137,7 @@ describe("SP13 Task 3: toothDetails settings tab", () => {
     const children = Children.toArray((node as ReactElement).props.children).filter(
       isValidElement,
     ) as ReactElement<any>[];
-    const [wearRow, discoRow, notationRow] = children;
+    const [, , , wearRow, discoRow, notationRow] = children;
 
     wearRow.props.onChange("simple");
     expect(s.onWearDetailLevel).toHaveBeenCalledTimes(1);

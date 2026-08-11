@@ -1,9 +1,10 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import type { Bundle, Observation, Condition, CodeableConcept, ToothRecord, OdontogramExportPayload, FhirExportOptions } from "./types";
 import { LOCAL_SYSTEM, FDI_SYSTEM, ICD10_SYSTEM } from "./codesystems";
 import { PLACEHOLDER_PATIENT_FULLURL, baseObservation } from "./primitives";
+import { toothBodySiteCode } from "./iso3950";
 import {
   derivePerioClassification,
   type PerioDerivationInput,
@@ -16,20 +17,19 @@ import {
 } from "../perioClassification";
 
 /**
- * SP-perio P1 Task 3: per-site periodontal probing (`ToothRecord.perio`, see
- * types.ts) is per-site NUMERIC data (6 fixed probing points per tooth, each
- * carrying PD/GM/BOP/SUP), not the one-enum/boolean-field-per-tooth shape the
- * axis registry (registry/axes.ts + registry/fhir.ts) assumes. It is
- * therefore deliberately NOT routed through AXES/fieldMappings.ts or the
- * axis parity oracle — this is a bespoke builder, called once from
- * buildFhirBundle() (toFhir.ts) AFTER the registry-driven per-tooth
- * Observations, reusing `baseObservation()` (fhir/primitives.ts) for the
- * panel Observation's resourceType/status/category/subject/bodySite so it
- * matches every other Observation's conventions exactly.
+ * Per-site periodontal probing (`ToothRecord.perio`, see types.ts) is per-site
+ * NUMERIC data (6 fixed probing points per tooth, each carrying PD/GM/BOP/SUP),
+ * not the one-enum/boolean-field-per-tooth shape the axis registry
+ * (registry/axes.ts + registry/fhir.ts) assumes. It is therefore deliberately
+ * NOT routed through AXES/fieldMappings.ts or the axis parity oracle — this is a
+ * bespoke builder, called once from buildFhirBundle() (toFhir.ts) after the
+ * registry-driven per-tooth Observations, reusing `baseObservation()`
+ * (fhir/primitives.ts) for the panel Observation's
+ * resourceType/status/category/subject/bodySite so it matches every other
+ * Observation's conventions exactly.
  *
- * SNOMED CT is NOT included anywhere in this module (maintainer-verify
- * later against the official SNOMED CT browser, same policy as
- * `SNOMED_CODES` in codesystems.ts) — LOINC-primary only, per task-3-brief.md.
+ * SNOMED CT is not included anywhere in this module (same policy as
+ * `SNOMED_CODES` in codesystems.ts) — LOINC-primary only.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,24 +40,22 @@ type Any = any;
  *  every other finding in this engine uses the engine-local LOCAL_SYSTEM only. */
 const LOINC_SYSTEM = "http://loinc.org";
 
-/** Verified LOINC codes (task-3-brief.md, task-2-brief.md) — used exactly as
- *  specified. */
+/** Verified LOINC codes, used exactly as specified. */
 const LOINC = {
   panel: { code: "74029-0", display: "Periodontal panel" },
   pd: { code: "32910-2", display: "Probing depth" },
   recession: { code: "32911-0", display: "Gingival recession" },
   cal: { code: "32912-8", display: "Clinical attachment level (calculated)" },
-  // SP-perio P2b Task 2.
   furcation: { code: "34015-8", display: "Furcation involvement" },
-  // SP-perio P4b Task 3: Condition evidence Observations.
+  // Condition evidence Observations.
   smokingStatus: { code: "72166-2", display: "Tobacco smoking status" },
   hba1c: { code: "4548-4", display: "Hemoglobin A1c/Hemoglobin.total in Blood" },
 } as const;
 
-// SP-perio P2b Task 2: furcation entrance labels — the union across every
-// tooth position furcationEntrances() (odontogram.ts) can return. Mirrored
-// here rather than imported, same policy PERIO_SITES/SITE_DISPLAY below
-// follow (fhir/ stays independent of the large odontogram.ts module).
+// Furcation entrance labels — the union across every tooth position
+// furcationEntrances() (odontogram.ts) can return. Mirrored here rather than
+// imported, same policy PERIO_SITES/SITE_DISPLAY below follow (fhir/ stays
+// independent of the large odontogram.ts module).
 const FURCATION_ENTRANCES = ["mesial", "distal", "buccal", "lingual"] as const;
 type FurcationEntrance = typeof FURCATION_ENTRANCES[number];
 
@@ -68,10 +66,10 @@ const FURCATION_ENTRANCE_DISPLAY: Record<FurcationEntrance, string> = {
   lingual: "Lingual",
 };
 
-// SP-perio P2b Task 3: the 4 fixed O'Leary plaque-index surfaces — the SAME
-// value set/labels as FURCATION_ENTRANCES above, but kept as an independent
-// constant (own bodySite local-code prefix, own gating) since plaque and
-// furcation are unrelated axes that only happen to share a surface vocabulary.
+// The 4 fixed O'Leary plaque-index surfaces — the SAME value set/labels as
+// FURCATION_ENTRANCES above, but kept as an independent constant (own bodySite
+// local-code prefix, own gating) since plaque and furcation are unrelated axes
+// that only happen to share a surface vocabulary.
 const PLAQUE_SURFACES = ["mesial", "distal", "buccal", "lingual"] as const;
 type PlaqueSurface = typeof PLAQUE_SURFACES[number];
 
@@ -108,21 +106,20 @@ function loincConcept(entry: { code: string; display: string }): CodeableConcept
 
 /**
  * Engine-local finding CodeableConcept (no LOINC/SNOMED coding at all) — the
- * same no-dedicated-standard-code treatment `perio-bop`/`plaque-surface`
- * above already get. SP-perio PG-D Task 1: PI/GI have no dedicated LOINC
- * (LOINC only defines whole-mouth plaque/gingival indices, not per-surface
- * graded ones), so both ride on LOCAL_SYSTEM only, mirroring {@link loincConcept}.
+ * same no-dedicated-standard-code treatment `perio-bop`/`plaque-surface` above
+ * already get. PI/GI have no dedicated LOINC (LOINC only defines whole-mouth
+ * plaque/gingival indices, not per-surface graded ones), so both ride on
+ * LOCAL_SYSTEM only, mirroring {@link loincConcept}.
  */
 function localConcept(code: string, display: string): CodeableConcept {
   return { coding: [{ system: LOCAL_SYSTEM, code, display }], text: display };
 }
 
 /**
- * ICD-10 (WHO) CodeableConcept — SP-perio P4b Task 3's first ICD-coded
- * export (`http://hl7.org/fhir/sid/icd-10`, see codesystems.ts). BNO-10 (the
- * Hungarian national ICD-10 clinical modification) mirrors the WHO K05.*
- * codes used here 1:1, so a separate BNO coding is not emitted. SNOMED CT is
- * deferred (task-3-brief.md), mirroring every other engine-local finding.
+ * ICD-10 (WHO) CodeableConcept (`http://hl7.org/fhir/sid/icd-10`, see
+ * codesystems.ts). BNO-10 (the Hungarian national ICD-10 clinical modification)
+ * mirrors the WHO K05.* codes used here 1:1, so a separate BNO coding is not
+ * emitted. SNOMED CT is deferred, mirroring every other engine-local finding.
  */
 function icdConcept(code: string, display: string): CodeableConcept {
   return { coding: [{ system: ICD10_SYSTEM, code, display }], text: display };
@@ -170,10 +167,9 @@ function attachBodySite(component: Any, tooth: string, localCode: string, displa
  *  Thin wrapper over {@link attachBodySite} preserving the exact
  *  `perio-site:${site}` local-code format every existing perio FHIR test
  *  asserts against. NOTE: FHIR R4's Observation.component has no standard
- *  `bodySite` element (it was added in R5) — task-3-brief.md deliberately
- *  asks for one anyway, since this engine's FHIR export already isn't a
- *  strict-conformance profile (see the LOCAL_SYSTEM-based finding codes
- *  throughout). */
+ *  `bodySite` element (it was added in R5) — this engine's FHIR export is not a
+ *  strict-conformance profile anyway (see the LOCAL_SYSTEM-based finding codes
+ *  throughout), so one is emitted regardless. */
 function attachSiteBodySite(component: Any, tooth: string, site: PerioSite): void {
   attachBodySite(component, tooth, `perio-site:${site}`, SITE_DISPLAY[site]);
 }
@@ -196,48 +192,26 @@ function isFiniteNumber(v: unknown): v is number {
 }
 
 /**
- * Build the periodontal-panel Observation for one tooth, or `undefined`
- * when the tooth has no charted perio sites AND no graded furcation
- * entrance. Pure; tolerant of malformed `rec.perio`/`rec.furcation` (never
- * throws) — unrecognized site/entrance keys and non-numeric/out-of-range
- * values are silently skipped rather than propagated.
+ * Build the periodontal-panel Observation for one tooth, or `undefined` when
+ * the tooth has no charted perio sites AND no graded furcation entrance AND no
+ * plaque/PI/GI/KG/mPI/mBI data. Pure; tolerant of malformed
+ * `rec.perio`/`rec.furcation`/etc. (never throws) — unrecognized site/entrance
+ * keys and non-numeric/out-of-range values are silently skipped rather than
+ * propagated.
  *
- * `sup` (suppuration on probing) is intentionally NOT emitted here — out of
- * scope per task-3-brief.md (only PD/recession/CAL/BOP are specified). A
- * future task may add it, likely facing the same no-dedicated-LOINC
- * situation as per-site BOP below.
+ * `sup` (suppuration on probing) is intentionally NOT emitted here (only
+ * PD/recession/CAL/BOP are charted per site). Adding it would face the same
+ * no-dedicated-LOINC situation as per-site BOP below.
  *
- * SP-perio P2b Task 2: furcation involvement rides on the SAME panel
- * Observation, as additional components — a tooth with furcation data but
- * NO charted perio site still gets the panel (built with only furcation
- * components), and a tooth with charted perio sites but no furcation data
- * gets exactly the same output as before this task (byte-identical golden).
- *
- * SP-perio P2b Task 3: O'Leary plaque-index presence rides on the SAME panel
- * too, as additional boolean components — a tooth with ONLY plaque data
- * (no charted perio site, no graded furcation) still gets the panel; a tooth
- * with neither perio, furcation, NOR plaque data gets no panel at all
- * (byte-identical golden, as before). There is no verified per-surface
- * O'Leary LOINC code (LOINC only defines whole-mouth plaque indices), so
- * each plaque component carries no LOINC coding at all — engine-local code
- * only, the same no-dedicated-LOINC treatment per-site BOP gets above.
- *
- * SP-perio PG-D Task 1: the Silness-Löe Plaque Index (`pi`) and Löe-Silness
- * Gingival Index (`gi`) — per-surface GRADED (1-3) axes, deliberately
- * SEPARATE from the O'Leary `plaque` boolean above — ride on the SAME panel
- * too, as additional integer components; a tooth with ONLY pi/gi data still
- * gets the panel, and a tooth with none of perio/furcation/plaque/pi/gi gets
- * no panel at all (byte-identical golden, as before). Neither has a
- * dedicated LOINC, so both use the same engine-local-code-only treatment as
- * per-site BOP and per-surface plaque.
- *
- * SP-perio PG-D Task 2: keratinized gingiva width (`kg`) — a single
- * per-tooth BUCCAL mm scalar, unlike PI/GI's per-surface maps — rides on the
- * SAME panel too, as one additional valueQuantity component; a tooth with
- * ONLY kg data still gets the panel, and a tooth with none of
- * perio/furcation/plaque/pi/gi/kg gets no panel at all (byte-identical
- * golden, as before). No dedicated LOINC, engine-local finding code only,
- * fixed buccal bodySite.
+ * Furcation involvement, O'Leary plaque presence, Silness-Löe PI, Löe-Silness
+ * GI, keratinized-gingiva width, and the peri-implant Mombelli mPI/mBI indices
+ * all ride on the SAME panel Observation as additional components — a tooth with
+ * only one of those axes still gets the panel (built with only that axis's
+ * components). None of PI/GI/plaque/KG/mPI/mBI has a dedicated LOINC (LOINC
+ * defines only whole-mouth plaque/gingival indices), so each carries an
+ * engine-local finding code only, the same treatment per-site BOP gets.
+ * Keratinized gingiva width is a single per-tooth buccal mm scalar (not
+ * per-site/per-surface) on a fixed buccal bodySite.
  */
 function buildToothPerioObservation(subjectRef: string, tooth: string, rec: ToothRecord): Observation | undefined {
   const perio = rec.perio;
@@ -258,9 +232,9 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
   const plaqueRaw = Array.isArray(rec.plaque) ? (rec.plaque as unknown[]).filter((v): v is string => typeof v === "string") : [];
   const plaqueSurfaces = PLAQUE_SURFACES.filter((s) => plaqueRaw.includes(s));
 
-  // SP-perio PG-D Task 1: PI/GI graded surfaces — same tolerant parsing as
-  // furcation above (unrecognized surface or out-of-range/non-integer grade
-  // silently dropped, never throws).
+  // PI/GI graded surfaces — same tolerant parsing as furcation above
+  // (unrecognized surface or out-of-range/non-integer grade silently dropped,
+  // never throws).
   const piRaw = rec.pi && typeof rec.pi === "object" ? (rec.pi as Record<string, unknown>) : undefined;
   const piEntries: [PlaqueSurface, number][] = piRaw
     ? (PLAQUE_SURFACES.filter((s) => {
@@ -276,10 +250,10 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
       }).map((s) => [s, giRaw[s] as number]))
     : [];
 
-  // SP-perio PG-E Task 1: peri-implant Mombelli mPI/mBI graded surfaces —
-  // same tolerant parsing as PI/GI above (implant-only enforcement lives at
-  // the odontogram.ts setter layer, not here — FHIR export is unconditional
-  // on whatever is in the payload, same as every other axis).
+  // Peri-implant Mombelli mPI/mBI graded surfaces — same tolerant parsing as
+  // PI/GI above (implant-only enforcement lives at the odontogram.ts setter
+  // layer, not here — FHIR export is unconditional on whatever is in the
+  // payload, same as every other axis).
   const mpiRaw = rec.mpi && typeof rec.mpi === "object" ? (rec.mpi as Record<string, unknown>) : undefined;
   const mpiEntries: [PlaqueSurface, number][] = mpiRaw
     ? (PLAQUE_SURFACES.filter((s) => {
@@ -295,10 +269,9 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
       }).map((s) => [s, mbiRaw[s] as number]))
     : [];
 
-  // SP-perio PG-D Task 2: keratinized gingiva width — a single per-tooth
-  // BUCCAL mm scalar (integer 0-15). Tolerant of malformed/foreign input
-  // (non-numeric, out-of-range, null): treated as "not charted", same as
-  // every other axis above.
+  // Keratinized gingiva width — a single per-tooth BUCCAL mm scalar (integer
+  // 0-15). Tolerant of malformed/foreign input (non-numeric, out-of-range,
+  // null): treated as "not charted", same as every other axis above.
   const kgRaw = rec.kg;
   const kgValue = isFiniteNumber(kgRaw) && Number.isInteger(kgRaw) && kgRaw >= 0 && kgRaw <= 15 ? kgRaw : undefined;
 
@@ -355,8 +328,8 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
     components.push(bopComponent);
   }
 
-  // SP-perio P2b Task 2: one component per graded furcation entrance,
-  // LOINC 34015-8, the Glickman grade (1-4) as a plain integer value.
+  // One component per graded furcation entrance, LOINC 34015-8, the Glickman
+  // grade (1-4) as a plain integer value.
   for (const entrance of gradedEntrances) {
     const grade = furcationRaw![entrance] as number;
     const furcationComponent: Any = {
@@ -367,11 +340,11 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
     components.push(furcationComponent);
   }
 
-  // SP-perio P2b Task 3: one boolean component per O'Leary plaque-index
-  // surface WITH plaque present. No LOINC coding (see doc comment above) —
-  // engine-local code only, always `valueBoolean: true` (a clean/not-recorded
-  // surface simply has no component at all, mirroring how `plaque` itself
-  // stores presence-only membership rather than an explicit false).
+  // One boolean component per O'Leary plaque-index surface WITH plaque present.
+  // No LOINC coding (see doc comment above) — engine-local code only, always
+  // `valueBoolean: true` (a clean/not-recorded surface simply has no component
+  // at all, mirroring how `plaque` itself stores presence-only membership rather
+  // than an explicit false).
   for (const surface of plaqueSurfaces) {
     const plaqueComponent: Any = {
       code: { coding: [{ system: LOCAL_SYSTEM, code: "plaque-surface", display: "Dental plaque present" }], text: "Dental plaque present" },
@@ -381,8 +354,8 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
     components.push(plaqueComponent);
   }
 
-  // SP-perio PG-D Task 1: one integer component per graded PI surface —
-  // Silness-Löe Plaque Index, no dedicated LOINC, engine-local finding code.
+  // One integer component per graded PI surface — Silness-Löe Plaque Index, no
+  // dedicated LOINC, engine-local finding code.
   for (const [surface, grade] of piEntries) {
     const piComponent: Any = {
       code: localConcept("plaque-index-silness-loe", "Plaque index (Silness-Löe)"),
@@ -392,8 +365,8 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
     components.push(piComponent);
   }
 
-  // SP-perio PG-D Task 1: one integer component per graded GI surface —
-  // Löe-Silness Gingival Index, same no-dedicated-LOINC treatment as PI above.
+  // One integer component per graded GI surface — Löe-Silness Gingival Index,
+  // same no-dedicated-LOINC treatment as PI above.
   for (const [surface, grade] of giEntries) {
     const giComponent: Any = {
       code: localConcept("gingival-index-loe-silness", "Gingival index (Löe-Silness)"),
@@ -403,9 +376,9 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
     components.push(giComponent);
   }
 
-  // SP-perio PG-E Task 1: one integer component per graded mPI/mBI surface —
-  // Mombelli modified plaque/sulcus bleeding indices (peri-implant), same
-  // no-dedicated-LOINC treatment as PI/GI above.
+  // One integer component per graded mPI/mBI surface — Mombelli modified
+  // plaque/sulcus bleeding indices (peri-implant), same no-dedicated-LOINC
+  // treatment as PI/GI above.
   for (const [surface, grade] of mpiEntries) {
     const c: Any = { code: localConcept("mod-plaque-index-mombelli", "Modified plaque index (Mombelli)"), valueInteger: grade };
     attachPlaqueBodySite(c, tooth, surface);
@@ -417,10 +390,10 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
     components.push(c);
   }
 
-  // SP-perio PG-D Task 2: one valueQuantity (mm) component for keratinized
-  // gingiva width, when charted — no dedicated LOINC, engine-local finding
-  // code, fixed buccal bodySite (this axis is a single scalar, not per-site/
-  // per-surface, so there is nothing to loop over).
+  // One valueQuantity (mm) component for keratinized gingiva width, when charted
+  // — no dedicated LOINC, engine-local finding code, fixed buccal bodySite (this
+  // axis is a single scalar, not per-site/per-surface, so there is nothing to
+  // loop over).
   if (kgValue !== undefined) {
     const kgComponent: Any = {
       code: localConcept("keratinized-gingiva-width", "Keratinized gingiva width"),
@@ -436,17 +409,14 @@ function buildToothPerioObservation(subjectRef: string, tooth: string, rec: Toot
 }
 
 /**
- * Append one periodontal-panel Observation per tooth with charted perio
- * sites to `bundle.entry`, mutating it in place. Called from
- * `buildFhirBundle` (toFhir.ts) AFTER the registry-driven per-tooth
- * Observations. A tooth with no charted perio sites (the common case —
- * `rec.perio` is omitted entirely by serializeState() unless at least one
- * site is charted) contributes NO entry, which is what keeps the existing
- * `fhir-golden.json` fixture (built from payloads with no perio data at
- * all) byte-identical after this task.
+ * Append one periodontal-panel Observation per tooth with charted perio data to
+ * `bundle.entry`, mutating it in place. Called from `buildFhirBundle`
+ * (toFhir.ts) AFTER the registry-driven per-tooth Observations. A tooth with no
+ * charted perio data (the common case — `rec.perio` is omitted entirely by
+ * serializeState() unless at least one site is charted) contributes NO entry.
  *
- * Pure aside from the `bundle.entry` mutation; tolerant of malformed
- * `payload` (never throws), matching `buildFhirBundle`'s own contract.
+ * Pure aside from the `bundle.entry` mutation; tolerant of malformed `payload`
+ * (never throws), matching `buildFhirBundle`'s own contract.
  */
 export function appendPerioObservations(bundle: Bundle, payload: OdontogramExportPayload, options: FhirExportOptions = {}): void {
   const teeth =
@@ -455,26 +425,26 @@ export function appendPerioObservations(bundle: Bundle, payload: OdontogramExpor
   if (!bundle.entry) bundle.entry = [];
   for (const [tooth, recRaw] of Object.entries(teeth)) {
     const rec = (recRaw && typeof recRaw === "object" ? recRaw : {}) as ToothRecord;
-    const obs = buildToothPerioObservation(subjectRef, tooth, rec);
+    const siteTooth = toothBodySiteCode(tooth, rec);
+    const obs = buildToothPerioObservation(subjectRef, siteTooth, rec);
     if (obs) bundle.entry.push({ resource: obs });
   }
 }
 
 // ---------------------------------------------------------------------------
-// SP-perio P4b Task 3 — the engine's FIRST FHIR Condition: 2017 World
-// Workshop periodontitis/gingivitis diagnosis (ICD-10/BNO K05), with
-// type-differentiated stage/grade/extent + evidence Observations.
+// The engine's FHIR Condition: 2017 World Workshop periodontitis/gingivitis
+// diagnosis (ICD-10/BNO K05), with type-differentiated stage/grade/extent +
+// evidence Observations.
 //
-// ARCHITECTURE: `derivePerioClassification` (perioClassification.ts, T1) is
-// pure — it takes an already-reduced `PerioDerivationInput`, never engine
-// state. `buildDerivationInputFromPayload` below is the PAYLOAD-side adapter
-// (mirrors `buildDerivationInputFromState` in odontogram.ts, the STATE-side
-// adapter T1/T2 use for the UI/summary path) — this module deliberately
-// never imports odontogram.ts (see the module doc comment at the top of this
-// file), so every constant it needs (the FDI arch sequence, the interdental/
-// buccal-oral site groupings, the override valid-value sets) is duplicated
-// locally, the same policy PERIO_SITES/FURCATION_ENTRANCES above already
-// follow.
+// ARCHITECTURE: `derivePerioClassification` (perioClassification.ts) is pure —
+// it takes an already-reduced `PerioDerivationInput`, never engine state.
+// `buildDerivationInputFromPayload` below is the PAYLOAD-side adapter (mirrors
+// `buildDerivationInputFromState` in odontogram.ts, the STATE-side adapter the
+// UI/summary path uses) — this module deliberately never imports odontogram.ts
+// (see the module doc comment at the top of this file), so every constant it
+// needs (the FDI arch sequence, the interdental/buccal-oral site groupings, the
+// override valid-value sets) is duplicated locally, the same policy
+// PERIO_SITES/FURCATION_ENTRANCES above already follow.
 // ---------------------------------------------------------------------------
 
 // Mirrors ALL_TEETH in odontogram.ts (upper 18->28, then lower 48->38).
@@ -489,15 +459,15 @@ const ALL_TEETH_FDI = [
 const INTERDENTAL_SITES: readonly PerioSite[] = ["MB", "DB", "ML", "DL"];
 const BUCCAL_ORAL_SITES: readonly PerioSite[] = ["B", "L"];
 
-// Mirrors the P4a `VALID_SMOKING`/`VALID_DIABETES` sets in odontogram.ts —
+// Mirrors the `VALID_SMOKING`/`VALID_DIABETES` sets in odontogram.ts —
 // duplicated (not imported) for the same dependency-independence reason.
 const VALID_SMOKING_STATUS = new Set(["unknown", "never", "former", "current"]);
 const VALID_DIABETES_STATUS = new Set(["unknown", "none", "present"]);
 
-// Mirrors the P4b Task 2 `VALID_DIAGNOSIS`/`VALID_STAGE`/`VALID_GRADE`/
-// `VALID_EXTENT` override sets in odontogram.ts — deliberately excludes the
-// derivation's non-authorable placeholder values ("na"/"indeterminate"), an
-// override always names a concrete clinical value.
+// Mirrors the `VALID_DIAGNOSIS`/`VALID_STAGE`/`VALID_GRADE`/`VALID_EXTENT`
+// override sets in odontogram.ts — deliberately excludes the derivation's
+// non-authorable placeholder values ("na"/"indeterminate"), an override always
+// names a concrete clinical value.
 const VALID_DIAGNOSIS_OVERRIDE = new Set(["health", "gingivitis", "periodontitis"]);
 const VALID_STAGE_OVERRIDE = new Set(["I", "II", "III", "IV"]);
 const VALID_GRADE_OVERRIDE = new Set(["A", "B", "C"]);
@@ -613,18 +583,18 @@ interface FinalPerioClassification {
 
 /**
  * Compute the FINAL periodontal classification for a serialized payload:
- * `derivePerioClassification` (T1, pure) fed by {@link buildDerivationInputFromPayload}
- * above, then each axis overridden by `payload.case.<axis>Override` when it
- * is a valid concrete value for that axis (mirrors `getPerioClassification()`'s
+ * `derivePerioClassification` (pure) fed by {@link buildDerivationInputFromPayload}
+ * above, then each axis overridden by `payload.case.<axis>Override` when it is a
+ * valid concrete value for that axis (mirrors `getPerioClassification()`'s
  * override ?? derived rule in odontogram.ts exactly — same valid-value sets,
  * same "invalid/missing override -> derived wins" fallback).
  *
- * CAVEAT (T1 review, binding on every caller): `derived.grade` can read
- * `"indeterminate"` while `derived.buckets` still reads concrete values
- * (e.g. smoking "A", diabetes "A", direct null) — `buckets` is provenance
- * ONLY, never re-derive `grade` from it. This function (and
- * {@link appendPerioCondition} below) always branches on the final `grade`/
- * `stage`/`extent` STRING values themselves, never on `buckets`.
+ * CAVEAT (binding on every caller): `derived.grade` can read `"indeterminate"`
+ * while `derived.buckets` still reads concrete values (e.g. smoking "A",
+ * diabetes "A", direct null) — `buckets` is provenance ONLY, never re-derive
+ * `grade` from it. This function (and {@link appendPerioCondition} below) always
+ * branches on the final `grade`/`stage`/`extent` STRING values themselves, never
+ * on `buckets`.
  */
 function computeFinalClassification(payload: OdontogramExportPayload): FinalPerioClassification {
   const derived = derivePerioClassification(buildDerivationInputFromPayload(payload));
@@ -698,38 +668,37 @@ const K05_EXTENT_DISPLAY: Record<Exclude<PerioExtent, "na">, string> = {
 };
 
 /**
- * Append the engine's FIRST FHIR Condition — the 2017 World Workshop
- * periodontitis/gingivitis diagnosis (ICD-10/BNO K05) — to `bundle.entry`
- * when the FINAL classification (override ?? derived, see
- * {@link computeFinalClassification}) is gingivitis or periodontitis.
- * Emits NOTHING (no Condition, no evidence Observations) for a "health"
- * diagnosis. Called from `buildFhirBundle` (toFhir.ts) AFTER
- * `appendPerioObservations`.
+ * Append the engine's FHIR Condition — the 2017 World Workshop
+ * periodontitis/gingivitis diagnosis (ICD-10/BNO K05) — to `bundle.entry` when
+ * the FINAL classification (override ?? derived, see
+ * {@link computeFinalClassification}) is gingivitis or periodontitis. Emits
+ * NOTHING (no Condition, no evidence Observations) for a "health" diagnosis.
+ * Called from `buildFhirBundle` (toFhir.ts) AFTER `appendPerioObservations`.
  *
- * `code`: K05.3 periodontitis, K05.2 when the final `extent` is
- * "molar-incisor" (checked BEFORE the generic periodontitis code — mirrors
+ * `code`: K05.3 periodontitis, K05.2 when the final `extent` is "molar-incisor"
+ * (checked BEFORE the generic periodontitis code — mirrors
  * `derivePerioClassification`'s own molar-incisor-first precedence), K05.1
  * gingivitis.
  *
- * `stage[]`: one type-differentiated entry per APPLICABLE axis only — a
- * stage entry iff diagnosis is periodontitis AND `stage` is neither "na" nor
- * "indeterminate"; a grade entry iff `grade` is not "indeterminate"
- * (evaluated regardless of diagnosis, since `derivePerioClassification`
- * itself computes grade independently of diagnosis); an extent entry iff
- * `extent` is not "na". Each entry's `type`/`summary` are engine-local
- * CodeableConcepts (`periodontal-stage`/`-grade`/`-extent` type codes,
+ * `stage[]`: one type-differentiated entry per APPLICABLE axis only — a stage
+ * entry iff diagnosis is periodontitis AND `stage` is neither "na" nor
+ * "indeterminate"; a grade entry iff `grade` is not "indeterminate" (evaluated
+ * regardless of diagnosis, since `derivePerioClassification` itself computes
+ * grade independently of diagnosis); an extent entry iff `extent` is not "na".
+ * Each entry's `type`/`summary` are engine-local CodeableConcepts
+ * (`periodontal-stage`/`-grade`/`-extent` type codes,
  * `stage-<I..IV>`/`grade-<A..C>`/`extent-<value>` summary codes) — SNOMED is
- * deferred per task-3-brief.md.
+ * deferred.
  *
- * `evidence[]`: references the smoking-status Observation (emitted only
- * when `payload.case.smokingStatus` is a concrete non-"unknown" value) and
- * the HbA1c Observation (emitted only when `payload.case.hba1c` is set) —
- * both pushed to `bundle.entry` alongside the Condition, never on their own.
+ * `evidence[]`: references the smoking-status Observation (emitted only when
+ * `payload.case.smokingStatus` is a concrete non-"unknown" value) and the HbA1c
+ * Observation (emitted only when `payload.case.hba1c` is set) — both pushed to
+ * `bundle.entry` alongside the Condition, never on their own.
  *
- * Pure aside from the `bundle.entry` mutation; tolerant of malformed
- * `payload` (never throws, via {@link buildDerivationInputFromPayload}'s own
- * tolerance); deterministic (fixed ids, no Date/random) — the same payload
- * always produces a byte-identical Condition/evidence block.
+ * Pure aside from the `bundle.entry` mutation; tolerant of malformed `payload`
+ * (never throws, via {@link buildDerivationInputFromPayload}'s own tolerance);
+ * deterministic (fixed ids, no Date/random) — the same payload always produces a
+ * byte-identical Condition/evidence block.
  */
 export function appendPerioCondition(bundle: Bundle, payload: OdontogramExportPayload, options: FhirExportOptions = {}): void {
   const final = computeFinalClassification(payload);

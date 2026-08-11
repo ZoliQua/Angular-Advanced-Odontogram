@@ -1,15 +1,15 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 /**
- * SP-perio P4b Task 1 — pure 2017 World Workshop periodontal classification
- * derivation core (diagnosis / stage / grade / extent).
+ * Pure 2017 World Workshop periodontal classification derivation core
+ * (diagnosis / stage / grade / extent).
  *
  * DELIBERATELY dependency-free: this module imports NOTHING from
  * `odontogram.ts` (or anywhere else in the engine). `derivePerioClassification`
  * is a pure function of its input struct — no module-level state, no `Date`,
  * no `Math.random` — so it is fully deterministic and safe to call from a
- * serialized payload (T3's FHIR Condition builder feeds it exactly that way).
+ * serialized payload (the FHIR Condition builder feeds it exactly that way).
  * The engine-state adapter that BUILDS a {@link PerioDerivationInput} from the
  * live chart (`buildDerivationInputFromState()`) lives in `odontogram.ts`,
  * which is free to import types from here (one-directional dependency).
@@ -36,8 +36,8 @@ export interface ToothDerivationInput {
   present: boolean;
 }
 
-/** Case-level metadata the derivation needs — the P4a `CaseMeta` shape,
- *  duplicated here (not imported) to keep this module dependency-free. */
+/** Case-level metadata the derivation needs — the `CaseMeta` shape, duplicated
+ *  here (not imported) to keep this module dependency-free. */
 export interface PerioMetaInput {
   age: number | null;
   maxRblPercent: number | null;
@@ -74,7 +74,7 @@ export interface PerioClassification {
   grade: PerioGrade;
   extent: PerioExtent;
   /** Provenance for the final `grade` — the three sub-grades `deriveGrade`
-   *  computes internally, surfaced (not re-derived) so callers (T3's FHIR
+   *  computes internally, surfaced (not re-derived) so callers (the FHIR
    *  evidence) can cite exactly which factor(s) drove the result.
    *  `direct` is the raw %RBL÷age band, or `null` when age/RBL is missing
    *  (mirrors `grade === "indeterminate"` when no modifiers are known either).
@@ -305,8 +305,8 @@ function deriveExtent(teeth: ToothDerivationInput[]): PerioExtent {
  * Pure derivation of the full 2017 World Workshop periodontal classification
  * (diagnosis/stage/grade/extent) from an already-reduced input struct. No
  * engine state, no Date/random — safe to call repeatedly with the same
- * input and always get the same output (T3 feeds this from a serialized
- * FHIR-export-time snapshot, not live module state).
+ * input and always get the same output (fed from a serialized FHIR-export-time
+ * snapshot, not live module state).
  */
 export function derivePerioClassification(input: PerioDerivationInput): PerioClassification {
   const diagnosis = deriveDiagnosis(input.teeth, input.bopPercent);

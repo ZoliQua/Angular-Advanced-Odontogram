@@ -8,12 +8,13 @@ import {
   tooth11Svg, tooth13Svg, tooth14Svg, tooth16Svg, tooth14OcclSvg, tooth16OcclSvg,
 } from "../generated/teeth-svgs";
 import {
-  icon8Svg, iconGumSvg, iconOcclSvg, iconPulpSvg, iconNoSelectionUrl,
+  icon8Svg, iconGumSvg, iconOcclSvg, iconPulpSvg, iconNoSelectionUrl, brandLogoUrl,
 } from "../generated/icon-svgs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const teeth = (f: string) => readFileSync(resolve(here, "../assets/teeth-svgs", f), "utf8");
 const icons = (f: string) => readFileSync(resolve(here, "../assets/icon-svgs", f), "utf8");
+const logoBase64 = () => readFileSync(resolve(here, "../assets/react-module-logo.png")).toString("base64");
 
 describe("generated SVG asset modules", () => {
   it("teeth markup is byte-identical to the .svg sources", () => {
@@ -34,5 +35,12 @@ describe("generated SVG asset modules", () => {
     expect(iconNoSelectionUrl).toBe(
       "data:image/svg+xml," + encodeURIComponent(icons("icon_no_selection.svg")),
     );
+  });
+  // v2.4.0 resync (Task 1): react-module-logo.png is a shell-only asset
+  // (App.tsx) with no ?raw/text-import analog — it's a PNG, so it's
+  // base64-encoded into a data: URI, same generated-module path as the
+  // other assets above (see scripts/generate-svg-assets.mjs).
+  it("brand logo is a base64 data URI of its source PNG", () => {
+    expect(brandLogoUrl).toBe("data:image/png;base64," + logoBase64());
   });
 });

@@ -1,4 +1,4 @@
-// Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // UI-2 Task 2: the perio chart consumes `getPerioRowVisibility()` (the
@@ -24,6 +24,7 @@ import {
   setNumberingSystem,
   getPerioRowVisibility,
   setPerioRowVisibility,
+  onStateChange,
   type PerioRowId,
 } from "../odontogram";
 
@@ -70,6 +71,17 @@ describe("UI-2 Task 2: default visibility (all true)", () => {
   it("getPerioRowVisibility() defaults every id to true", () => {
     const visibility = getPerioRowVisibility();
     for (const id of ALL_ROW_IDS) expect(visibility[id], id).toBe(true);
+  });
+
+  it("does NOT fire notifyStateChange when the visibility is already the same (idempotent)", () => {
+    let fired = false;
+    const unsub = onStateChange(() => { fired = true; });
+    try {
+      setPerioRowVisibility("pi", true);
+      expect(fired).toBe(false);
+    } finally {
+      unsub();
+    }
   });
 
   it("every index row label is present", () => {
