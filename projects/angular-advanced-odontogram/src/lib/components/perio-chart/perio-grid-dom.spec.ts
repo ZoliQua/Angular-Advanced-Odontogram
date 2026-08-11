@@ -376,6 +376,24 @@ describe("buildPlaqueCell / buildGradeCell (diamond quad builders)", () => {
     expect(calls.onPlaque).toEqual([[16, "mesial"]]);
   });
 
+  // v2.4.0 resync: SURFACE_LETTER watermark tag (`data-surface-letter`) — the
+  // faint M/D/B/L letter shown behind each plaque/PI/GI/mPI/mBI marker square
+  // (CSS: `core/index.css`'s `[data-surface-letter]::before{ content:
+  // attr(data-surface-letter) }`).
+  it("buildPlaqueCell tags each surface button with its dental-standard watermark letter", () => {
+    const cells: ToothCellRefs = {
+      pd: {}, gm: {}, bop: {}, cal: {}, mobility: null, furcation: {}, plaque: {},
+      cejVisibility: null, rootConcavity: null, pi: {}, gi: {}, kg: null,
+      gingivalThickness: null, millerClass: null, mpi: {}, mbi: {},
+    };
+    const { handlers } = spyHandlers();
+    buildPlaqueCell(16, cells, handlers);
+    expect(cells.plaque.mesial!.dataset.surfaceLetter).toBe("M");
+    expect(cells.plaque.distal!.dataset.surfaceLetter).toBe("D");
+    expect(cells.plaque.buccal!.dataset.surfaceLetter).toBe("B");
+    expect(cells.plaque.lingual!.dataset.surfaceLetter).toBe("L");
+  });
+
   it("buildGradeCell(mapKey='mpi') wires each surface to onMpiSurface", () => {
     const cells: ToothCellRefs = {
       pd: {}, gm: {}, bop: {}, cal: {}, mobility: null, furcation: {}, plaque: {},
@@ -386,6 +404,20 @@ describe("buildPlaqueCell / buildGradeCell (diamond quad builders)", () => {
     buildGradeCell(16, "mpi", cells, handlers);
     cells.mpi.distal!.click();
     expect(calls.onMpiSurface).toEqual([[16, "distal"]]);
+  });
+
+  it("buildGradeCell tags each surface button with its dental-standard watermark letter (mirrors buildPlaqueCell)", () => {
+    const cells: ToothCellRefs = {
+      pd: {}, gm: {}, bop: {}, cal: {}, mobility: null, furcation: {}, plaque: {},
+      cejVisibility: null, rootConcavity: null, pi: {}, gi: {}, kg: null,
+      gingivalThickness: null, millerClass: null, mpi: {}, mbi: {},
+    };
+    const { handlers } = spyHandlers();
+    buildGradeCell(16, "pi", cells, handlers);
+    expect(cells.pi.mesial!.dataset.surfaceLetter).toBe("M");
+    expect(cells.pi.distal!.dataset.surfaceLetter).toBe("D");
+    expect(cells.pi.buccal!.dataset.surfaceLetter).toBe("B");
+    expect(cells.pi.lingual!.dataset.surfaceLetter).toBe("L");
   });
 });
 
@@ -465,6 +497,48 @@ describe("collectCurveInput / collectOverlayInput / collectMmHeatInput", () => {
     const mmHeatIn = collectMmHeatInput(layout, ["MB", "B", "DB"]);
     expect(mmHeatIn[0].pd).toBe(3);
     expect(mmHeatIn[0].cal).toBe(4); // getToothCal: pd(3) + gm(1)
+  });
+
+  // v2.4.0 resync: continuity fix — a tooth with ANY charted site on an
+  // aspect has its REMAINING sites on that aspect treated as pd=0/gm=0 (not
+  // `undefined`), so the pocket/margin curve draws fully across the tooth
+  // instead of stopping at the first gap. A tooth with NO charted site on the
+  // aspect is unaffected — every site there stays fully `undefined`.
+  it("continuity fix: a tooth with one charted site fills its OTHER sites with pd=0/gm=0; an uncharted tooth stays undefined", () => {
+    const layout: ArchLayout = {
+      teeth: [
+        { toothNo: 16, x: 0, width: 30 }, // one charted site (MB)
+        { toothNo: 17, x: 30, width: 30 }, // no charted sites
+      ],
+      totalWidth: 60,
+      cejY: 40,
+    };
+    setPerioSite(16, "MB", { pd: 3, gm: 1 });
+    const curveIn = collectCurveInput(layout, ["MB", "B", "DB"]);
+
+    // Tooth 16: charted MB stands; the uncharted B/DB fill to 0/0.
+    expect(curveIn.sites[0]).toEqual({ site: "MB", pd: 3, gm: 1 });
+    expect(curveIn.sites[1]).toEqual({ site: "B", pd: 0, gm: 0 });
+    expect(curveIn.sites[2]).toEqual({ site: "DB", pd: 0, gm: 0 });
+
+    // Tooth 17: nothing charted at all -> every site stays undefined.
+    expect(curveIn.sites[3]).toEqual({ site: "MB", pd: undefined, gm: undefined });
+    expect(curveIn.sites[4]).toEqual({ site: "B", pd: undefined, gm: undefined });
+    expect(curveIn.sites[5]).toEqual({ site: "DB", pd: undefined, gm: undefined });
+  });
+
+  // A charted site's OWN pd is defined but its gm was never charted (a real,
+  // if unusual, state — pd without a paired gm reading): gm still fills to 0
+  // rather than staying undefined, since `pd !== undefined` on this site.
+  it("continuity fix: a charted site's own missing gm fills to 0 (not undefined) once its pd is charted", () => {
+    const layout: ArchLayout = {
+      teeth: [{ toothNo: 16, x: 0, width: 30 }],
+      totalWidth: 30,
+      cejY: 40,
+    };
+    setPerioSite(16, "MB", { pd: 3 }); // pd only, no gm
+    const curveIn = collectCurveInput(layout, ["MB", "B", "DB"]);
+    expect(curveIn.sites[0]).toEqual({ site: "MB", pd: 3, gm: 0 });
   });
 });
 

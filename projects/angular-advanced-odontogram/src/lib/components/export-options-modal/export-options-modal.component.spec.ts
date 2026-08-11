@@ -1,18 +1,25 @@
 // Angular port of the ExportOptionsModal contract from
-// $ENGINE/src/ExportOptionsModal.tsx (228 lines) — Phase 3 Task 4. Unlike
-// SettingsModalComponent/DualStateConfirmComponent, this dialog is
-// self-contained (owns its own checkbox state + reads/writes case identity +
-// calls exportPdf itself), so these specs drive it through the REAL engine
-// seams (`getCaseMeta`, `setPerioSite`, `resetEngineStateForTest` via the
-// global vitest setup) rather than a host-supplied settings object — plus a
-// DI-injected `EXPORT_PDF_FN` substitute (see that token's doc comment in the
-// component for why: real `exportPdf` does jsPDF/canvas work jsdom can't run).
+// $ENGINE/src/ExportOptionsModal.tsx (285 lines, v2.4.0 resync pin
+// `f9b45fc`). Unlike SettingsModalComponent/DualStateConfirmComponent, this
+// dialog is self-contained (owns its own checkbox state + reads/writes case
+// identity + calls exportPdf itself), so these specs drive it through the
+// REAL engine seams (`getCaseMeta`, `setPerioSite`, `resetEngineStateForTest`
+// via the global vitest setup) rather than a host-supplied settings object —
+// plus a DI-injected `EXPORT_PDF_FN` substitute (see that token's doc comment
+// in the component for why: real `exportPdf` does jsPDF/canvas work jsdom
+// can't run).
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, provideZonelessChangeDetection, signal } from "@angular/core";
 import { EXPORT_PDF_FN, ExportOptionsModalComponent } from "./export-options-modal.component";
 import { setI18nLanguage } from "../../core/i18n/useI18n";
-import { getCaseMeta, setPerioSite } from "../../core/odontogram";
+import {
+  getCaseMeta,
+  setPerioSite,
+  setExamDate,
+  setNotesEnabled,
+  __hydrateImportedChartsForTest,
+} from "../../core/odontogram";
 import type { PdfExportOptions } from "../../core/perioPdf";
 
 @Component({
@@ -44,7 +51,7 @@ describe("ExportOptionsModalComponent", () => {
     setI18nLanguage("en");
   });
 
-  it("(a) renders nothing while closed; open renders #exportOptionsModal with 4 default-checked checkboxes", async () => {
+  it("(a) renders nothing while closed; open renders #exportOptionsModal with 6 default-checked checkboxes", async () => {
     const f = TestBed.createComponent(HostComponent);
     await f.whenStable();
     expect(f.nativeElement.querySelector("#exportOptionsModal")).toBeNull();
@@ -62,7 +69,9 @@ describe("ExportOptionsModalComponent", () => {
     const checkboxes = Array.from(
       dialog.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
     );
-    expect(checkboxes.length).toBe(4);
+    // patientData, odontogramChart, odontogramDescription, individualNotes,
+    // perioStatus, perioDescription (TSX 213-263).
+    expect(checkboxes.length).toBe(6);
     for (const cb of checkboxes) expect(cb.checked).toBe(true);
   });
 
@@ -75,8 +84,8 @@ describe("ExportOptionsModalComponent", () => {
     let checkboxes = Array.from(
       dialog.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
     );
-    expect(checkboxes[2].disabled).toBe(true); // perioStatus
-    expect(checkboxes[3].disabled).toBe(true); // perioDescription
+    expect(checkboxes[4].disabled).toBe(true); // perioStatus
+    expect(checkboxes[5].disabled).toBe(true); // perioDescription
     expect(dialog.querySelector(".hint")).not.toBeNull();
 
     // Close, seed real perio data, reopen — mirrors TSX's re-read-on-open.
@@ -88,9 +97,33 @@ describe("ExportOptionsModalComponent", () => {
 
     dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
     checkboxes = Array.from(dialog.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
-    expect(checkboxes[2].disabled).toBe(false);
-    expect(checkboxes[3].disabled).toBe(false);
+    expect(checkboxes[4].disabled).toBe(false);
+    expect(checkboxes[5].disabled).toBe(false);
     expect(dialog.querySelector(".hint")).toBeNull();
+  });
+
+  it("(b2) no tooth note disables the individualNotes checkbox; a seeded note enables it (mirrors TSX 66/241)", async () => {
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    let dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
+    let checkboxes = Array.from(
+      dialog.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    );
+    expect(checkboxes[3].disabled).toBe(true); // individualNotes
+
+    // Close, seed a real tooth note, reopen — mirrors TSX's re-read-on-open.
+    f.componentInstance.open.set(false);
+    await f.whenStable();
+    setNotesEnabled(true);
+    __hydrateImportedChartsForTest({ teeth: { 11: { note: "Sensitive to cold" } } });
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
+    checkboxes = Array.from(dialog.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+    expect(checkboxes[3].disabled).toBe(false);
   });
 
   it("(c) typing a patient name commits through setPatientName on blur", async () => {
@@ -108,7 +141,47 @@ describe("ExportOptionsModalComponent", () => {
     expect(getCaseMeta().patientName).toBe("Jane Doe");
   });
 
-  it("(d) export forces perio flags off when hasPerio is false (even if checked) and emits close synchronously (fire-and-forget export, mirrors TSX 131-132)", async () => {
+  it("(c2) entering a DOB writes straight through setPatientDob on input (mirrors TSX 189-198's setPatientDob-on-change, no local-buffer decoupling)", async () => {
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    const dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
+    const dobInput = dialog.querySelector<HTMLInputElement>("#exportOptionsPatientDob")!;
+    dobInput.value = "1990-05-17";
+    dobInput.dispatchEvent(new Event("input", { bubbles: true }));
+    await f.whenStable();
+
+    expect(getCaseMeta().patientDob).toBe("1990-05-17");
+    expect(dobInput.value).toBe("1990-05-17");
+  });
+
+  it("(c3) exam date defaults to today on open when the case has none, but is left untouched when already set (mirrors TSX 83-87)", async () => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    expect(getCaseMeta().examDate).toBe(todayIso);
+    const dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
+    const examDateInput = dialog.querySelector<HTMLInputElement>("#exportOptionsExamDate")!;
+    expect(examDateInput.value).toBe(todayIso);
+
+    // Close, set an explicit (non-today) exam date, reopen — the default
+    // must not clobber an already-set value.
+    f.componentInstance.open.set(false);
+    await f.whenStable();
+    const explicit = "2020-01-01";
+    // (component is closed — write through the engine directly, like any
+    // other surface, e.g. PerioSidebarComponent's own exam-date input, would)
+    setExamDate(explicit);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    expect(getCaseMeta().examDate).toBe(explicit);
+  });
+
+  it("(d) export forces perio flags off when hasPerio is false (even if checked) and emits close synchronously (fire-and-forget export, mirrors TSX 150-151)", async () => {
     const f = TestBed.createComponent(HostComponent);
     f.componentInstance.open.set(true);
     await f.whenStable();
@@ -127,9 +200,11 @@ describe("ExportOptionsModalComponent", () => {
     expect(exportPdfSpy).toHaveBeenCalledTimes(1);
     const opts = exportPdfSpy.mock.calls[0][0] as PdfExportOptions;
     expect(opts.patientData).toBe(true);
-    expect(opts.odontogramChart).toBe(true); // v2.4.0 resync (Task 1): field split, see component's onExport() note
+    expect(opts.odontogramChart).toBe(true); // independently-selectable checkbox, see component's onExport() note
     expect(opts.odontogramDescription).toBe(true);
-    expect(opts.individualNotes).toBe(true);
+    // No tooth note was seeded — forced off despite the checkbox defaulting
+    // ON, mirroring the perio flags' hasPerio force-off below (TSX 146).
+    expect(opts.individualNotes).toBe(false);
     expect(opts.perioStatus).toBe(false);
     expect(opts.perioDescription).toBe(false);
   });
@@ -230,10 +305,29 @@ describe("ExportOptionsModalComponent", () => {
     expect(exportPdfSpy).toHaveBeenCalledTimes(1);
     const opts = exportPdfSpy.mock.calls[0][0] as PdfExportOptions;
     expect(opts.patientData).toBe(true);
-    expect(opts.odontogramChart).toBe(true); // v2.4.0 resync (Task 1): field split, see component's onExport() note
+    expect(opts.odontogramChart).toBe(true); // independently-selectable checkbox, see component's onExport() note
     expect(opts.odontogramDescription).toBe(true);
-    expect(opts.individualNotes).toBe(true);
+    // No tooth note was seeded here either — still forced off (see (d)'s note).
+    expect(opts.individualNotes).toBe(false);
     expect(opts.perioStatus).toBe(true);
     expect(opts.perioDescription).toBe(true);
+  });
+
+  it("(i) export with a tooth note PRESENT passes the (checked, un-forced) individualNotes opt through as-is", async () => {
+    setNotesEnabled(true);
+    __hydrateImportedChartsForTest({ teeth: { 11: { note: "Sensitive to cold" } } });
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    const dialog = f.nativeElement.querySelector("#exportOptionsModal") as HTMLElement;
+    const exportBtn = Array.from(
+      dialog.querySelectorAll<HTMLButtonElement>(".odon-confirm-btn"),
+    ).find((b) => b.classList.contains("odon-confirm-accept"))!;
+    exportBtn.click();
+
+    expect(exportPdfSpy).toHaveBeenCalledTimes(1);
+    const opts = exportPdfSpy.mock.calls[0][0] as PdfExportOptions;
+    expect(opts.individualNotes).toBe(true);
   });
 });

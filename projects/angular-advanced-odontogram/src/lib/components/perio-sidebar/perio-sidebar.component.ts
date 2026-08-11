@@ -1,4 +1,5 @@
-// Angular port of $ENGINE/src/PerioSidebar.tsx (452 lines).
+// Angular port of $ENGINE/src/PerioSidebar.tsx (441 lines,
+// v2.4.0 resync pin `f9b45fc`).
 //
 // Phase 4 Task 2: the whole-mouth summary bar + "Páciens adatok"
 // case-metadata form + 2017 World Workshop periodontal classification block
@@ -108,8 +109,10 @@ const EMPTY_CASE_META: CaseMetaData = {
   gradeOverride: null,
   extentOverride: null,
   patientName: null,
-  // v2.4.0 resync (Task 1): CaseMeta gained patientDob — mechanical default
-  // to keep this literal compiling; UI wiring for the field is Task 2-4's.
+  // PerioSidebar itself has no DOB UI (that lives on ExportOptionsModal's
+  // own "case-meta-row" — see that component's `#exportOptionsPatientDob`
+  // input); this literal just needs to satisfy CaseMetaData's shape,
+  // mirroring the pinned TSX's own EMPTY_CASE_META (PerioSidebar.tsx 84).
   patientDob: null,
   examDate: null,
 };

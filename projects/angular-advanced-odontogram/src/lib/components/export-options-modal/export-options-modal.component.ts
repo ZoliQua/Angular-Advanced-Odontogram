@@ -1,20 +1,22 @@
-// Angular port of $ENGINE/src/ExportOptionsModal.tsx (228 lines).
+// Angular port of $ENGINE/src/ExportOptionsModal.tsx (285 lines,
+// v2.4.0 resync pin `f9b45fc`).
 //
-// Phase 3 Task 4: the "PDF report…" export-settings dialog. Unlike
+// The "PDF report…" export-settings dialog. Unlike
 // SettingsModalComponent/DualStateConfirmComponent (pure views driven
 // entirely by host-supplied state), this dialog is SELF-CONTAINED, mirroring
-// the TSX exactly: it owns its own checkbox state (all four default ON,
-// TSX 52-55), reads/writes case identity (patient name + exam date) straight
-// through the engine's `getCaseMeta`/`setPatientName`/`setExamDate` (TSX
-// 63-73, 156-180), and calls `exportPdf()` itself on "Export" (TSX 123-133)
-// — the host only supplies `open` and reacts to `close`.
+// the TSX exactly: it owns its own checkbox state (all default ON, TSX
+// 55-66), reads/writes case identity (patient name + DOB + exam date)
+// straight through the engine's `getCaseMeta`/`setPatientName`/
+// `setPatientDob`/`setExamDate` (TSX 67-108, 175-211), and calls
+// `exportPdf()` itself on "Export" (TSX 140-152) — the host only supplies
+// `open` and reacts to `close`.
 //
 // Shares the `.odon-confirm-backdrop`/`.odon-confirm-modal` dialog contract
-// with DualStateConfirmComponent/SettingsModalComponent (TSX 21-37): root
-// `id="exportOptionsModal"` (TSX 135/143), `role="dialog"` + `aria-modal`,
+// with DualStateConfirmComponent/SettingsModalComponent (TSX 154-170): root
+// `id="exportOptionsModal"` (TSX 162/171), `role="dialog"` + `aria-modal`,
 // labelled via an incrementing title id, Esc/backdrop-click closes, focus
-// trapped while open + restored to the opener on close — all via Task 1's
-// `dialog-focus.ts` helpers, no reimplementation.
+// trapped while open + restored to the opener on close — all via
+// `dialog-focus.ts`'s helpers, no reimplementation.
 import {
   ChangeDetectionStrategy,
   Component,
@@ -33,8 +35,10 @@ import {
   exportPdf,
   getCaseMeta,
   hasAnyPerioData,
+  hasAnyToothNote,
   onStateChange,
   setExamDate,
+  setPatientDob,
   setPatientName,
 } from "../../core/odontogram";
 import type { PdfExportOptions } from "../../core/perioPdf";
@@ -89,6 +93,18 @@ export const EXPORT_PDF_FN = new InjectionToken<(opts: PdfExportOptions) => Prom
             />
           </div>
           <div class="case-meta-row">
+            <label class="case-meta-row-label" for="exportOptionsPatientDob">
+              {{ i18n.t('case.patientDob') }}
+            </label>
+            <input
+              id="exportOptionsPatientDob"
+              class="case-meta-input"
+              type="date"
+              [value]="caseMeta().patientDob ?? ''"
+              (input)="onPatientDobInput($event)"
+            />
+          </div>
+          <div class="case-meta-row">
             <label class="case-meta-row-label" for="exportOptionsExamDate">
               {{ i18n.t('case.examDate') }}
             </label>
@@ -112,10 +128,27 @@ export const EXPORT_PDF_FN = new InjectionToken<(opts: PdfExportOptions) => Prom
           <label>
             <input
               type="checkbox"
-              [checked]="odontogram()"
-              (change)="odontogram.set($any($event.target).checked)"
+              [checked]="odontogramChart()"
+              (change)="odontogramChart.set($any($event.target).checked)"
             />
-            <span>{{ i18n.t('export.options.odontogram') }}</span>
+            <span>{{ i18n.t('export.options.odontogramChart') }}</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              [checked]="odontogramDescription()"
+              (change)="odontogramDescription.set($any($event.target).checked)"
+            />
+            <span>{{ i18n.t('export.options.odontogramDescription') }}</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              [checked]="individualNotes()"
+              [disabled]="!hasNotes()"
+              (change)="individualNotes.set($any($event.target).checked)"
+            />
+            <span>{{ i18n.t('toothInfo.notes') }}</span>
           </label>
           <label>
             <input
@@ -169,12 +202,19 @@ export class ExportOptionsModalComponent {
   protected readonly titleId = nextDialogTitleId("exportOptionsModalTitle");
 
   protected readonly patientData = signal(true);
-  protected readonly odontogram = signal(true);
+  // Odontogram chart and description are independently-selectable checkboxes
+  // (TSX 58-60), plus a third for per-tooth notes.
+  protected readonly odontogramChart = signal(true);
+  protected readonly odontogramDescription = signal(true);
+  protected readonly individualNotes = signal(true);
   protected readonly perioStatus = signal(true);
   protected readonly perioDescription = signal(true);
   protected readonly hasPerio = signal(false);
+  // Whether any tooth carries a note — drives the notes checkbox's
+  // `disabled` state (mirrors `hasPerio`/the perio checkboxes, TSX 66).
+  protected readonly hasNotes = signal(false);
   protected readonly caseMeta = signal(getCaseMeta());
-  // Local, decoupled buffer for the patient-name input — mirrors TSX 58-63.
+  // Local, decoupled buffer for the patient-name input — mirrors TSX 68-73.
   // `setPatientName` trims on every call, and the `onStateChange` re-sync
   // below would snap a just-typed trailing space back, making it impossible
   // to type a space ("John Doe"). So the input is driven by this local
@@ -186,9 +226,12 @@ export class ExportOptionsModalComponent {
   private openerEl: HTMLElement | null = null;
 
   constructor() {
-    // Mirrors TSX 68-80: capture the opener + move focus into the dialog when
-    // it opens, and (re)read hasPerio + caseMeta so the dialog reflects the
-    // current chart every time it opens. Cleanup restores focus to the opener.
+    // Mirrors TSX 78-96: capture the opener + move focus into the dialog when
+    // it opens, and (re)read hasPerio/hasNotes + caseMeta so the dialog
+    // reflects the current chart every time it opens. Exam date defaults to
+    // today (still editable) when the case has none, so a fresh report is
+    // dated without the user having to fill it in. Cleanup restores focus to
+    // the opener.
     effect((onCleanup) => {
       const isOpen = this.open();
       const dialog = this.dialogRef()?.nativeElement;
@@ -196,6 +239,10 @@ export class ExportOptionsModalComponent {
 
       this.openerEl = (document.activeElement as HTMLElement | null) ?? null;
       this.hasPerio.set(hasAnyPerioData());
+      this.hasNotes.set(hasAnyToothNote());
+      if (getCaseMeta().examDate === null) {
+        setExamDate(new Date().toISOString().slice(0, 10));
+      }
       this.caseMeta.set(getCaseMeta());
       this.nameInput.set(getCaseMeta().patientName ?? "");
       focusFirst(dialog);
@@ -205,14 +252,16 @@ export class ExportOptionsModalComponent {
       });
     });
 
-    // Mirrors TSX 85-91: keep the name/exam-date inputs (and the hasPerio
-    // gate) in sync with the engine while the dialog is open.
+    // Mirrors TSX 101-108: keep the name/DOB/exam-date inputs (and the
+    // hasPerio/hasNotes gates) in sync with the engine while the dialog is
+    // open.
     effect((onCleanup) => {
       if (!this.open()) return;
       onCleanup(
         onStateChange(() => {
           this.caseMeta.set(getCaseMeta());
           this.hasPerio.set(hasAnyPerioData());
+          this.hasNotes.set(hasAnyToothNote());
         }),
       );
     });
@@ -243,12 +292,17 @@ export class ExportOptionsModalComponent {
     setPatientName(v.trim() === "" ? null : v);
   }
 
+  protected onPatientDobInput(e: Event): void {
+    const v = (e.target as HTMLInputElement).value;
+    setPatientDob(v === "" ? null : v);
+  }
+
   protected onExamDateInput(e: Event): void {
     const v = (e.target as HTMLInputElement).value;
     setExamDate(v === "" ? null : v);
   }
 
-  // Mirrors TSX 123-133's `handleExport` VERBATIM: commit the (possibly
+  // Mirrors TSX 140-152's `handleExport` VERBATIM: commit the (possibly
   // untrimmed) name buffer, force-AND the perio flags with `hasPerio`
   // (belt-and-suspenders on top of `exportPdf()`'s own internal auto-skip),
   // fire `exportPdf` fire-and-forget (its own rejection is caught and logged,
@@ -266,13 +320,9 @@ export class ExportOptionsModalComponent {
     setPatientName(v.trim() === "" ? null : v);
     const opts: PdfExportOptions = {
       patientData: this.patientData(),
-      // v2.4.0 resync (Task 1): PdfExportOptions' single `odontogram` flag
-      // split into odontogramChart/odontogramDescription/individualNotes.
-      // Mechanical stopgap — this modal's single checkbox still drives all
-      // three until Task 2/4 gives them independent UI.
-      odontogramChart: this.odontogram(),
-      odontogramDescription: this.odontogram(),
-      individualNotes: this.odontogram(),
+      odontogramChart: this.odontogramChart(),
+      odontogramDescription: this.odontogramDescription(),
+      individualNotes: this.individualNotes() && this.hasNotes(),
       perioStatus: this.perioStatus() && this.hasPerio(),
       perioDescription: this.perioDescription() && this.hasPerio(),
     };

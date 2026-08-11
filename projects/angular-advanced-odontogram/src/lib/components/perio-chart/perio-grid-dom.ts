@@ -101,6 +101,12 @@ const LINGUAL_SITES: readonly PerioSite[] = ["ML", "L", "DL"];
 // quadrant order the 4-quadrant plaque mark reads in.
 const PLAQUE_SURFACES: readonly string[] = ["mesial", "distal", "buccal", "lingual"];
 
+// v2.4.0 resync: single-letter surface tag shown as a faint watermark behind
+// each plaque/PI/GI/mPI/mBI marker square, so which surface a mark belongs to
+// is unambiguous. Dental-standard letters — language-neutral, no i18n needed
+// (mirrors `PerioChart.tsx`'s own `SURFACE_LETTER`).
+const SURFACE_LETTER: Record<string, string> = { mesial: "M", distal: "D", buccal: "B", lingual: "L" };
+
 // UI-3a Task 3: does SURFACE "mesial" sit in the LEFT column of a tooth's
 // diamond plaque/grade cell (`.perio-fullgrid-plaque-quad`'s `"mes dis"`
 // middle row)? Mesial always points toward the arch midline. The upper/lower
@@ -227,12 +233,13 @@ export type GridHandlers = {
   onMbiSurface: (toothNo: number, surface: string) => void;
 };
 
-// T3 curve overlay: gather the ordered per-site {pd,gm} readings for one row
-// (buccal MB/B/DB or lingual ML/L/DL) plus each site's x. The 3 sites of a
-// tooth spread evenly across that tooth's width (reusing the SAME per-tooth
-// x/width `archToothLayout` gives the arch teeth, so the curve tracks them):
-// site j lands at x + width*(j+0.5)/3 → the 1/6, 1/2, 5/6 fractions. Reads
-// getToothPerio (active chart) → status/plan aware + live-updates.
+// Gather the ordered per-site {pd,gm} readings for one row (buccal MB/B/DB or
+// lingual ML/L/DL) plus each site's x for the pocket/margin curve. The 3
+// sites of a tooth spread evenly across that tooth's width (reusing the SAME
+// per-tooth x/width `archToothLayout` gives the arch teeth, so the curve
+// tracks them): site j lands at x + width*(j+0.5)/3 → the 1/6, 1/2, 5/6
+// fractions. Reads getToothPerio (active chart) → status/plan aware +
+// live-updates.
 export function collectCurveInput(
   layout: ArchLayout,
   siteKeys: readonly PerioSite[],
@@ -241,13 +248,16 @@ export function collectCurveInput(
   const xs: number[] = [];
   for (const tooth of layout.teeth) {
     const perio = getToothPerio(tooth.toothNo);
+    // v2.4.0 resync: a tooth with ANY charted site on this aspect has its
+    // remaining sites treated as 0 (pd=0, gm=0), so the pocket/margin curve
+    // is drawn fully across the tooth rather than stopping at the first gap.
+    const anyCharted = siteKeys.some((s) => Object.prototype.hasOwnProperty.call(perio.pd, s));
     siteKeys.forEach((site, j) => {
       const charted = Object.prototype.hasOwnProperty.call(perio.pd, site);
-      sites.push({
-        site,
-        pd: charted ? perio.pd[site] : undefined,
-        gm: Object.prototype.hasOwnProperty.call(perio.gm, site) ? perio.gm[site] : undefined,
-      });
+      const pd = charted ? perio.pd[site] : (anyCharted ? 0 : undefined);
+      const gm = pd === undefined ? undefined
+        : (Object.prototype.hasOwnProperty.call(perio.gm, site) ? perio.gm[site] : 0);
+      sites.push({ site, pd, gm });
       xs.push(tooth.x + (tooth.width * (j + 0.5)) / 3);
     });
   }
@@ -926,6 +936,7 @@ export function buildPlaqueCell(
     btn.type = "button";
     btn.id = `perio-fg-plaque-${toothNo}-${surface}`;
     btn.dataset.plaqueSurface = surface;
+    btn.dataset.surfaceLetter = SURFACE_LETTER[surface] ?? "";
     btn.style.gridArea = diamondGridArea(surface, toothNo);
     btn.title = t(`surface.${surface}`);
     btn.setAttribute("aria-label", t(`surface.${surface}`));
@@ -1019,6 +1030,7 @@ export function buildGradeCell(
     btn.type = "button";
     btn.id = `perio-fg-${mapKey}-${toothNo}-${surface}`;
     btn.dataset.gradeSurface = surface;
+    btn.dataset.surfaceLetter = SURFACE_LETTER[surface] ?? "";
     btn.style.gridArea = diamondGridArea(surface, toothNo);
     btn.title = t(`surface.${surface}`);
     btn.setAttribute("aria-label", t(`surface.${surface}`));

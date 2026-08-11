@@ -9,8 +9,10 @@ import { Component, provideZonelessChangeDetection, signal } from "@angular/core
 import { PerioChartComponent } from "./perio-chart.component";
 import { hideInfoPopover } from "./perio-grid-dom";
 import { setI18nLanguage } from "../../core/i18n/useI18n";
+import { loadTemplateCache } from "../../core/perioGraphic";
 import {
   __resetChartStateForTest,
+  __setToothStateForTest,
   setNumberingSystem,
   setReadOnly,
   setPerioSite,
@@ -146,5 +148,41 @@ describe("PerioChartComponent", () => {
     await f.whenStable();
     expect(btn.classList.contains("is-active")).toBe(true);
     expect(btn.getAttribute("aria-checked")).toBe("true");
+  });
+
+  // v2.4.0 resync: `getPerioToothKind` is now threaded into
+  // buildBuccalArchSvg/buildPalatalArchSvg (TSX 1977-1980/2061-2073) — a
+  // "missing" tooth (toothSelection none/no-tooth-after-extraction) is
+  // skipped from the arch tooth-row graphic (its column stays reserved by
+  // the layout, but no tooth artwork is drawn), tracking the live odontogram
+  // instead of the old implant-only predicate that always drew SOMETHING.
+  it("(f) a tooth marked 'missing' in the odontogram is skipped from the arch tooth-row graphic", async () => {
+    __setToothStateForTest(18, { toothSelection: "none" });
+
+    const f = createHost();
+    f.componentInstance.inline.set(true);
+    await f.whenStable();
+    // The graphic effect kicks off `loadTemplateCache().then(...)` on the
+    // SAME cached module-level promise this awaits — by the time this
+    // resolves, the component's own `.then()` callback (registered first,
+    // during the effect above) has already run and populated the arch SVGs.
+    await loadTemplateCache();
+    await f.whenStable();
+    const root: HTMLElement = f.nativeElement;
+
+    // The FIRST buccal-aspect arch svg in document order is UPPER_ARCH's
+    // (grid-build order: upper grid appended before lower, TSX 314-317). Its
+    // row group holds one <g> per DRAWN tooth plus the mm-grid layer + the
+    // pocket/margin curve layer (both non-tooth children, filtered out here
+    // by class so the count reflects tooth groups only).
+    const buccalUpperRow = root.querySelector(
+      "svg.perio-tooth-arch-buccal .perio-tooth-row-buccal",
+    ) as SVGGElement;
+    expect(buccalUpperRow).not.toBeNull();
+    const toothGroups = Array.from(buccalUpperRow.children).filter(
+      (el) => !el.classList.contains("perio-mm-grid") && !el.classList.contains("perio-curve"),
+    );
+    // UPPER_ARCH has 16 teeth; tooth 18 is skipped -> 15 drawn tooth groups.
+    expect(toothGroups.length).toBe(15);
   });
 });

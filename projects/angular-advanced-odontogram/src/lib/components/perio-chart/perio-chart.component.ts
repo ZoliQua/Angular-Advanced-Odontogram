@@ -98,6 +98,7 @@ import {
   setPerioOverlayLayer,
   getPerioRowVisibility,
   getPerioIndexNameMode,
+  getPerioToothKind,
   isToothImplant,
   type PerioCellCoord,
   type PerioOverlayLayer,
@@ -330,10 +331,10 @@ export class PerioChartComponent {
         if (cache) {
           applyArchColumns(this.gridUpperEl, UPPER_ARCH, cache, container);
           applyArchColumns(this.gridLowerEl, LOWER_ARCH, cache, container);
-          this.buccalUpperEl.appendChild(buildBuccalArchSvg(cache, UPPER_ARCH, isToothImplant));
-          this.palatalUpperEl.appendChild(buildPalatalArchSvg(cache, UPPER_ARCH, isToothImplant));
-          this.buccalLowerEl.appendChild(buildBuccalArchSvg(cache, LOWER_ARCH, isToothImplant));
-          this.palatalLowerEl.appendChild(buildPalatalArchSvg(cache, LOWER_ARCH, isToothImplant));
+          this.buccalUpperEl.appendChild(buildBuccalArchSvg(cache, UPPER_ARCH, isToothImplant, undefined, getPerioToothKind));
+          this.palatalUpperEl.appendChild(buildPalatalArchSvg(cache, UPPER_ARCH, isToothImplant, undefined, getPerioToothKind));
+          this.buccalLowerEl.appendChild(buildBuccalArchSvg(cache, LOWER_ARCH, isToothImplant, undefined, getPerioToothKind));
+          this.palatalLowerEl.appendChild(buildPalatalArchSvg(cache, LOWER_ARCH, isToothImplant, undefined, getPerioToothKind));
           drawArchCurves(cache, this.gridUpperEl, UPPER_ARCH);
           drawArchCurves(cache, this.gridLowerEl, LOWER_ARCH);
           const layer = getPerioOverlayLayer();
@@ -396,19 +397,19 @@ export class PerioChartComponent {
         const palatalLower = this.palatalLowerEl;
         if (buccalUpper) {
           buccalUpper.innerHTML = "";
-          buccalUpper.appendChild(buildBuccalArchSvg(cache, UPPER_ARCH, isToothImplant));
+          buccalUpper.appendChild(buildBuccalArchSvg(cache, UPPER_ARCH, isToothImplant, undefined, getPerioToothKind));
         }
         if (palatalUpper) {
           palatalUpper.innerHTML = "";
-          palatalUpper.appendChild(buildPalatalArchSvg(cache, UPPER_ARCH, isToothImplant));
+          palatalUpper.appendChild(buildPalatalArchSvg(cache, UPPER_ARCH, isToothImplant, undefined, getPerioToothKind));
         }
         if (buccalLower) {
           buccalLower.innerHTML = "";
-          buccalLower.appendChild(buildBuccalArchSvg(cache, LOWER_ARCH, isToothImplant));
+          buccalLower.appendChild(buildBuccalArchSvg(cache, LOWER_ARCH, isToothImplant, undefined, getPerioToothKind));
         }
         if (palatalLower) {
           palatalLower.innerHTML = "";
-          palatalLower.appendChild(buildPalatalArchSvg(cache, LOWER_ARCH, isToothImplant));
+          palatalLower.appendChild(buildPalatalArchSvg(cache, LOWER_ARCH, isToothImplant, undefined, getPerioToothKind));
         }
         lastImplantSig = implantSig();
       };
