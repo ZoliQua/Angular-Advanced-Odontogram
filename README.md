@@ -1,7 +1,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-1.0.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -11,7 +11,7 @@
 
 An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angular + TypeScript** — with a full **periodontal charting module**, multi-surface caries/restorations, endodontic/prosthetic states, FDI/Universal/Palmer numbering, **HL7 FHIR R4** export/import, optional ICDAS scoring, and a 12-language UI.
 
-> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Version 1.0.0 has full feature parity with the React module v2.2.0 (payload version 2.19) — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim; only the component shell is Angular-native.
+> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Feature parity with react-advanced-odontogram v2.4.0 (payload version 2.20) — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim; only the component shell is Angular-native.
 
 🔗 **Live demo:** https://angular-advanced-odontogram.vercel.app/ \
 ⚛️ **Original React project:** https://github.com/ZoliQua/React-Odontogram-Modul
@@ -62,6 +62,8 @@ import {
   exportStatus, importStatus,   // JSON state serialization / hydration
   exportFhir, exportSvg, exportImage,
   setReadOnly, startIntroTour,
+  enablePersistence, disablePersistence,
+  clearPersistedState, isPersistenceEnabled,  // opt-in localStorage persistence (host-wired)
 } from "angular-advanced-odontogram";
 ```
 
@@ -82,7 +84,8 @@ Per-site probing depth, gingival margin, bleeding on probing (+ suppuration) at 
 - 🔍 Multi-surface caries & fillings (ICDAS / CARS severity, root & radiographic caries), endo & AAE pulp diagnosis, apical diagnosis, peri-implant status, wear, discoloration, orthodontics
 - 🩺 Full periodontal module (see above) + 2017 classification
 - 🔗 **HL7 FHIR R4** export/import; JSON export/import with migrations — round-trip compatible with [`react-advanced-odontogram`](https://github.com/ZoliQua/React-Odontogram-Modul)
-- 🖼️ PNG / JPG / SVG chart export and a **PDF report** (jsPDF)
+- 🖼️ PNG / JPG / SVG chart export and a configurable **PDF report** (jsPDF) — per-section layout/content settings, multilingual PDF fonts (Arabic shaping, CJK), and individual per-tooth notes in exports
+- 💾 Opt-in **localStorage persistence** API (host-wired, off by default) · 🗂️ collapsible panel cards · 🎛️ availability controls for export/import formats, Plan mode, and the periodontal chart
 - 🔢 FDI / Universal / Palmer numbering · 🌐 12 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, Arabic RTL) · 🎨 theming via `--odon-*` CSS variables · 🧩 plugin system · ⌨️ keyboard accessibility
 
 ## 📖 Documentation

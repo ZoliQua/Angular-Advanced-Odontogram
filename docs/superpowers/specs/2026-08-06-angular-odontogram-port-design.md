@@ -111,12 +111,14 @@ documented in the affected spec's own header comment:
    Ported using the corrected assertions.
 
 The core re-sync decision has been made (owner decision 2026-08-07): 1.0.0
-pins v2.2.0. **Parity target updated (owner decision 2026-08-11): 1.1.0
+pinned v2.2.0. **Resync delivered (owner decision 2026-08-11, Phase 6): 1.1.0
 resyncs to v2.4.0** (`$ENGINE` HEAD `f9b45fc`, superseding the originally
 scheduled v2.2.1 target — the source repo moved further before this resync
-landed). Payload stays 2.20-compatible; FHIR/roundtrip/SVG-fingerprint
-goldens were regenerated upstream and re-copied verbatim (Phase 6 Task 1,
-2026-08-11) — see §10's deferred list.
+landed). Payload is 2.20; FHIR/roundtrip/SVG-fingerprint goldens were
+regenerated upstream and re-copied verbatim (Phase 6 Task 1, 2026-08-11) and
+re-verified green through the full Phase 6 burn-down (Task 5) — see
+`docs/superpowers/specs/1.1.0-acceptance.md` for the evidence and §10 for
+what remains deferred beyond this release.
 
 ## 3. Target workspace
 
@@ -331,7 +333,21 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
 
 ## 10. Later / explicitly deferred
 
-- 1.1.0: resync to react-advanced-odontogram v2.2.1 (payload 2.20 — patientDob, individual notes, PDF-dialog DOB/split options, Plan-mode gating, bridge lower-arch fix); closes §2's deferred core re-sync decision (owner decision 2026-08-07: 1.0.0 pins v2.2.0).
+- **1.1.0 — DELIVERED (Phase 6, 2026-08-11):** resync to
+  react-advanced-odontogram v2.4.0 (payload 2.20 — patientDob, individual
+  notes, PDF-dialog DOB/split options, Plan-mode/perio-chart availability
+  gating, filling-material/fissure-sealing settings, PDF-report settings +
+  multilingual PDF fonts, collapsible panel cards, and the bridge lower-arch
+  saddle re-anchoring); closed §2's deferred core re-sync decision (owner
+  decision 2026-08-07: 1.0.0 pinned v2.2.0; owner decision 2026-08-11:
+  target moved to v2.4.0 since the source repo advanced past v2.2.1 before
+  this resync landed). See `docs/superpowers/specs/1.1.0-acceptance.md`.
+- A further resync beyond v2.4.0 will be due in a future release — `$ENGINE`
+  kept advancing past the `f9b45fc` pin during Phase 6's execution window
+  (see §2's known-drift note).
+- Persistence demo wiring: the new opt-in `enablePersistence` API is not
+  wired into the `demo` app shell (upstream doesn't wire it into its shell
+  either — host-opt-in by design); a demo toggle could come later if wanted.
 - Remaining 10 README translations (after 1.0.0 content settles).
 - Any shared-core extraction with the React repo (revisit only if dual
   maintenance becomes painful).

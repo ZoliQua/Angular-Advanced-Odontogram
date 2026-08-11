@@ -1,7 +1,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Verzió](https://img.shields.io/badge/version-1.0.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Verzió](https://img.shields.io/badge/version-1.1.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![Licenc](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -11,7 +11,7 @@
 
 Interaktív, SVG-alapú **fogászati odontogram- (fogtérkép-) szerkesztő** **Angular + TypeScript** alapon — teljes **parodontális charting modullal**, többfelszínes caries/restaurációs jelöléssel, endodonciai/protetikai állapotokkal, FDI/Universal/Palmer számozással, **HL7 FHIR R4** exporttal/importtal, opcionális ICDAS-pontozással és 12 nyelvű felülettel.
 
-> **Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) hivatalos Angular portja** (npm: `react-advanced-odontogram`). Az 1.0.0 teljes funkcionális paritásban van a React modul v2.2.0-jával (payload verzió 2.19) — a JSON- és FHIR R4-exportok oda-vissza kompatibilisek a két könyvtár között. A klinikai motor szó szerint közös; csak a komponens-héj Angular-natív.
+> **Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) hivatalos Angular portja** (npm: `react-advanced-odontogram`). Teljes funkcionális paritásban van a react-advanced-odontogram v2.4.0-jával (payload verzió 2.20) — a JSON- és FHIR R4-exportok oda-vissza kompatibilisek a két könyvtár között. A klinikai motor szó szerint közös; csak a komponens-héj Angular-natív.
 
 🔗 **Élő demó:** https://angular-advanced-odontogram.vercel.app/ \
 ⚛️ **Eredeti React projekt:** https://github.com/ZoliQua/React-Odontogram-Modul
@@ -62,6 +62,8 @@ import {
   exportStatus, importStatus,   // JSON állapot-szerializáció / -visszatöltés
   exportFhir, exportSvg, exportImage,
   setReadOnly, startIntroTour,
+  enablePersistence, disablePersistence,
+  clearPersistedState, isPersistenceEnabled,  // opcionális localStorage-perzisztencia (host által bekötve)
 } from "angular-advanced-odontogram";
 ```
 
@@ -82,7 +84,8 @@ Helyenkénti szondázási mélység, ínyszél és szondázási vérzés (+ supp
 - 🔍 Többfelszínes caries és tömések (ICDAS / CARS súlyosság, gyökér- és radiográfiai caries), endodoncia és AAE pulpadiagnózis, apikális diagnózis, periimplantális státusz, kopás, elszíneződés, fogszabályozás
 - 🩺 Teljes parodontális modul (lásd fent) + 2017-es klasszifikáció
 - 🔗 **HL7 FHIR R4** export/import; JSON export/import migrációkkal — oda-vissza kompatibilis a [`react-advanced-odontogram`](https://github.com/ZoliQua/React-Odontogram-Modul) csomaggal
-- 🖼️ PNG / JPG / SVG chart-export és **PDF-riport** (jsPDF)
+- 🖼️ PNG / JPG / SVG chart-export és konfigurálható **PDF-riport** (jsPDF) — szekciónkénti elrendezés-/tartalombeállítások, többnyelvű PDF-fontok (arab shaping, CJK) és egyedi, fogankénti jegyzetek az exportokban
+- 💾 Opcionális **localStorage-perzisztencia** API (host által bekötve, alapból kikapcsolva) · 🗂️ összecsukható panelkártyák · 🎛️ elérhetőség-vezérlők az export/import formátumokhoz, a Terv módhoz és a parodontális charthoz
 - 🔢 FDI / Universal / Palmer számozás · 🌐 12 nyelvű felület (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, arab RTL) · 🎨 témázás `--odon-*` CSS-változókkal · 🧩 plugin-rendszer · ⌨️ billentyűzetes akadálymentesség
 
 ## 📖 Dokumentáció
