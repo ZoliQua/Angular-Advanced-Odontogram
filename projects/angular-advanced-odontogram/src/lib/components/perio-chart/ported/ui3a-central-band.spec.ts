@@ -3,18 +3,22 @@
 // Same mount route as the sibling ported files in this directory (see
 // ../perio-p2-grid.spec.ts's header comment for the full rationale).
 //
-// DRIFT (frozen corpus vs live $ENGINE), same class as Task 5's
-// ui1-perio-sidebar finding: the frozen copy's "band-orientation legend"
-// describe block asserts a SINGLE `.perio-fullgrid-band-label` containing
-// both "▲ Buccal ▲" and "▼ Lingual / Palatal ▼" text. The live component
-// (`$ENGINE/src/PerioChart.tsx` 1291-1353, byte-identical to this repo's
-// `perio-grid-dom.ts` 1225-1287) renders TWO separate band-label elements —
-// one above the band (buccal only) and one below (lingual/palatal only).
-// Verified against the live, currently-green test at
-// `$ENGINE/src/__tests__/ui3a-central-band.test.ts` (140-152), which asserts
-// the two-label shape and was updated accordingly (its own "row-label cell
-// empty" and DOM-order/visibility describes are otherwise unchanged from the
-// frozen copy). Ported using the corrected, live assertions.
+// DRIFT — RESOLVED at v2.4.0 (Task 5, v2.4.0 resync): at the time this file
+// was originally ported (pre-resync), the frozen copy's "band-orientation
+// legend" describe block asserted a SINGLE `.perio-fullgrid-band-label`
+// containing both "▲ Buccal ▲" and "▼ Lingual / Palatal ▼" text, while the
+// live component rendered TWO separate band-label elements (one above the
+// band, buccal only; one below, lingual/palatal only). This spec was ported
+// using the corrected (then-live) two-label assertions instead of the
+// frozen corpus's stale single-label ones.
+//
+// As of the v2.4.0 resync (Task 1, pin f9b45fc), `$ENGINE` IS the frozen
+// source of truth again — `core/__tests__/ui3a-central-band.test.ts`'s
+// "UI-3a Task 2: band-orientation legend" describe block now natively
+// asserts the same two-label shape this spec already had (`bandLabels.length
+// === 2`, top = buccal, bottom = lingual/palatal). The upstream divergence
+// this note originally flagged is gone; the frozen-copy caveat above no
+// longer applies — kept for history only.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, provideZonelessChangeDetection } from "@angular/core";

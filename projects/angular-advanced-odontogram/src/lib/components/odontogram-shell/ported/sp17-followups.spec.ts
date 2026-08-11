@@ -2,6 +2,19 @@
 // (swept into REACT_DEPENDENT by the exclusion grep's "useI18n" keyword
 // match only) — verbatim port, import paths adjusted for
 // components/odontogram-shell/ported/.
+//
+// DRIFT NOTE (Task 5, v2.4.0 resync): Fix #3's expected value changed. The
+// v2.2.0-era corpus asserted the recon-measured SADDLE_Y_FRACTION_LOWER of
+// 0.19; at the pinned v2.4.0 commit (f9b45fc) upstream re-anchored it back
+// to the TRUE geometric mirror of the upper fraction (`1 - SADDLE_Y_FRACTION`
+// = 0.28000000000000003 in JS float), per `bridgeOverlay.ts`'s own comment
+// ("2.2.1: the recon-measured 0.19 sat too high on the lower abutment vs the
+// well-fitting upper saddle..."). This is a REAL upstream visual-behavior
+// change (the lower-arch bridge-saddle bar moves vertically), not test
+// staleness — flagged here for owner sign-off at final review. Assertion
+// updated to mirror `core/__tests__/sp17-followups.test.ts`'s own current
+// expectation exactly (`toBe(1 - SADDLE_Y_FRACTION)`, both sides derived
+// from the same module-scope constants so exact equality holds).
 import { describe, it, expect, afterEach } from "vitest";
 import {
   setPulpDetailLevel,
@@ -12,7 +25,7 @@ import {
   __setToothStateForTest,
 } from "../../../core/odontogram";
 import { setI18nLanguage, t } from "../../../core/i18n/useI18n";
-import { SADDLE_Y_FRACTION_LOWER } from "../../../core/bridgeOverlay";
+import { SADDLE_Y_FRACTION_LOWER, SADDLE_Y_FRACTION } from "../../../core/bridgeOverlay";
 
 setI18nLanguage("en");
 
@@ -28,6 +41,17 @@ describe("Fix #1: setPulpDetailLevel live-refresh", () => {
       setPulpDetailLevel("latin");
       expect(fired).toBe(true);
       expect(getPulpDetailLevel()).toBe("latin");
+    } finally {
+      unsub();
+    }
+  });
+
+  it("does NOT fire notifyStateChange when the level is already the same (idempotent)", () => {
+    let fired = false;
+    const unsub = onStateChange(() => { fired = true; });
+    try {
+      setPulpDetailLevel("aae");
+      expect(fired).toBe(false);
     } finally {
       unsub();
     }
@@ -77,7 +101,9 @@ describe("Fix #2: crown-leakage summary line gated on restorationType crown/brid
 });
 
 describe("Fix #3: lower-arch bridge saddle Y fraction", () => {
-  it("SADDLE_Y_FRACTION_LOWER is the recon-measured 0.19, not the old mirrored 0.28", () => {
-    expect(SADDLE_Y_FRACTION_LOWER).toBe(0.19);
+  // v2.4.0: re-anchored to the TRUE geometric mirror of the proven upper
+  // value (see the header DRIFT NOTE above) — was the recon-measured 0.19.
+  it("SADDLE_Y_FRACTION_LOWER mirrors the upper fraction (1 - SADDLE_Y_FRACTION)", () => {
+    expect(SADDLE_Y_FRACTION_LOWER).toBe(1 - SADDLE_Y_FRACTION);
   });
 });

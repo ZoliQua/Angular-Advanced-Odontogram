@@ -10,30 +10,23 @@
 // ODONTOGRAM_ENGINE_LIFECYCLE DI-faked (fake-tooth-svg injection, mirroring
 // the source's vi.mock init); everything else real.
 //
-// STALENESS NOTE (flagged for the reviewer): the frozen corpus copy of this
-// file at core/__tests__/ui1-perio-sidebar.test.tsx is OLDER than the live
-// engine source it was originally transcribed from — a `diff` against the
-// live $ENGINE/src/__tests__/ui1-perio-sidebar.test.tsx (which the live
-// suite runs green) shows only this file's "perio (Dental Chart) view"
-// test differs, and non-trivially: the frozen copy asserts
-// `document.getElementById("statusCard")).toBeNull()` /
-// `document.getElementById("toothSelect")).toBeNull()` when the Dental
-// Chart view is active, i.e. that the odontogram controls panel is FULLY
-// UNMOUNTED. That directly contradicts (a) the live App.tsx itself (its own
-// comment at the isPerioView branch: "Keep the odontogram control panel
-// ALWAYS mounted, toggling only its visibility with CSS. Unmounting it on
-// the perio toggle produced fresh DOM nodes whose one-time wireControls()
-// listeners were never re-attached..."), (b) the current live version of
-// THIS SAME test file (which instead asserts `.panel-odontogram-controls`
-// stays mounted with `display: none`, `#statusCard`/`#toothSelect` both
-// still truthy), and (c) the OTHER five files ported alongside this one in
-// this same task (perio-graphical-presentation.spec.ts's own "hides
-// .chart-column via CSS... but keeps... mounted" tests, run against the
-// exact same shell wiring). The frozen copy is a stale pre-CSS-hide
-// snapshot. Ported here using the CORRECTED (live, currently-passing)
-// assertions — verified by running `npx vitest run
-// src/__tests__/ui1-perio-sidebar.test.tsx` directly against the read-only
-// $ENGINE checkout, which passes 10/10 with the corrected test body.
+// STALENESS NOTE — RESOLVED at v2.4.0 (Task 5, v2.4.0 resync): at the time
+// this file was originally ported (pre-resync), the frozen corpus copy of
+// core/__tests__/ui1-perio-sidebar.test.tsx was OLDER than the live engine
+// source it was transcribed from, and asserted that the odontogram controls
+// panel was FULLY UNMOUNTED (`#statusCard`/`#toothSelect` both `null`) when
+// the Dental Chart view was active — contradicting App.tsx's own
+// "always mounted, CSS-hidden" design and the live test suite of the day.
+// This spec was ported using the corrected (then-live) assertions instead
+// of the frozen corpus's stale ones.
+//
+// As of the v2.4.0 resync (Task 1, pin f9b45fc), `$ENGINE` IS the frozen
+// source of truth again — `core/__tests__/ui1-perio-sidebar.test.tsx` now
+// natively asserts the same "always mounted, `display: none`" shape this
+// spec already had (see its own "perio (Dental Chart) view" describe block,
+// `.panel-odontogram-controls` + truthy `#statusCard`/`#toothSelect`). The
+// upstream divergence this note originally flagged is gone; the
+// frozen-copy caveat above no longer applies — kept for history only.
 import { describe, it, expect, beforeEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { provideZonelessChangeDetection } from "@angular/core";
