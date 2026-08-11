@@ -26,7 +26,7 @@ describe("SP12 Task 1: discoloration axis + round-trip", () => {
   it("JSON export stamps 2.9 + round-trips discoloration", () => {
     __setToothStateForTest(11, { toothSelection: "tooth-base", discoloration: "tetracycline" });
     const payload = __collectExportPayloadForTest();
-    expect(payload.version).toBe("2.19");
+    expect(payload.version).toBe("2.20");
     expect(payload.teeth[11].discoloration).toBe("tetracycline");
   });
   it("hydrate reads it back; unknown → none; legacy → none", () => {

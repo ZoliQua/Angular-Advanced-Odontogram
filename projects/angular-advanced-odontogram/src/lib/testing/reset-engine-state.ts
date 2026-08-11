@@ -67,7 +67,12 @@ import {
   __resetChartStateForTest,
   __setActiveToothForTest,
   closePerioOverlay,
+  setFillingComplexity,
+  setFillingDefectEnabled,
+  setFillingMaterialAvailability,
+  setFissureSealingEnabled,
   setNumberingSystem,
+  setPdfSettings,
   setPerioIndexNameMode,
   setPerioOverlayLayer,
   setPerioRowVisibility,
@@ -76,6 +81,7 @@ import {
   type PerioRowId,
 } from "../core/odontogram";
 import { setI18nLanguage } from "../core/i18n/useI18n";
+import { DEFAULT_PDF_THEME } from "../core/perioPdf";
 
 // Phase 3 Task 3: the Settings -> Periodontal tab's two module-level
 // singletons (`core/odontogram.ts`'s `perioRowVisibility`/`perioIndexNameMode`)
@@ -91,6 +97,16 @@ const ALL_PERIO_ROW_IDS: readonly PerioRowId[] = [
   "plaque", "bop", "cal", "gm", "pd", "furcation", "mobility", "cej",
   "rootConcavity", "pi", "gi", "mpi", "mbi", "kg", "gt", "miller",
 ];
+
+// v2.4.0 resync (Task 2): the Fillings-tab session-config singletons
+// (`core/odontogram.ts`'s `fillingDefectEnabled`/`fillingComplexity`/
+// `fissureSealingEnabled`/`fillingMaterialAvail`) — same leak class as the
+// perio-settings singletons above; each is a module-level flag with a public
+// setter but no bulk-reset export, so a spec (e.g.
+// `odontogram-shell.component.spec.ts`'s Task 3 describe block, or a future
+// Settings -> Fillings tab spec) that flips one leaks it to every later spec
+// in the same `test.isolate: false` run.
+const ALL_FILLING_MATERIALS = ["amalgam", "composite", "gic", "temporary"] as const;
 
 /** Resets every known core/odontogram + i18n singleton to its default state.
  *  Exported (not just used internally) so a spec file can call it mid-test
@@ -120,6 +136,42 @@ export function resetEngineStateForTest(): void {
   // `defaultPerioRowVisibility()` / `let perioIndexNameMode = "translated"`).
   for (const id of ALL_PERIO_ROW_IDS) setPerioRowVisibility(id, true);
   setPerioIndexNameMode("translated");
+  // Fillings-tab session-config singletons (Task 2): every field back to its
+  // own module default (see `core/odontogram.ts`'s `let fillingDefectEnabled
+  // = true`, `let fillingComplexity: ... = "complex"`, etc.).
+  setFillingDefectEnabled(true);
+  setFillingComplexity("complex");
+  setFissureSealingEnabled(true);
+  for (const material of ALL_FILLING_MATERIALS) setFillingMaterialAvailability(material, true);
+  // PDF export settings singleton (Task 2) — no bulk-reset export either, so
+  // restore every field to its own module default (see
+  // `core/odontogram.ts`'s `const pdfSettings: PdfSettings = {...}`).
+  setPdfSettings({
+    defaultName: "John Doe",
+    defaultDob: "1980-01-01",
+    showAge: true,
+    dateFormat: "iso",
+    colorTheme: DEFAULT_PDF_THEME,
+    showBone: true,
+    showHealthyPulp: true,
+    toothSpacing: "medium",
+    border: false,
+    borderThickness: "medium",
+    borderColor: "#000000",
+    toothNumberSize: "normal",
+    includeOdontogramText: true,
+    includeOdontogramTable: true,
+    perioToothSpacing: "medium",
+    perioShowEmptyRows: false,
+    perioLabelPlacement: "center",
+    perioFontSize: "normal",
+    includePerioTable: true,
+    includePerioAbbrev: true,
+    showDisclaimer: true,
+    disclaimerText: "",
+    showGenerator: true,
+    summaryGrouping: "jaw",
+  });
   // Dark-mode DOM class some shell specs flip on `document.documentElement`.
   document.documentElement.classList.remove("dark");
   // Perio overlay singletons (session-level, shared across specs).

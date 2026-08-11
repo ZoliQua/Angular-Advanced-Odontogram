@@ -39,17 +39,20 @@ import {
   cancelDualStateConfirm,
   closePerioOverlay,
   formatToothLabel,
+  getChartMode,
   getPerioRowVisibility,
   getToothPerio,
   isDualStateConfirmPending,
   isPerioOverlayOpen,
   openPerioOverlay,
   setChartMode,
+  setNotesEnabled,
   setNumberingSystem,
   setPerioSite,
   setPerioViewMode,
 } from "../../core/odontogram";
 import { setI18nLanguage, t } from "../../core/i18n/useI18n";
+import type { SettingsState } from "../settings-modal/settings-modal.component";
 
 const initOdontogram = vi.fn().mockResolvedValue(undefined);
 const destroyOdontogram = vi.fn();
@@ -90,6 +93,10 @@ const MUST_HAVE_IDS = [
   "cariesSubcrownRow", "rootCariesRow", "rootCariesSelect",
   // fillingSection
   "fillingSection", "btnToggleFillingCard", "fillingSelect", "fillingSurfaceChecks",
+  // v2.4.0 resync (Task 2): "simple" complexity skeleton rows — unconditionally
+  // mounted (hidden via a `.hidden` class, like fillingSurfaceChecks above),
+  // not a conditional housing.
+  "fillingSimpleRow", "fillingSimpleToggle", "fillingSimpleDefectRow", "fillingSimpleDefectSelect",
   "fissureSealingRow", "fissureSealing", "fillingSubcariesSummary", "fillingDefectSummary",
   // rootPeriodontiumSection
   "rootPeriodontiumSection", "btnToggleRootPeriodontiumCard", "rpRootBlock", "pulpEndoRow",
@@ -654,5 +661,204 @@ describe("OdontogramShellComponent Phase 4 Task 5: PerioChart/PerioSidebar housi
 
     expect(f.nativeElement.querySelector("#perioOverlay")).toBeNull();
     expect(isPerioOverlayOpen()).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 2 (v2.4.0 resync): App.tsx shell deltas — availability gating, the
+// grouped dentition table + individual notes replacing permanentList/
+// missingList, and the selection-colour/border custom CSS properties on
+// #toothGrid. Same DI-fake-lifecycle-only, real-engine-everywhere-else route
+// as the Task 3/5 describe blocks above.
+//
+// The new session-only UI signals (export/import availability,
+// planModeAvailable, perioChartAvailable, screenSpacing/screenNumberSize,
+// selectionColor/selectionBorderStyle) have no dedicated Settings-modal UI
+// yet — that reorg is Task 3's job (SettingsModal.tsx's own delta). These
+// tests drive the new fields through the component's own `settingsState()`
+// handlers instead — the exact same seam `SettingsModalComponent`'s
+// `[settings]` input binds to once Task 3 wires the UI, so this pins the
+// shell-side contract those future controls will call into.
+// ---------------------------------------------------------------------------
+describe("OdontogramShellComponent Task 2: v2.4.0 App shell deltas", () => {
+  beforeEach(() => {
+    initOdontogram.mockClear();
+    destroyOdontogram.mockClear();
+    __resetChartStateForTest();
+    setI18nLanguage("en");
+    document.documentElement.classList.remove("dark");
+    closePerioOverlay();
+    setPerioViewMode("toggle");
+    TestBed.configureTestingModule({
+      imports: [OdontogramShellComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        {
+          provide: ODONTOGRAM_ENGINE_LIFECYCLE,
+          useValue: { init: initOdontogram, destroy: destroyOdontogram },
+        },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    setNotesEnabled(false);
+  });
+
+  // `settingsState` is `protected` (same seam `SettingsModalComponent`'s
+  // `[settings]` input reads) — cast to reach it directly from the spec,
+  // matching this file's existing `(x as any)` precedent for internal-only
+  // test seams (see ported/ds1-confirm.spec.ts).
+  function settings(f: ReturnType<typeof TestBed.createComponent>): SettingsState {
+    return (f.componentInstance as unknown as { settingsState: () => SettingsState }).settingsState();
+  }
+
+  it('brand logo renders as an <img class="brand-logo"> (App.tsx 40-43/519)', async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+
+    const logo = f.nativeElement.querySelector(".brand img.brand-logo") as HTMLImageElement;
+    expect(logo).not.toBeNull();
+    expect(logo.src).toContain("data:image/png;base64,");
+    expect(f.nativeElement.querySelector(".brand .dot")).toBeNull(); // old placeholder gone
+  });
+
+  it("perioChartAvailable(false) hides .perio-launch-bar; planModeAvailable(false) hides #chartModeToggle (App.tsx 668-670/745-750)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    const launchBar = f.nativeElement.querySelector(".perio-launch-bar") as HTMLElement;
+    const modeToggle = f.nativeElement.querySelector("#chartModeToggle") as HTMLElement;
+    expect(launchBar.classList.contains("hidden")).toBe(false);
+    expect(modeToggle.classList.contains("hidden")).toBe(false);
+
+    settings(f).onPerioChartAvailable(false);
+    settings(f).onPlanModeAvailable(false);
+    await f.whenStable();
+
+    expect(launchBar.classList.contains("hidden")).toBe(true);
+    expect(modeToggle.classList.contains("hidden")).toBe(true);
+  });
+
+  it("export/import format availability hides the matching dropdown menu items (App.tsx 668-683/691-692)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+
+    settings(f).onExportPng(false);
+    settings(f).onExportJpg(false);
+    settings(f).onImportFhir(false);
+    await f.whenStable();
+
+    (f.nativeElement.querySelector("#btnExportMenu") as HTMLButtonElement).click();
+    await f.whenStable();
+    const exportGroup = f.nativeElement.querySelectorAll(".topbar-group.dropdown")[1] as HTMLElement;
+    const exportLabels = Array.from(exportGroup.querySelectorAll(".dropdown-item")).map(
+      (b) => b.textContent,
+    );
+    expect(exportLabels).not.toContain(t("export.menu.png"));
+    expect(exportLabels).not.toContain(t("export.menu.perioPng")); // reuses the exportPng flag
+    expect(exportLabels).not.toContain(t("export.menu.jpg"));
+    expect(exportLabels).toContain(t("export.menu.svg")); // untouched flag stays enabled
+    expect(exportLabels).toContain(t("export.menu.pdf"));
+
+    (f.nativeElement.querySelector("#btnImportMenu") as HTMLButtonElement).click();
+    await f.whenStable();
+    const importGroup = f.nativeElement.querySelectorAll(".topbar-group.dropdown")[2] as HTMLElement;
+    const importLabels = Array.from(importGroup.querySelectorAll(".dropdown-item")).map(
+      (b) => b.textContent,
+    );
+    expect(importLabels).not.toContain(t("import.menu.fhir"));
+    expect(importLabels).toContain(t("import.menu.statusJson"));
+  });
+
+  it("onPlanModeAvailable(false) auto-reverts an active plan-mode chart to status (App.tsx 550-556)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    setChartMode("plan");
+    expect(getChartMode()).toBe("plan");
+
+    settings(f).onPlanModeAvailable(false);
+
+    expect(getChartMode()).toBe("status");
+  });
+
+  it("onPerioChartAvailable(false) auto-closes the perio overlay and reverts to the odontogram view (App.tsx 561-567)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    (f.nativeElement.querySelector("#appViewDentalChart") as HTMLButtonElement).click();
+    await f.whenStable();
+    expect(f.nativeElement.querySelector(".dental-chart-column")).not.toBeNull();
+
+    settings(f).onPerioChartAvailable(false);
+    await f.whenStable();
+
+    expect(f.nativeElement.querySelector(".dental-chart-column")).toBeNull();
+    expect(isPerioOverlayOpen()).toBe(false);
+  });
+
+  it("#toothGrid carries the screen-spacing/tooth-number data attrs and the selection colour/border custom CSS properties (App.tsx 785-796)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    const grid = f.nativeElement.querySelector("#toothGrid") as HTMLElement;
+
+    expect(grid.getAttribute("data-screen-spacing")).toBe("normal");
+    expect(grid.getAttribute("data-tooth-num")).toBe("normal");
+    expect(grid.style.getPropertyValue("--odon-select-rgb")).toBe("59,123,255");
+    expect(grid.style.getPropertyValue("--odon-select-border-style")).toBe("dashed");
+
+    settings(f).onScreenToothSpacing("wide");
+    settings(f).onScreenToothNumberSize("xlarge");
+    settings(f).onSelectionColor("#ff0000");
+    settings(f).onSelectionBorderStyle("dotted");
+    await f.whenStable();
+
+    expect(grid.getAttribute("data-screen-spacing")).toBe("wide");
+    expect(grid.getAttribute("data-tooth-num")).toBe("xlarge");
+    expect(grid.style.getPropertyValue("--odon-select-rgb")).toBe("255,0,0");
+    expect(grid.style.getPropertyValue("--odon-select-border-style")).toBe("dotted");
+  });
+
+  it("the tooth-info card renders a grouped dentition table + individual notes from the REAL getOdontogramSummary(), replacing permanentList/missingList (App.tsx 787-834)", async () => {
+    __setToothStateForTest(16, {
+      toothSelection: "tooth-base",
+      caries: ["caries-occlusal"],
+      note: "watch this one",
+    });
+
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    // `notesEnabled` is driven by the `enableNotes` input (App.tsx 347-350's
+    // effect calls `setNotesEnabled(enableNotes ?? false)` unconditionally at
+    // construction) — set it here rather than calling `setNotesEnabled`
+    // directly, which that effect would immediately stomp back to false.
+    f.componentRef.setInput("enableNotes", true);
+    await f.whenStable();
+
+    const table = f.nativeElement.querySelector(".tooth-info-table");
+    expect(table).not.toBeNull();
+    const problemCell = table.querySelector(".tooth-cell-problem");
+    expect(problemCell).not.toBeNull();
+    expect(problemCell.textContent).toContain(formatToothLabel(16));
+
+    const notesBox = f.nativeElement.querySelector("#toothInfoNotes");
+    expect(notesBox).not.toBeNull();
+    expect(notesBox.textContent).toContain("watch this one");
+    expect(notesBox.textContent).toContain(formatToothLabel(16));
+
+    // The old flat paragraphs are gone from the DOM entirely (App.tsx no
+    // longer renders permanentList/missingList — replaced by the table above).
+    expect(f.nativeElement.querySelector(".tooth-info-list")).toBeNull();
+  });
+
+  it("the fillingSimple* skeleton rows are unconditionally mounted, hidden via a class (App.tsx 1091-1105)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+
+    const row = f.nativeElement.querySelector("#fillingSimpleRow") as HTMLElement;
+    const defectRow = f.nativeElement.querySelector("#fillingSimpleDefectRow") as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.classList.contains("hidden")).toBe(true);
+    expect(f.nativeElement.querySelector("#fillingSimpleToggle")).not.toBeNull();
+    expect(defectRow).not.toBeNull();
+    expect(defectRow.classList.contains("hidden")).toBe(true);
+    expect(f.nativeElement.querySelector("#fillingSimpleDefectSelect")).not.toBeNull();
   });
 });

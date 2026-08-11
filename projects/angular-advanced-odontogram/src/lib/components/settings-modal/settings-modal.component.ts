@@ -31,6 +31,7 @@ import { focusFirst, nextDialogTitleId, trapTabKey } from "../shared/dialog-focu
 import type { Language } from "../../core/i18n/translations";
 import type { NumberingSystem } from "../../core/utils/numbering";
 import type {
+  PdfSettings,
   PerioIndexNameMode,
   PerioRowId,
   PerioViewMode,
@@ -42,10 +43,29 @@ import type {
   ToothDetailLevel,
 } from "../../core/odontogram";
 
+// v2.4.0 resync (Task 2): the four small value-type aliases SettingsModal.tsx
+// exports alongside its `SettingsState` (TSX 42-48) — ported verbatim so the
+// interface fields below can reference them. The UI these types drive
+// (dedicated Settings-modal rows) is Task 3's reorg; this task only needs the
+// types + interface fields to exist so `OdontogramShellComponent`'s extended
+// `settingsState` computed (App.tsx 474-570's delta) type-checks.
+/** On-screen odontogram layout controls (distinct from the PDF/export
+ *  equivalents). Spacing = inter-tooth gap in the live grid; number size = the
+ *  tooth-number font size. Session-only, pure CSS via data-attributes on the
+ *  `#toothGrid` element. */
+export type ScreenToothSpacing = "wide" | "normal" | "close";
+export type ScreenToothNumberSize = "small" | "normal" | "xlarge";
+/** Selection-ring border style (default dashed). */
+export type SelectionBorderStyle = "solid" | "dashed" | "dotted";
+/** Fillings card complexity — "complex" = per-surface grid (default), "simple"
+ *  = one filled/not-filled toggle for the whole tooth. */
+export type FillingComplexity = "complex" | "simple";
+
 /**
  * The full set of live setting values + change handlers the modal drives.
- * Field-for-field identical to SettingsModal.tsx's `SettingsState` (29-68) —
- * every field maps 1:1 to an existing app-level piece of state.
+ * Field-for-field identical to SettingsModal.tsx's `SettingsState` (52-135,
+ * v2.4.0 pin `f9b45fc`) — every field maps 1:1 to an existing app-level piece
+ * of state.
  *
  * NOTE for the host wiring this up (Task 3, OdontogramShellComponent): unlike
  * React re-rendering from scratch, Angular's `[checked]`/`[selected]`
@@ -66,6 +86,22 @@ export interface SettingsState {
   onToggleDark: () => void;
   toothInfo: boolean;
   onToothInfo: (value: boolean) => void;
+  // Per-format export availability + per-source import availability
+  // (v2.4.0 resync, Task 2). When a format/source is off, its export/import
+  // menu item is hidden; when PDF is off, the Export Settings tab is also
+  // disabled (Task 3's reorg wires that gate).
+  exportPng: boolean;
+  onExportPng: (value: boolean) => void;
+  exportJpg: boolean;
+  onExportJpg: (value: boolean) => void;
+  exportSvg: boolean;
+  onExportSvg: (value: boolean) => void;
+  exportPdf: boolean;
+  onExportPdf: (value: boolean) => void;
+  importStatus: boolean;
+  onImportStatus: (value: boolean) => void;
+  importFhir: boolean;
+  onImportFhir: (value: boolean) => void;
   secondaryCariesMode: SecondaryCariesMode;
   onSecondaryCariesMode: (value: SecondaryCariesMode) => void;
   icdas: boolean;
@@ -76,6 +112,11 @@ export interface SettingsState {
   onRootCariesMode: (value: RootCariesMode) => void;
   radiographicDepthMode: RadiographicDepthMode;
   onRadiographicDepthMode: (value: RadiographicDepthMode) => void;
+  // Adjustable tooth-selection colour + border style (v2.4.0 resync, Task 2).
+  selectionColor: string;
+  onSelectionColor: (value: string) => void;
+  selectionBorderStyle: SelectionBorderStyle;
+  onSelectionBorderStyle: (value: SelectionBorderStyle) => void;
   pulpLevel: PulpDetailLevel;
   onPulpLevel: (value: PulpDetailLevel) => void;
   wearDetailLevel: ToothDetailLevel;
@@ -86,16 +127,41 @@ export interface SettingsState {
   onSurfaceNotation: (value: SurfaceNotation) => void;
   notes: boolean;
   onNotes: (value: boolean) => void;
+  // Odontogram-tab on-screen controls (v2.4.0 resync, Task 2).
+  planModeAvailable: boolean;
+  onPlanModeAvailable: (value: boolean) => void;
+  screenToothSpacing: ScreenToothSpacing;
+  onScreenToothSpacing: (value: ScreenToothSpacing) => void;
+  screenToothNumberSize: ScreenToothNumberSize;
+  onScreenToothNumberSize: (value: ScreenToothNumberSize) => void;
   showStatusCard: boolean;
   onShowStatusCard: (value: boolean) => void;
   showOrthoCard: boolean;
   onShowOrthoCard: (value: boolean) => void;
+  // Periodontal Chart availability (v2.4.0 resync, Task 2). When off, the
+  // perio entry points are hidden and the tab's other perio settings are
+  // disabled (Task 3's reorg wires that gate).
+  perioChartAvailable: boolean;
+  onPerioChartAvailable: (value: boolean) => void;
   perioViewMode: PerioViewMode;
   onPerioViewMode: (value: PerioViewMode) => void;
   perioRowVisibility: Record<PerioRowId, boolean>;
   onPerioRowVisibility: (id: PerioRowId, visible: boolean) => void;
   perioIndexNameMode: PerioIndexNameMode;
   onPerioIndexNameMode: (value: PerioIndexNameMode) => void;
+  // Fillings tab config (v2.4.0 resync, Task 2) — mirrors odontogram.ts
+  // module flags.
+  fillingDefectEnabled: boolean;
+  onFillingDefectEnabled: (value: boolean) => void;
+  fillingComplexity: FillingComplexity;
+  onFillingComplexity: (value: FillingComplexity) => void;
+  fillingMaterials: Record<string, boolean>;
+  onFillingMaterial: (material: string, value: boolean) => void;
+  fissureSealingEnabled: boolean;
+  onFissureSealingEnabled: (value: boolean) => void;
+  // PDF export settings mirror (v2.4.0 resync, Task 2).
+  pdfSettings: PdfSettings;
+  onPdfSettings: (patch: Partial<PdfSettings>) => void;
 }
 
 /** Ids of the 7 tabs, in the order the tab strip (and `SETTINGS_TABS`) renders them. */

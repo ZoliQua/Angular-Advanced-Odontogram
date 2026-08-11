@@ -29,7 +29,13 @@ import {
   closePerioOverlay,
   destroyOdontogram,
   formatToothLabel,
+  getChartMode,
+  getFillingComplexity,
+  getFillingDefectEnabled,
+  getFillingMaterialAvailability,
+  getFissureSealingEnabled,
   getOdontogramSummary,
+  getPdfSettings,
   getPerioIndexNameMode,
   getPerioRowVisibility,
   getPerioViewMode,
@@ -41,11 +47,17 @@ import {
   openPerioOverlay,
   registerPlugins,
   setCariesDepthEnabled,
+  setChartMode,
   setDiscolorationDetailLevel,
+  setFillingComplexity,
+  setFillingDefectEnabled,
+  setFillingMaterialAvailability,
+  setFissureSealingEnabled,
   setIcdasEnabled,
   setImportFormat,
   setNotesEnabled,
   setNumberingSystem,
+  setPdfSettings,
   setPerioIndexNameMode,
   setPerioRowVisibility,
   setPerioViewMode,
@@ -57,6 +69,7 @@ import {
   setSurfaceNotation,
   setWearDetailLevel,
   type OdontogramSummary,
+  type PdfSettings,
   type PerioIndexNameMode,
   type PerioRowId,
   type PerioViewMode,
@@ -74,11 +87,19 @@ import type { Language } from "../../core/i18n/translations";
 import { I18nService } from "../../i18n/i18n.service";
 import { startIntroTour } from "../../core/tour";
 import { DualStateConfirmComponent } from "../dual-state-confirm/dual-state-confirm.component";
-import { SettingsModalComponent, type SettingsState } from "../settings-modal/settings-modal.component";
+import {
+  SettingsModalComponent,
+  type FillingComplexity,
+  type ScreenToothNumberSize,
+  type ScreenToothSpacing,
+  type SelectionBorderStyle,
+  type SettingsState,
+} from "../settings-modal/settings-modal.component";
 import { ExportOptionsModalComponent } from "../export-options-modal/export-options-modal.component";
 import { PerioChartComponent } from "../perio-chart/perio-chart.component";
 import { PerioSidebarComponent } from "../perio-sidebar/perio-sidebar.component";
 import {
+  brandLogoUrl,
   icon8Svg,
   iconGumSvg,
   iconNoSelectionUrl,
@@ -93,6 +114,19 @@ import {
 // `#toothGrid` below) since they are diagrams read 18->28 left-to-right in
 // every locale.
 const RTL_LANGUAGES: ReadonlySet<Language> = new Set(["ar"]);
+
+/**
+ * App.tsx 205-212, verbatim: parse a `#rgb`/`#rrggbb` hex colour to a CSS
+ * `"r,g,b"` channel string for `rgba(var(--odon-select-rgb), α)`. Falls back
+ * to the blue default on a malformed value.
+ */
+function hexToRgbCss(hex: string): string {
+  let h = (hex || "").replace("#", "").trim();
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const n = parseInt(h, 16);
+  if (h.length !== 6 || !Number.isFinite(n)) return "59,123,255";
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+}
 
 /**
  * DI seam around App.tsx 320-325's `initOdontogram()`/`destroyOdontogram()`
@@ -129,7 +163,7 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
     <div class="odontogram-root" #root [attr.dir]="isRtl() ? 'rtl' : 'ltr'" [attr.lang]="lang()">
       <header class="topbar">
         <div class="brand">
-          <div class="dot"></div>
+          <img class="brand-logo" [src]="brandLogoUrl" alt="" aria-hidden="true" />
           <div>
             <div class="title">{{ i18n.t('app.title') }}</div>
             <div class="subtitle">{{ i18n.t('app.subtitleLang') }} {{ i18n.t('app.subtitleNumbering.' + currentNumbering()) }} {{ i18n.t(isDark() ? 'app.subtitleMode.dark' : 'app.subtitleMode.light') }}</div>
@@ -195,13 +229,29 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
               <div class="dropdown-menu" role="menu" [attr.aria-label]="i18n.t('topbar.export')">
                 <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusExport'); exportOpen.set(false)">{{ i18n.t('export.menu.statusJson') }}</button>
                 <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusFhirExport'); exportOpen.set(false)">{{ i18n.t('export.menu.fhir') }}</button>
-                <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusPngExport'); exportOpen.set(false)">{{ i18n.t('export.menu.png') }}</button>
-                <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusJpgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.jpg') }}</button>
-                <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusSvgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.svg') }}</button>
-                <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioSvgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioSvg') }}</button>
-                <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioPngExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioPng') }}</button>
-                <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioJpgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioJpg') }}</button>
-                <button class="dropdown-item" role="menuitem" (click)="exportOpen.set(false); pdfOpen.set(true)">{{ i18n.t('export.menu.pdf') }}</button>
+                <!-- Image + PDF items gated by per-format availability
+                     (General -> Export). Status/FHIR JSON export always stay. -->
+                @if (exportPngOn()) {
+                  <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusPngExport'); exportOpen.set(false)">{{ i18n.t('export.menu.png') }}</button>
+                }
+                @if (exportJpgOn()) {
+                  <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusJpgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.jpg') }}</button>
+                }
+                @if (exportSvgOn()) {
+                  <button class="dropdown-item" role="menuitem" (click)="proxyClick('btnStatusSvgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.svg') }}</button>
+                }
+                @if (exportSvgOn()) {
+                  <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioSvgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioSvg') }}</button>
+                }
+                @if (exportPngOn()) {
+                  <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioPngExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioPng') }}</button>
+                }
+                @if (exportJpgOn()) {
+                  <button class="dropdown-item" role="menuitem" [disabled]="!hasPerio()" (click)="proxyClick('btnPerioJpgExport'); exportOpen.set(false)">{{ i18n.t('export.menu.perioJpg') }}</button>
+                }
+                @if (exportPdfOn()) {
+                  <button class="dropdown-item" role="menuitem" (click)="exportOpen.set(false); pdfOpen.set(true)">{{ i18n.t('export.menu.pdf') }}</button>
+                }
               </div>
             }
           </div>
@@ -212,8 +262,12 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
             </button>
             @if (importOpen()) {
               <div class="dropdown-menu" role="menu" [attr.aria-label]="i18n.t('topbar.import')">
-                <button class="dropdown-item" role="menuitem" (click)="importStatusJson()">{{ i18n.t('import.menu.statusJson') }}</button>
-                <button class="dropdown-item" role="menuitem" (click)="importFhirJson()">{{ i18n.t('import.menu.fhir') }}</button>
+                @if (importStatusOn()) {
+                  <button class="dropdown-item" role="menuitem" (click)="importStatusJson()">{{ i18n.t('import.menu.statusJson') }}</button>
+                }
+                @if (importFhirOn()) {
+                  <button class="dropdown-item" role="menuitem" (click)="importFhirJson()">{{ i18n.t('import.menu.fhir') }}</button>
+                }
               </div>
             }
           </div>
@@ -221,7 +275,9 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
         </div>
       </header>
       <main class="layout">
-        <div class="perio-launch-bar">
+        <!-- Hide the perio entry point (view toggle / open button) entirely
+             when the Periodontal chart is turned off in Settings. -->
+        <div class="perio-launch-bar" [class.hidden]="!perioChartAvailable()">
           @if (viewMode() === 'toggle') {
             <div id="appViewToggle" class="chart-mode-toggle" role="tablist">
               <button
@@ -259,7 +315,11 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
               <div class="chart-title">{{ i18n.t('chart.title') }}</div>
               <div class="chart-hint">{{ i18n.t('chart.hint') }}</div>
             </div>
-            <div id="chartModeToggle" class="chart-mode-toggle" role="tablist">
+            <!-- The Status|Plan toggle is hidden when plan mode is turned off
+                 in Settings -> Odontogram. Hidden via CSS (not unmounted) so
+                 odontogram.ts's one-time click wiring on these buttons
+                 survives being toggled off and back on. -->
+            <div id="chartModeToggle" class="chart-mode-toggle" [class.hidden]="!planModeAvailable()" role="tablist">
               <button id="chartModeStatus" type="button" class="chart-mode-btn is-active" role="tab" aria-selected="true">{{ i18n.t('chartMode.status') }}</button>
               <button id="chartModePlan" type="button" class="chart-mode-btn" role="tab" aria-selected="false">{{ i18n.t('chartMode.plan') }}</button>
               <span id="chartModePlanBadge" class="plan-badge hidden">{{ i18n.t('chartMode.planBadge') }}</span>
@@ -278,17 +338,63 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
               </button>
             </div>
           </div>
-          <div id="toothGrid" class="tooth-grid" dir="ltr" [attr.aria-label]="i18n.t('chart.aria.toothGrid')"></div>
+          <div
+            id="toothGrid"
+            class="tooth-grid"
+            dir="ltr"
+            [attr.data-screen-spacing]="screenSpacing()"
+            [attr.data-tooth-num]="screenNumberSize()"
+            [style.--odon-select-rgb]="hexToRgbCss(selectionColor())"
+            [style.--odon-select-border-style]="selectionBorderStyle()"
+            [attr.aria-label]="i18n.t('chart.aria.toothGrid')"
+          ></div>
         </section>
         @if (toothInfoOn() && summary(); as s) {
           <section class="tooth-info card" [attr.aria-label]="i18n.t('toothInfo.title')">
             <div class="card-title">{{ i18n.t('toothInfo.title') }}</div>
             <p class="tooth-info-overview">{{ s.overview }}</p>
-            @if (s.permanentList) {
-              <p class="tooth-info-list">{{ s.permanentList }}</p>
+            <!-- Grouped dentition table: one column per tooth category, one
+                 row per anatomical group (whole mouth / jaw / quadrant /
+                 sextant per the PDF summary-grouping setting). Tooth numbers
+                 are coloured by status (blue = has content, red+italic = has
+                 a problem). Replaces the old permanentList/missingList
+                 paragraphs (App.tsx 787-834, v2.4.0 resync). -->
+            @if (s.toothTable.rows.length > 0) {
+              <div class="tooth-info-table-wrap">
+                <table class="tooth-info-table">
+                  <thead>
+                    <tr>
+                      <th aria-hidden="true"></th>
+                      @for (c of s.toothTable.columns; track c.key) {
+                        <th scope="col">{{ c.label }}</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of s.toothTable.rows; track row.key) {
+                      <tr>
+                        <th scope="row">{{ row.label }}</th>
+                        @for (c of s.toothTable.columns; track c.key) {
+                          <td>
+                            @for (cell of row.cells[c.key] ?? []; track cell.toothNo; let last = $last) {
+                              <span [class]="'tooth-cell tooth-cell-' + cell.status">{{ cell.label }}{{ last ? '' : ', ' }}</span>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+                <p class="tooth-info-table-legend">{{ s.toothTable.legend }}</p>
+              </div>
             }
-            @if (s.missingList) {
-              <p class="tooth-info-list">{{ s.missingList }}</p>
+            @if (s.individualNotes; as notes) {
+              <div id="toothInfoNotes" class="tooth-info-notes">
+                <span class="tooth-info-heading">{{ notes.heading }}:</span>
+                @for (n of notes.items; track $index) {
+                  <p class="tooth-info-note-item">{{ n }}</p>
+                }
+              </div>
             }
             @for (sec of s.sections; track sec.key) {
               <p class="tooth-info-line">
@@ -533,6 +639,21 @@ export const ODONTOGRAM_ENGINE_LIFECYCLE = new InjectionToken<{
                 <select id="fillingSelect"></select>
               </div>
               <div id="fillingSurfaceChecks" class="hidden"></div>
+              <!-- "simple" complexity: one filled/not-filled toggle shown
+                   instead of the 5-surface grid (wired in odontogram.ts). It
+                   is a .row LABEL (the whole pill is clickable — the native
+                   checkbox is display:none), like #fissureSealingRow. -->
+              <label id="fillingSimpleRow" class="row fissure-row hidden">
+                <input type="checkbox" id="fillingSimpleToggle" />
+                <span>{{ i18n.t('filling.simpleToggle') }}</span>
+              </label>
+              <!-- When the filling-defect feature is on, a defect select
+                   applies a defect to ALL filled surfaces (simple mode has no
+                   per-surface cells). -->
+              <div id="fillingSimpleDefectRow" class="row hidden">
+                <span>{{ i18n.t('fillingDefect.label') }}</span>
+                <select id="fillingSimpleDefectSelect"></select>
+              </div>
               <label id="fissureSealingRow" class="row fissure-row">
                 <input type="checkbox" id="fissureSealing" />
                 <span>{{ i18n.t('filling.fissureSealing') }}</span>
@@ -669,6 +790,10 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected readonly iconGumSvg = iconGumSvg;
   protected readonly iconPulpSvg = iconPulpSvg;
   protected readonly iconNoSelectionUrl = iconNoSelectionUrl;
+  // Brand logo (v2.4.0 resync, Task 2) — App.tsx 40-43's data-URI-inlined PNG,
+  // same "bundled, no runtime asset fetch" guarantee as the ?raw-inlined SVGs
+  // above.
+  protected readonly brandLogoUrl = brandLogoUrl;
 
   // Free engine functions the template invokes directly (App.tsx 4-19
   // imports) — exposed as instance fields, same precedent as the icon
@@ -678,6 +803,10 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected readonly formatToothLabel = formatToothLabel;
   protected readonly acceptDualStateConfirm = acceptDualStateConfirm;
   protected readonly cancelDualStateConfirm = cancelDualStateConfirm;
+  // App.tsx 205-212's colour-parsing helper, ported verbatim (see the
+  // module-level `hexToRgbCss` above) — exposed the same way as the free
+  // engine functions above so `#toothGrid`'s inline style bindings can call it.
+  protected readonly hexToRgbCss = hexToRgbCss;
 
   // App.tsx 160-173's LANGUAGE_OPTIONS, verbatim (order + labelKeys).
   protected readonly languageOptions: ReadonlyArray<{ value: Language; labelKey: string }> = [
@@ -735,11 +864,39 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   // `summary` is Task 5 scope; the signal + its refresh effect are wired now.
   protected readonly toothInfoOn = signal(true);
 
+  // v2.4.0 resync (Task 2): per-format export availability + per-source
+  // import availability (App.tsx 257-264) — session-only UI config. All
+  // default ON. A disabled format/source hides its export/import menu item;
+  // disabling PDF also disables the Export Settings tab (Task 3's reorg).
+  protected readonly exportPngOn = signal(true);
+  protected readonly exportJpgOn = signal(true);
+  protected readonly exportSvgOn = signal(true);
+  protected readonly exportPdfOn = signal(true);
+  protected readonly importStatusOn = signal(true);
+  protected readonly importFhirOn = signal(true);
+  // Odontogram-tab on-screen controls (App.tsx 265-269, session-only).
+  protected readonly planModeAvailable = signal(true);
+  protected readonly perioChartAvailable = signal(true);
+  protected readonly screenSpacing = signal<ScreenToothSpacing>("normal");
+  protected readonly screenNumberSize = signal<ScreenToothNumberSize>("normal");
+  // Adjustable tooth-selection colour + border style (App.tsx 270-271).
+  protected readonly selectionColor = signal<string>("#3b7bff");
+  protected readonly selectionBorderStyle = signal<SelectionBorderStyle>("dashed");
+  // Fillings-tab config (App.tsx 272-275) — mirrors odontogram.ts module flags.
+  protected readonly fillingDefectOn = signal<boolean>(getFillingDefectEnabled());
+  protected readonly fillingComplexityState = signal<FillingComplexity>(getFillingComplexity());
+  protected readonly fissureSealingOn = signal<boolean>(getFissureSealingEnabled());
+  protected readonly fillingMaterialsState = signal<Record<string, boolean>>(
+    getFillingMaterialAvailability(),
+  );
+
   // onStateChange mirrors (App.tsx 395-452).
   protected readonly summary = signal<OdontogramSummary | null>(null);
   protected readonly hasPerio = signal(false);
   protected readonly perioOpen = signal(false);
   protected readonly viewMode = signal<PerioViewMode>(getPerioViewMode());
+  // PDF export settings mirror (App.tsx 296-297, session-only module state).
+  protected readonly pdfSettingsState = signal<PdfSettings>(getPdfSettings());
   // Task 3: mirror the two Settings -> Periodontal tab module flags into
   // shell state (App.tsx 262-271/437-444) — same precedent as `viewMode`
   // mirroring `perioViewMode` above, kept in sync via the onStateChange
@@ -776,6 +933,14 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   protected readonly onLanguage = (v: Language): void => this.setLang(v);
   protected readonly onToggleDark = (): void => this.toggleDark();
   protected readonly onToothInfo = (v: boolean): void => this.toothInfoOn.set(v);
+  // v2.4.0 resync (Task 2): per-format export / per-source import
+  // availability — session-only UI config, no engine call (App.tsx 517-522).
+  protected readonly onExportPng = (v: boolean): void => this.exportPngOn.set(v);
+  protected readonly onExportJpg = (v: boolean): void => this.exportJpgOn.set(v);
+  protected readonly onExportSvg = (v: boolean): void => this.exportSvgOn.set(v);
+  protected readonly onExportPdf = (v: boolean): void => this.exportPdfOn.set(v);
+  protected readonly onImportStatus = (v: boolean): void => this.importStatusOn.set(v);
+  protected readonly onImportFhir = (v: boolean): void => this.importFhirOn.set(v);
   protected readonly onSecondaryCariesMode = (v: SecondaryCariesMode): void => {
     this.secondaryMode.set(v);
     setSecondaryCariesMode(v);
@@ -796,6 +961,11 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     this.radiographicMode.set(v);
     setRadiographicDepthMode(v);
   };
+  // Adjustable tooth-selection colour + border style (v2.4.0 resync, Task 2,
+  // App.tsx 543-547) — session-only UI config, no engine call.
+  protected readonly onSelectionColor = (v: string): void => this.selectionColor.set(v);
+  protected readonly onSelectionBorderStyle = (v: SelectionBorderStyle): void =>
+    this.selectionBorderStyle.set(v);
   protected readonly onPulpLevel = (v: PulpDetailLevel): void => {
     this.pulpLevel.set(v);
     setPulpDetailLevel(v);
@@ -816,8 +986,28 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     this.notesOn.set(v);
     setNotesEnabled(v);
   };
+  // Odontogram-tab on-screen controls (v2.4.0 resync, Task 2, App.tsx 550-556).
+  protected readonly onPlanModeAvailable = (v: boolean): void => {
+    this.planModeAvailable.set(v);
+    // Leaving plan unavailable must not strand the chart in plan mode.
+    if (!v && getChartMode() === "plan") setChartMode("status");
+  };
+  protected readonly onScreenToothSpacing = (v: ScreenToothSpacing): void =>
+    this.screenSpacing.set(v);
+  protected readonly onScreenToothNumberSize = (v: ScreenToothNumberSize): void =>
+    this.screenNumberSize.set(v);
   protected readonly onShowStatusCard = (v: boolean): void => this.showStatusCardOn.set(v);
   protected readonly onShowOrthoCard = (v: boolean): void => this.showOrthoCardOn.set(v);
+  // Periodontal Chart availability (v2.4.0 resync, Task 2, App.tsx 561-567).
+  protected readonly onPerioChartAvailable = (v: boolean): void => {
+    this.perioChartAvailable.set(v);
+    // Turning perio off must leave the user on the odontogram, not stranded
+    // on a now-hidden perio view / open overlay.
+    if (!v) {
+      this.activeView.set("odontogram");
+      closePerioOverlay();
+    }
+  };
   // perioViewMode/perioRowVisibility/perioIndexNameMode call the engine setter
   // only (App.tsx 507-512) — the onStateChange mirror in the constructor is
   // what feeds the new value back into shell state (and thus into the next
@@ -828,6 +1018,30 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     setPerioRowVisibility(id, v);
   protected readonly onPerioIndexNameMode = (v: PerioIndexNameMode): void =>
     setPerioIndexNameMode(v);
+  // Fillings tab config (v2.4.0 resync, Task 2, App.tsx 583-590) — mirrors
+  // odontogram.ts module flags, same round-trip-through-local-state pattern
+  // as the other module-backed handlers above.
+  protected readonly onFillingDefectEnabled = (v: boolean): void => {
+    this.fillingDefectOn.set(v);
+    setFillingDefectEnabled(v);
+  };
+  protected readonly onFillingComplexity = (v: FillingComplexity): void => {
+    this.fillingComplexityState.set(v);
+    setFillingComplexity(v);
+  };
+  protected readonly onFillingMaterial = (material: string, v: boolean): void => {
+    this.fillingMaterialsState.update((prev) => ({ ...prev, [material]: v }));
+    setFillingMaterialAvailability(material, v);
+  };
+  protected readonly onFissureSealingEnabled = (v: boolean): void => {
+    this.fissureSealingOn.set(v);
+    setFissureSealingEnabled(v);
+  };
+  // PDF export settings mirror (v2.4.0 resync, Task 2, App.tsx 591-592).
+  protected readonly onPdfSettings = (patch: Partial<PdfSettings>): void => {
+    setPdfSettings(patch);
+    this.pdfSettingsState.set(getPdfSettings());
+  };
 
   // Task 3: the live settings surface for the Settings modal (App.tsx 474-513,
   // `settingsState`) — a computed so every field always reflects current shell
@@ -841,6 +1055,18 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     onToggleDark: this.onToggleDark,
     toothInfo: this.toothInfoOn(),
     onToothInfo: this.onToothInfo,
+    exportPng: this.exportPngOn(),
+    onExportPng: this.onExportPng,
+    exportJpg: this.exportJpgOn(),
+    onExportJpg: this.onExportJpg,
+    exportSvg: this.exportSvgOn(),
+    onExportSvg: this.onExportSvg,
+    exportPdf: this.exportPdfOn(),
+    onExportPdf: this.onExportPdf,
+    importStatus: this.importStatusOn(),
+    onImportStatus: this.onImportStatus,
+    importFhir: this.importFhirOn(),
+    onImportFhir: this.onImportFhir,
     secondaryCariesMode: this.secondaryMode(),
     onSecondaryCariesMode: this.onSecondaryCariesMode,
     icdas: this.icdasOn(),
@@ -851,6 +1077,10 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     onRootCariesMode: this.onRootCariesMode,
     radiographicDepthMode: this.radiographicMode(),
     onRadiographicDepthMode: this.onRadiographicDepthMode,
+    selectionColor: this.selectionColor(),
+    onSelectionColor: this.onSelectionColor,
+    selectionBorderStyle: this.selectionBorderStyle(),
+    onSelectionBorderStyle: this.onSelectionBorderStyle,
     pulpLevel: this.pulpLevel(),
     onPulpLevel: this.onPulpLevel,
     wearDetailLevel: this.wearLevel(),
@@ -861,16 +1091,34 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
     onSurfaceNotation: this.onSurfaceNotation,
     notes: this.notesOn(),
     onNotes: this.onNotes,
+    planModeAvailable: this.planModeAvailable(),
+    onPlanModeAvailable: this.onPlanModeAvailable,
+    screenToothSpacing: this.screenSpacing(),
+    onScreenToothSpacing: this.onScreenToothSpacing,
+    screenToothNumberSize: this.screenNumberSize(),
+    onScreenToothNumberSize: this.onScreenToothNumberSize,
     showStatusCard: this.showStatusCardOn(),
     onShowStatusCard: this.onShowStatusCard,
     showOrthoCard: this.showOrthoCardOn(),
     onShowOrthoCard: this.onShowOrthoCard,
+    perioChartAvailable: this.perioChartAvailable(),
+    onPerioChartAvailable: this.onPerioChartAvailable,
     perioViewMode: this.viewMode(),
     onPerioViewMode: this.onPerioViewMode,
     perioRowVisibility: this.perioRowVisibilityState(),
     onPerioRowVisibility: this.onPerioRowVisibility,
     perioIndexNameMode: this.perioIndexNameModeState(),
     onPerioIndexNameMode: this.onPerioIndexNameMode,
+    fillingDefectEnabled: this.fillingDefectOn(),
+    onFillingDefectEnabled: this.onFillingDefectEnabled,
+    fillingComplexity: this.fillingComplexityState(),
+    onFillingComplexity: this.onFillingComplexity,
+    fillingMaterials: this.fillingMaterialsState(),
+    onFillingMaterial: this.onFillingMaterial,
+    fissureSealingEnabled: this.fissureSealingOn(),
+    onFissureSealingEnabled: this.onFissureSealingEnabled,
+    pdfSettings: this.pdfSettingsState(),
+    onPdfSettings: this.onPdfSettings,
   }));
 
   constructor() {

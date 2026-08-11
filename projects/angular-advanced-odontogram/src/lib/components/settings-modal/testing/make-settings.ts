@@ -14,7 +14,39 @@
 // test) — everything else comes straight from this base.
 import { vi } from "vitest";
 import type { SettingsState } from "../settings-modal.component";
-import type { PerioRowId } from "../../../core/odontogram";
+import type { PerioRowId, PdfSettings } from "../../../core/odontogram";
+import { DEFAULT_PDF_THEME } from "../../../core/perioPdf";
+
+// v2.4.0 resync (Task 2): default PDF settings mirror, matching
+// core/odontogram.ts's own module defaults (see `resetEngineStateForTest`'s
+// `setPdfSettings` call in `lib/testing/reset-engine-state.ts`, kept in sync
+// with this literal).
+const DEFAULT_PDF_SETTINGS: PdfSettings = {
+  defaultName: "John Doe",
+  defaultDob: "1980-01-01",
+  showAge: true,
+  dateFormat: "iso",
+  colorTheme: DEFAULT_PDF_THEME,
+  showBone: true,
+  showHealthyPulp: true,
+  toothSpacing: "medium",
+  border: false,
+  borderThickness: "medium",
+  borderColor: "#000000",
+  toothNumberSize: "normal",
+  includeOdontogramText: true,
+  includeOdontogramTable: true,
+  perioToothSpacing: "medium",
+  perioShowEmptyRows: false,
+  perioLabelPlacement: "center",
+  perioFontSize: "normal",
+  includePerioTable: true,
+  includePerioAbbrev: true,
+  showDisclaimer: true,
+  disclaimerText: "",
+  showGenerator: true,
+  summaryGrouping: "jaw",
+};
 
 const PERIO_ROW_IDS: readonly PerioRowId[] = [
   "plaque", "bop", "cal", "gm", "pd", "furcation", "mobility", "cej",
@@ -34,6 +66,18 @@ export function makeSettings(overrides: Partial<SettingsState> = {}): SettingsSt
     onToggleDark: vi.fn(),
     toothInfo: false,
     onToothInfo: vi.fn(),
+    exportPng: true,
+    onExportPng: vi.fn(),
+    exportJpg: true,
+    onExportJpg: vi.fn(),
+    exportSvg: true,
+    onExportSvg: vi.fn(),
+    exportPdf: true,
+    onExportPdf: vi.fn(),
+    importStatus: true,
+    onImportStatus: vi.fn(),
+    importFhir: true,
+    onImportFhir: vi.fn(),
     secondaryCariesMode: "standard",
     onSecondaryCariesMode: vi.fn(),
     icdas: false,
@@ -44,6 +88,10 @@ export function makeSettings(overrides: Partial<SettingsState> = {}): SettingsSt
     onRootCariesMode: vi.fn(),
     radiographicDepthMode: "off",
     onRadiographicDepthMode: vi.fn(),
+    selectionColor: "#3b7bff",
+    onSelectionColor: vi.fn(),
+    selectionBorderStyle: "dashed",
+    onSelectionBorderStyle: vi.fn(),
     pulpLevel: "aae",
     onPulpLevel: vi.fn(),
     wearDetailLevel: "complex",
@@ -54,16 +102,34 @@ export function makeSettings(overrides: Partial<SettingsState> = {}): SettingsSt
     onSurfaceNotation: vi.fn(),
     notes: false,
     onNotes: vi.fn(),
+    planModeAvailable: true,
+    onPlanModeAvailable: vi.fn(),
+    screenToothSpacing: "normal",
+    onScreenToothSpacing: vi.fn(),
+    screenToothNumberSize: "normal",
+    onScreenToothNumberSize: vi.fn(),
     showStatusCard: true,
     onShowStatusCard: vi.fn(),
     showOrthoCard: true,
     onShowOrthoCard: vi.fn(),
+    perioChartAvailable: true,
+    onPerioChartAvailable: vi.fn(),
     perioViewMode: "toggle",
     onPerioViewMode: vi.fn(),
     perioRowVisibility,
     onPerioRowVisibility: vi.fn(),
     perioIndexNameMode: "translated",
     onPerioIndexNameMode: vi.fn(),
+    fillingDefectEnabled: true,
+    onFillingDefectEnabled: vi.fn(),
+    fillingComplexity: "complex",
+    onFillingComplexity: vi.fn(),
+    fillingMaterials: { amalgam: true, composite: true, gic: true, temporary: true },
+    onFillingMaterial: vi.fn(),
+    fissureSealingEnabled: true,
+    onFissureSealingEnabled: vi.fn(),
+    pdfSettings: { ...DEFAULT_PDF_SETTINGS },
+    onPdfSettings: vi.fn(),
     ...overrides,
   };
 }
