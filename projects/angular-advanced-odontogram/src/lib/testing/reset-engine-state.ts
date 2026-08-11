@@ -71,6 +71,7 @@ import {
   setFillingDefectEnabled,
   setFillingMaterialAvailability,
   setFissureSealingEnabled,
+  setNotesEnabled,
   setNumberingSystem,
   setPdfSettings,
   setPerioIndexNameMode,
@@ -131,6 +132,14 @@ export function resetEngineStateForTest(): void {
   // Perio chart view-mode toggle (module default — see
   // `core/odontogram.ts`'s `let perioViewMode: PerioViewMode = "toggle"`).
   setPerioViewMode("toggle");
+  // v2.4.0 resync (Task 3 fold-in, ledgered leak-class item): the Tooth
+  // details -> Notes toggle's module-level singleton
+  // (`core/odontogram.ts`'s `let notesEnabled = false`) has no reset seam of
+  // its own either — same leak class as every other module flag reset in
+  // this function. No spec in this suite currently leaves it flipped, but
+  // this is defense-in-depth against a future Settings -> Tooth details spec
+  // leaking it silently across files under `test.isolate: false`.
+  setNotesEnabled(false);
   // Perio-settings singletons (Task 3): every row back to visible, index-name
   // mode back to "translated" — both module defaults (see
   // `defaultPerioRowVisibility()` / `let perioIndexNameMode = "translated"`).

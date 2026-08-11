@@ -1,9 +1,21 @@
 // Angular port of the SettingsModal contract exercised by
 // $ENGINE/src/__tests__/settings-modal-a11y.test.tsx and the SETTINGS_TABS /
 // SettingsState shape from $ENGINE/src/SettingsModal.tsx. Cases (a)-(f) per
-// the Phase 3 Task 2 brief: closed/open rendering, tab-switch + toggle wiring,
-// periodontal tab's 16 rows/5 groups + row-visibility wiring, Esc-to-close,
-// and the APG tablist's Arrow-key roving-tabindex navigation.
+// the Phase 3 Task 2 brief: closed/open rendering, tab-switch + toggle
+// wiring, periodontal tab's 16 rows/5 groups + row-visibility wiring,
+// Esc-to-close, and the APG tablist's Arrow-key roving-tabindex navigation.
+//
+// v2.4.0 resync (Phase 6 Task 3): SETTINGS_TABS reorganized to
+// general/odontogram/periodontalChart/toothDetails/caries/fillings/export
+// (SettingsModal.tsx@f9b45fc) — cases (c)/(d) and the two select-follows-
+// input-update cases below are updated for the new tab ids
+// ("panels" -> "odontogram", "periodontal" -> "periodontalChart") and the
+// odontogram tab's new content (4 toggles + 2 selects instead of 2 toggles +
+// 1 select — perioViewMode moved to periodontalChart). The old "disabled
+// export/import placeholder" case is replaced with a case for the new,
+// real general-tab export/import toggles (the placeholder was removed by
+// the resync — see sp15-settings.spec.ts's dedicated coverage for the full
+// toggle set).
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, provideZonelessChangeDetection, signal } from "@angular/core";
@@ -73,29 +85,32 @@ describe("SettingsModalComponent", () => {
     }
   });
 
-  it("(c) switching to panels shows the two card toggles + perioViewMode select; toggling calls the on* callback", async () => {
+  it("(c) switching to odontogram shows 4 toggles + 2 selects; toggling calls the on* callback", async () => {
     const f = TestBed.createComponent(HostComponent);
     await f.whenStable();
     f.componentInstance.open.set(true);
     await f.whenStable();
 
-    const panelsTab = f.nativeElement.querySelector("#odon-settings-tab-panels") as HTMLButtonElement;
-    panelsTab.click();
+    const odontogramTab = f.nativeElement.querySelector(
+      "#odon-settings-tab-odontogram",
+    ) as HTMLButtonElement;
+    odontogramTab.click();
     await f.whenStable();
 
     const panel = f.nativeElement.querySelector(".odon-settings-panel") as HTMLElement;
     const switches = panel.querySelectorAll('input[type="checkbox"]');
-    expect(switches.length).toBe(2);
-    const select = panel.querySelector("select.odon-settings-select");
-    expect(select).not.toBeNull();
+    expect(switches.length).toBe(4);
+    const selects = panel.querySelectorAll("select.odon-settings-select");
+    expect(selects.length).toBe(2);
 
-    const statusToggle = switches[0] as HTMLInputElement;
+    // Order: plan-mode, tooth-info, statuses, orthodontics.
+    const statusToggle = switches[2] as HTMLInputElement;
     statusToggle.checked = true;
     statusToggle.dispatchEvent(new Event("change"));
     await f.whenStable();
     expect(f.componentInstance.settings().onShowStatusCard).toHaveBeenCalledWith(true);
 
-    const orthoToggle = switches[1] as HTMLInputElement;
+    const orthoToggle = switches[3] as HTMLInputElement;
     orthoToggle.checked = false;
     orthoToggle.dispatchEvent(new Event("change"));
     await f.whenStable();
@@ -123,18 +138,20 @@ describe("SettingsModalComponent", () => {
     expect(select.value).toBe("PALMER");
   });
 
-  it("panels tab's perioViewMode select reads toggle initially and follows a settings-input update to popup", async () => {
+  it("periodontalChart tab's perioViewMode select reads toggle initially and follows a settings-input update to popup", async () => {
     const f = TestBed.createComponent(HostComponent);
     f.componentInstance.settings.set(makeSettings({ perioViewMode: "toggle" }));
     await f.whenStable();
     f.componentInstance.open.set(true);
     await f.whenStable();
-    const panelsTab = f.nativeElement.querySelector("#odon-settings-tab-panels") as HTMLButtonElement;
-    panelsTab.click();
+    const perioTab = f.nativeElement.querySelector(
+      "#odon-settings-tab-periodontalChart",
+    ) as HTMLButtonElement;
+    perioTab.click();
     await f.whenStable();
 
     const select = f.nativeElement.querySelector(
-      ".odon-settings-panel select.odon-settings-select",
+      'select[aria-label="Periodontal chart view"]',
     ) as HTMLSelectElement;
     expect(select.value).toBe("toggle");
 
@@ -143,33 +160,37 @@ describe("SettingsModalComponent", () => {
     expect(select.value).toBe("popup");
   });
 
-  it("(d) periodontal tab renders 16 row toggles + 5 group headings + index-mode select; toggling pd calls onPerioRowVisibility", async () => {
+  it("(d) periodontalChart tab renders 16 row toggles + the availability toggle + 6 group headings + index-mode select; toggling pd calls onPerioRowVisibility", async () => {
     const f = TestBed.createComponent(HostComponent);
     await f.whenStable();
     f.componentInstance.open.set(true);
     await f.whenStable();
 
     const perioTab = f.nativeElement.querySelector(
-      "#odon-settings-tab-periodontal",
+      "#odon-settings-tab-periodontalChart",
     ) as HTMLButtonElement;
     perioTab.click();
     await f.whenStable();
 
     const panel = f.nativeElement.querySelector(".odon-settings-panel") as HTMLElement;
     const groupHeadings = panel.querySelectorAll(".odon-settings-group-title");
-    expect(groupHeadings.length).toBe(5);
+    // General + the 5 row-id groups.
+    expect(groupHeadings.length).toBe(6);
 
     const rowToggles = panel.querySelectorAll('input[type="checkbox"]');
-    expect(rowToggles.length).toBe(16);
+    // 16 row toggles + the perioChartAvailable toggle.
+    expect(rowToggles.length).toBe(17);
     rowToggles.forEach((el: Element) => {
       expect((el as HTMLInputElement).checked).toBe(true);
     });
 
+    // perioViewMode + perioIndexNameMode selects.
     const selects = panel.querySelectorAll("select.odon-settings-select");
-    expect(selects.length).toBe(1);
+    expect(selects.length).toBe(2);
 
-    // pd is the first row of the first group (pocket: pd, gm, cal, bop).
-    const pdToggle = rowToggles[0] as HTMLInputElement;
+    // pd is the first row toggle after the perioChartAvailable toggle
+    // (pocket group: pd, gm, cal, bop).
+    const pdToggle = rowToggles[1] as HTMLInputElement;
     pdToggle.checked = false;
     pdToggle.dispatchEvent(new Event("change"));
     await f.whenStable();
@@ -198,12 +219,14 @@ describe("SettingsModalComponent", () => {
     await f.whenStable();
 
     const generalTab = f.nativeElement.querySelector("#odon-settings-tab-general") as HTMLElement;
-    const panelsTab = f.nativeElement.querySelector("#odon-settings-tab-panels") as HTMLElement;
+    const odontogramTab = f.nativeElement.querySelector(
+      "#odon-settings-tab-odontogram",
+    ) as HTMLElement;
     expect(generalTab.getAttribute("aria-selected")).toBe("false");
     expect(generalTab.getAttribute("tabindex")).toBe("-1");
-    expect(panelsTab.getAttribute("aria-selected")).toBe("true");
-    expect(panelsTab.getAttribute("tabindex")).toBe("0");
-    expect(document.activeElement).toBe(panelsTab);
+    expect(odontogramTab.getAttribute("aria-selected")).toBe("true");
+    expect(odontogramTab.getAttribute("tabindex")).toBe("0");
+    expect(document.activeElement).toBe(odontogramTab);
   });
 
   it("ArrowLeft from the first tab wraps to the last tab", async () => {
@@ -274,15 +297,35 @@ describe("SettingsModalComponent", () => {
     expect(document.activeElement).toBe(opener);
   });
 
-  it("the disabled export/import row in the general tab has no interactive control", async () => {
+  it("the general tab's export/import toggles are real controls (no disabled placeholder)", async () => {
     const f = TestBed.createComponent(HostComponent);
     f.componentInstance.open.set(true);
     await f.whenStable();
 
-    const disabledRow = f.nativeElement.querySelector(".odon-settings-row-disabled") as HTMLElement;
-    expect(disabledRow).not.toBeNull();
-    expect(disabledRow.getAttribute("aria-disabled")).toBe("true");
-    expect(disabledRow.querySelector("input, select, button")).toBeNull();
-    expect(disabledRow.querySelector(".odon-settings-badge")).not.toBeNull();
+    const panel = f.nativeElement.querySelector(".odon-settings-panel") as HTMLElement;
+    expect(f.nativeElement.querySelector(".odon-settings-row-disabled")).toBeNull();
+    expect(f.nativeElement.querySelector(".odon-settings-badge")).toBeNull();
+    expect(panel.querySelector('input[aria-label="PNG image export"]')).not.toBeNull();
+    expect(panel.querySelector('input[aria-label="Status JSON import"]')).not.toBeNull();
+  });
+
+  it("the Export Settings tab is disabled when exportPdf is off, and falls back to the general panel", async () => {
+    const f = TestBed.createComponent(HostComponent);
+    f.componentInstance.settings.set(makeSettings({ exportPdf: false }));
+    await f.whenStable();
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+
+    const exportTab = f.nativeElement.querySelector(
+      "#odon-settings-tab-export",
+    ) as HTMLButtonElement;
+    expect(exportTab.getAttribute("aria-disabled")).toBe("true");
+    expect(exportTab.classList.contains("is-disabled")).toBe(true);
+
+    exportTab.click();
+    await f.whenStable();
+    // Click on a disabled tab is a no-op — general stays active/rendered.
+    expect(f.nativeElement.querySelector('[id="odon-settings-panel-general"]')).not.toBeNull();
+    expect(exportTab.getAttribute("aria-selected")).toBe("false");
   });
 });

@@ -517,7 +517,7 @@ describe("OdontogramShellComponent Task 3: settings modal wiring", () => {
 
     openSettings(f);
     await f.whenStable();
-    const perioTab = f.nativeElement.querySelector("#odon-settings-tab-periodontal") as HTMLButtonElement;
+    const perioTab = f.nativeElement.querySelector("#odon-settings-tab-periodontalChart") as HTMLButtonElement;
     perioTab.click();
     await f.whenStable();
 
@@ -533,7 +533,7 @@ describe("OdontogramShellComponent Task 3: settings modal wiring", () => {
 
     // Close and reopen — the modal component instance stays mounted (only its
     // `@if (open())`-guarded content unmounts), so `activeTab` stays on
-    // "periodontal" and the checkbox must still reflect the REAL engine state.
+    // "periodontalChart" and the checkbox must still reflect the REAL engine state.
     (f.nativeElement.querySelector(".odon-settings-close") as HTMLButtonElement).click();
     await f.whenStable();
     openSettings(f);

@@ -8,6 +8,16 @@
 // implemented by `onTabListKeyDown` in settings-modal.component.ts. No
 // element-tree assertions to remap here; only the render/query mechanics
 // change (TestBed instead of RTL).
+//
+// v2.4.0 resync (Phase 6 Task 3): re-diffed against the corpus source — its
+// assertions are id-agnostic (tab count via `SETTINGS_TABS`/`tabs()`,
+// wraparound, roving-tabindex invariant) and unaffected by the
+// general/odontogram/periodontalChart/toothDetails/caries/fillings/export
+// reorg; the fixture's `makeSettings()` already carries the full v2.4.0
+// `SettingsState` shape (Task 2). No assertion deltas beyond this note. The
+// Export tab's own disable-when-`exportPdf===false` gate (TSX 1080/1137)
+// doesn't interact with this file's default fixture (`exportPdf: true`), so
+// the tablist's Arrow-key nav still lands every tab identically.
 import { describe, it, expect, beforeEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, provideZonelessChangeDetection, signal } from "@angular/core";
