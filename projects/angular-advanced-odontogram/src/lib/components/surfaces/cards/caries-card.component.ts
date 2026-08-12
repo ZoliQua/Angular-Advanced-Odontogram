@@ -37,17 +37,18 @@ import {
   setRootCariesForSelection,
 } from "../../../core/odontogram";
 import { engineState } from "../../engine-state";
+import { ForceCheckedDirective, ForceValueDirective } from "./force-value.directive";
 import { SurfaceCell, SurfaceCrossComponent } from "./surface-cross.component";
 
 @Component({
   selector: "aao-caries-card",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SurfaceCrossComponent],
+  imports: [SurfaceCrossComponent, ForceValueDirective, ForceCheckedDirective],
   template: `
     <div class="hint">{{ i18n.t('caries.hint') }}</div>
     <div id="cariesDepthRow" [class]="caries().cariesDepthVisible ? 'row' : 'row hidden'">
       <span>{{ i18n.t('caries.depthLabel') }}</span>
-      <select id="cariesDepthSelect" [value]="activeDepthValue()" (change)="onDepthChange($event)">
+      <select id="cariesDepthSelect" [aaoForceValue]="activeDepthValue" (change)="onDepthChange($event)">
         @for (o of depthOptions(); track o.value) {
           <option [value]="o.value" [attr.title]="o.title ?? null">{{ o.label }}</option>
         }
@@ -62,7 +63,7 @@ import { SurfaceCell, SurfaceCrossComponent } from "./surface-cross.component";
           type="checkbox"
           id="chk-caries-subcrown"
           value="caries-subcrown"
-          [checked]="caries().subcrownChecked"
+          [aaoForceChecked]="subcrownChecked"
           [disabled]="caries().subcrownDisabled"
           (change)="onSubcrownChange($event)"
         />
@@ -71,7 +72,7 @@ import { SurfaceCell, SurfaceCrossComponent } from "./surface-cross.component";
     </div>
     <div id="rootCariesRow" [class]="caries().rootCariesVisible ? 'row' : 'row hidden'">
       <span>{{ i18n.t('caries.rootLabel') }}</span>
-      <select id="rootCariesSelect" [value]="caries().rootCariesDisplay" (change)="onRootCariesChange($event)">
+      <select id="rootCariesSelect" [aaoForceValue]="rootCariesDisplay" (change)="onRootCariesChange($event)">
         @for (o of rootOptions(); track o.value) {
           <option [value]="o.value">{{ o.label }}</option>
         }
@@ -84,6 +85,13 @@ export class CariesCardComponent {
   private readonly elRef = inject(ElementRef<HTMLElement>);
   protected readonly caries = engineState(getActiveCaries);
 
+  // Thunks for the `[aaoForceValue]`/`[aaoForceChecked]` directives — see
+  // `force-value.directive.ts`'s header and `ToothDetailsCardComponent`'s
+  // identical rationale note.
+  protected readonly activeDepthValue = () => String(this.caries().cariesActiveDepth);
+  protected readonly subcrownChecked = () => this.caries().subcrownChecked;
+  protected readonly rootCariesDisplay = () => this.caries().rootCariesDisplay;
+
   constructor() {
     // Mirrors the pin's `useLayoutEffect(() => {...})` (no dep array — reruns
     // on every render): apply #cariesSection's `hidden` class from this host
@@ -92,10 +100,6 @@ export class CariesCardComponent {
       const visible = this.caries().cariesSectionVisible;
       this.elRef.nativeElement.closest("#cariesSection")?.classList.toggle("hidden", !visible);
     });
-  }
-
-  protected activeDepthValue(): string {
-    return String(this.caries().cariesActiveDepth);
   }
 
   protected depthOptions(): { value: number; label: string; title?: string }[] {

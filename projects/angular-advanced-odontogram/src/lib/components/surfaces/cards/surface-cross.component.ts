@@ -25,6 +25,19 @@
 // disabled cell is rendered `display:none`, exactly as the imperative
 // `setDisabled()`→`syncControlLabelVisibility()` path hid it.
 //
+// Every cell's `<input type="checkbox" [checked]="cell.checked">` uses the
+// shared `[aaoForceChecked]` directive instead of a plain property binding
+// (T5 CONTROLLER-ADDED scope, from the T3 review's "latent-memoization
+// audit" finding — see `force-value.directive.ts`'s header): both callers'
+// `onToggle` (`setCariesSurfaceForSelection`/`setFillingSurfaceForSelection`)
+// route through `applyToSelected()` -> `gateToothEditBatch()`, whose
+// dual-state-confirm CANCEL path can leave a surface checkbox's
+// already-mutated DOM `.checked` stale after a cancel. Since `cell` here is a
+// plain per-render snapshot object (not itself a signal), the thunk looks the
+// cell back up by `value` from the `cells` INPUT SIGNAL itself (`checkedFor`)
+// so the directive's internal `effect()` has a genuine signal read to
+// subscribe to.
+//
 // Angular-ism: the pin's `SurfaceIndicator.children` is a `ReactNode` (either a
 // text badge or the 3-bar `<><i/><i/><i/></>` markup); Angular templates can't
 // carry an arbitrary render fragment through a plain data object, so it is
@@ -37,6 +50,7 @@
 // (once per side) instead of factored through `ngTemplateOutlet`, trading a
 // few duplicated lines for one fewer import/indirection.
 import { ChangeDetectionStrategy, Component, input } from "@angular/core";
+import { ForceCheckedDirective } from "./force-value.directive";
 
 /** Either a text badge (ICDAS code) or N neutral `<i>` severity bars. */
 export type SurfaceIndicatorContent = { kind: "badge"; text: string } | { kind: "bars"; count: number };
@@ -74,6 +88,7 @@ export type SurfaceCell = {
 @Component({
   selector: "aao-surface-cross",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ForceCheckedDirective],
   template: `
     <div class="surface-cross">
       @for (cell of cells(); track cell.value) {
@@ -105,7 +120,7 @@ export type SurfaceCell = {
             type="checkbox"
             [id]="'chk-' + cell.value"
             [value]="cell.value"
-            [checked]="cell.checked"
+            [aaoForceChecked]="checkedFor(cell.value)"
             [disabled]="cell.disabled"
             (change)="onCellToggle(cell, $event)"
           />
@@ -137,6 +152,14 @@ export type SurfaceCell = {
 })
 export class SurfaceCrossComponent {
   readonly cells = input.required<SurfaceCell[]>();
+
+  /** Thunk factory for `[aaoForceChecked]` — looks the cell back up by
+   *  `value` from the `cells` INPUT SIGNAL on every read (see file header),
+   *  since the `cell` loop variable itself is a plain per-render snapshot,
+   *  not a signal. */
+  protected checkedFor(value: string): () => boolean {
+    return () => this.cells().find((c) => c.value === value)?.checked ?? false;
+  }
 
   protected leftIndicators(cell: SurfaceCell): SurfaceIndicator[] {
     return (cell.indicators ?? []).filter((i) => i.side === "left");

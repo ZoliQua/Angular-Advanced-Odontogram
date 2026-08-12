@@ -37,10 +37,12 @@ import {
   setOrthoVerticalForSelection,
 } from "../../../core/odontogram";
 import { engineState } from "../../engine-state";
+import { ForceCheckedDirective, ForceValueDirective } from "./force-value.directive";
 
 @Component({
   selector: "aao-orthodontics-card",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ForceValueDirective, ForceCheckedDirective],
   template: `
     <section id="orthoCard" [class]="hidden() ? 'card hidden' : 'card'">
       <div class="card-title card-title-row">
@@ -48,7 +50,7 @@ import { engineState } from "../../engine-state";
       </div>
       <div id="orthoApplianceRow" class="row">
         <span>{{ i18n.t('ortho.appliance.label') }}</span>
-        <select id="orthoApplianceSelect" [value]="appliance()" (change)="onApplianceChange($event)">
+        <select id="orthoApplianceSelect" [aaoForceValue]="appliance" (change)="onApplianceChange($event)">
           @for (o of applianceOptions(); track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
           }
@@ -56,7 +58,7 @@ import { engineState } from "../../engine-state";
       </div>
       <div id="orthoDriftRow" class="row">
         <span>{{ i18n.t('ortho.drift.label') }}</span>
-        <select id="orthoDriftSelect" [value]="drift()" (change)="onDriftChange($event)">
+        <select id="orthoDriftSelect" [aaoForceValue]="drift" (change)="onDriftChange($event)">
           @for (o of driftOptions(); track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
           }
@@ -64,14 +66,14 @@ import { engineState } from "../../engine-state";
       </div>
       <div id="orthoVerticalRow" class="row">
         <span>{{ i18n.t('ortho.vertical.label') }}</span>
-        <select id="orthoVerticalSelect" [value]="vertical()" (change)="onVerticalChange($event)">
+        <select id="orthoVerticalSelect" [aaoForceValue]="vertical" (change)="onVerticalChange($event)">
           @for (o of verticalOptions(); track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
           }
         </select>
       </div>
       <label id="orthoRotationRow" class="row inline-check">
-        <input type="checkbox" id="orthoRotationToggle" [checked]="rotation()" (change)="onRotationChange($event)" />
+        <input type="checkbox" id="orthoRotationToggle" [aaoForceChecked]="rotation" (change)="onRotationChange($event)" />
         <span>{{ i18n.t('ortho.rotation.label') }}</span>
       </label>
     </section>
@@ -85,10 +87,13 @@ export class OrthodonticsCardComponent {
     const o = this.ortho();
     return o ? !o.visible : false;
   });
-  protected readonly appliance = computed(() => this.ortho()?.appliance ?? "none");
-  protected readonly drift = computed(() => this.ortho()?.drift ?? "none");
-  protected readonly vertical = computed(() => this.ortho()?.vertical ?? "none");
-  protected readonly rotation = computed(() => this.ortho()?.rotation ?? false);
+  // Thunks for the `[aaoForceValue]`/`[aaoForceChecked]` directives — see
+  // `force-value.directive.ts`'s header and `ToothDetailsCardComponent`'s
+  // identical rationale note.
+  protected readonly appliance = () => this.ortho()?.appliance ?? "none";
+  protected readonly drift = () => this.ortho()?.drift ?? "none";
+  protected readonly vertical = () => this.ortho()?.vertical ?? "none";
+  protected readonly rotation = () => this.ortho()?.rotation ?? false;
 
   protected applianceOptions(): { value: string; label: string }[] {
     return getOrthoApplianceOptions();

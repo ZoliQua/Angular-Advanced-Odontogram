@@ -80,6 +80,8 @@ import {
   setPerioViewMode,
   setReadOnly,
   setToothAnatomy,
+  setWearDetailLevel,
+  setDiscolorationDetailLevel,
   type PerioRowId,
 } from "../core/odontogram";
 import { setI18nLanguage } from "../core/i18n/useI18n";
@@ -149,6 +151,17 @@ export function resetEngineStateForTest(): void {
   // this is defense-in-depth against a future Settings -> Tooth details spec
   // leaking it silently across files under `test.isolate: false`.
   setNotesEnabled(false);
+  // T5 (composable-resync burn-down, Part B fold-in): the Tooth details ->
+  // wear/discoloration detail-level singletons (`core/odontogram.ts`'s `let
+  // wearDetailLevel`/`let discolorationDetailLevel`, module default
+  // "complex") are pre-existing (not new this phase) but had NO reset seam
+  // either — same leak class as every other module flag reset in this
+  // function. `tooth-details-card.spec.ts` (new this task) is the FIRST spec
+  // in the suite to flip either one (to exercise the select-vs-toggle swap),
+  // so without this reset it would leak "simple" to every later spec file in
+  // the same `test.isolate: false` run.
+  setWearDetailLevel("complex");
+  setDiscolorationDetailLevel("complex");
   // Perio-settings singletons (Task 3): every row back to visible, index-name
   // mode back to "translated" — both module defaults (see
   // `defaultPerioRowVisibility()` / `let perioIndexNameMode = "translated"`).

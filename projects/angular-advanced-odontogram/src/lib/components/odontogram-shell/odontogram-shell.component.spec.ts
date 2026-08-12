@@ -114,6 +114,11 @@ const MUST_HAVE_IDS = [
   "btnStatusExport", "btnStatusFhirExport", "btnStatusPngExport", "btnStatusJpgExport",
   "btnStatusSvgExport", "btnPerioSvgExport", "btnPerioPngExport", "btnPerioJpgExport",
   "btnStatusImport", "statusImportInput",
+  // T5 (composable-resync burn-down): the topbar's 1.2.0 resync additions
+  // (odontogram-topbar.component.ts) — the "About and credits" popup trigger
+  // and the "View on GitHub" toolbar link — never joined this inventory when
+  // Task 2 added them. Both are always rendered (not conditionally mounted).
+  "btnCreditsMenu", "btnGithubLink",
 ];
 
 describe("OdontogramShellComponent skeleton", () => {
@@ -888,5 +893,35 @@ describe("OdontogramShellComponent Task 2: v2.4.0 App shell deltas", () => {
     expect(defectRow).not.toBeNull();
     expect(defectRow.classList.contains("hidden")).toBe(true);
     expect(f.nativeElement.querySelector("#fillingSimpleDefectSelect")).not.toBeNull();
+  });
+
+  // T5 (composable-resync burn-down, Part C annotation for
+  // `credits-modal.test.tsx`): `credits-modal.component.spec.ts` already
+  // covers CreditsModalComponent's OWN behavior (open/close/Escape/backdrop/
+  // focus-trap/content) in isolation; this proves the shell-level WIRING —
+  // clicking the topbar's `#btnCreditsMenu` (`ui.setCreditsOpen(true)`) opens
+  // the real `<aao-credits-modal [open]="ui.creditsOpen()">` mounted inside
+  // `OdontogramShellComponent` — the shell-dom-parity gap neither spec
+  // covered on its own.
+  it("#btnCreditsMenu opens the mounted <aao-credits-modal>; its close button closes it (Task 2 wiring)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+
+    expect(f.nativeElement.querySelector("#creditsModal")).toBeNull();
+
+    const btn = f.nativeElement.querySelector("#btnCreditsMenu") as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    btn.click();
+    await f.whenStable();
+
+    const dialog = f.nativeElement.querySelector("#creditsModal") as HTMLElement;
+    expect(dialog).not.toBeNull();
+    expect(dialog.getAttribute("role")).toBe("dialog");
+
+    const closeBtn = dialog.querySelector(".odon-settings-close") as HTMLButtonElement;
+    closeBtn.click();
+    await f.whenStable();
+
+    expect(f.nativeElement.querySelector("#creditsModal")).toBeNull();
   });
 });

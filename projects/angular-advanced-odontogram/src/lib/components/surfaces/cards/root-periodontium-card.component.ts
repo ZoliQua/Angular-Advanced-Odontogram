@@ -39,24 +39,19 @@
 // this component's own host element (mirrors CariesCard/FillingsCard's
 // identical technique).
 //
-// Angular-ism (`#mobilitySelect` only): every other select here uses a plain
-// `[value]` property binding, but `#mobilitySelect` is the ONE control the
-// dual-state-confirm CANCEL path (`cancelDualStateConfirm()` →
-// `revertActiveControls()` → `notifyStateChange()`) has to snap back with no
-// underlying MODEL change — cancelling a deferred edit means the mutation
-// (`s.mobility = value`) never actually ran, so `getActiveRootPerio().mobilityValue`
-// is the SAME string before and after. React's controlled `<select value=…>`
-// re-asserts the DOM value on every commit regardless of prop equality
-// (exactly why "controlled inputs" fix native desync); Angular's `[value]`
-// property binding does the opposite — it SKIPS the DOM write when the bound
-// expression is `===` its previous value, so the browser's own (unrelated)
-// mutation of `.value` — which is what a user's still-pending native `<select>`
-// pick looks like while the confirm is open — would never be corrected back on
-// cancel. Forcing the write imperatively inside the same `effect()` that
-// already reruns on every `rp()` notify (see CariesCard's identical
-// `useLayoutEffect`-style rationale) sidesteps Angular's memoization the same
-// way React's reconciler does for this one control.
-import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, viewChild } from "@angular/core";
+// Every `[value]`/`[checked]` control in this card (T5 CONTROLLER-ADDED
+// scope, from the T3 review's "latent-memoization audit" finding) uses the
+// shared `[aaoForceValue]`/`[aaoForceChecked]` directives instead of plain
+// property bindings — see `force-value.directive.ts`'s file header for why:
+// every `set*ForSelection` setter here routes through `applyToSelected()` ->
+// `gateToothEditBatch()`, whose dual-state-confirm CANCEL path can leave a
+// native control's already-mutated DOM value/checked state stale because the
+// underlying engine value never changed (the deferred `apply` never ran).
+// `#mobilitySelect` — the one control DS-1's `ds1-confirm-revert.spec.ts` red
+// depended on — previously carried a one-off `effect()` + `viewChild`
+// force-write for exactly this; it now uses the same shared directive as
+// every other control in the card.
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject } from "@angular/core";
 import { I18nService } from "../../../i18n/i18n.service";
 import {
   getActiveRootPerio,
@@ -72,16 +67,18 @@ import {
   setResorptionForSelection,
 } from "../../../core/odontogram";
 import { engineState } from "../../engine-state";
+import { ForceCheckedDirective, ForceValueDirective } from "./force-value.directive";
 
 @Component({
   selector: "aao-root-periodontium-card",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ForceValueDirective, ForceCheckedDirective],
   template: `
     <div id="rpRootBlock" [class]="rp().rootBlockVisible ? null : 'hidden'">
       <div class="hint">{{ i18n.t('endo.hint') }}</div>
       <div id="pulpEndoRow" class="row">
         <span>{{ i18n.t('pulpEndo.label') }}</span>
-        <select id="pulpEndoSelect" [value]="rp().pulpEndoValue" [disabled]="rp().pulpEndoDisabled" (change)="onPulpEndoChange($event)">
+        <select id="pulpEndoSelect" [aaoForceValue]="pulpEndoValue" [disabled]="rp().pulpEndoDisabled" (change)="onPulpEndoChange($event)">
           @if (rp().pulpEndoNoneOption; as none) {
             <option [value]="none.value">{{ none.label }}</option>
           }
@@ -96,7 +93,7 @@ import { engineState } from "../../engine-state";
       </div>
       <div id="apicalDxRow" [class]="rp().apicalDxRowVisible ? 'row' : 'row hidden'">
         <span>{{ i18n.t('apical.dxLabel') }}</span>
-        <select id="apicalDxSelect" [value]="rp().apicalDxValue" [disabled]="rp().apicalDxDisabled" (change)="onApicalDxChange($event)">
+        <select id="apicalDxSelect" [aaoForceValue]="apicalDxValue" [disabled]="rp().apicalDxDisabled" (change)="onApicalDxChange($event)">
           @for (o of rp().apicalDxOptions; track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
           }
@@ -104,7 +101,7 @@ import { engineState } from "../../engine-state";
       </div>
       <div id="periapicalTypeRow" [class]="rp().periapicalRowVisible ? 'row' : 'row hidden'">
         <span>{{ i18n.t('periapical.typeLabel') }}</span>
-        <select id="periapicalTypeSelect" [value]="rp().periapicalTypeValue" (change)="onPeriapicalTypeChange($event)">
+        <select id="periapicalTypeSelect" [aaoForceValue]="periapicalTypeValue" (change)="onPeriapicalTypeChange($event)">
           @for (o of rp().periapicalTypeOptions; track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
           }
@@ -112,7 +109,7 @@ import { engineState } from "../../engine-state";
       </div>
       <div id="resorptionRow" [class]="rp().resorptionRowVisible ? 'row' : 'row hidden'">
         <span>{{ i18n.t('root.resorption') }}</span>
-        <select id="resorptionSelect" [value]="rp().resorptionValue" [disabled]="rp().resorptionDisabled" (change)="onResorptionChange($event)">
+        <select id="resorptionSelect" [aaoForceValue]="resorptionValue" [disabled]="rp().resorptionDisabled" (change)="onResorptionChange($event)">
           @for (o of rp().resorptionOptions; track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
           }
@@ -120,11 +117,11 @@ import { engineState } from "../../engine-state";
       </div>
       <div class="row inline-checks">
         <label [style.display]="rp().endoResectionDisabled ? 'none' : null">
-          <input type="checkbox" id="endoResection" [checked]="rp().endoResectionChecked" [disabled]="rp().endoResectionDisabled" (change)="onEndoResectionChange($event)" />
+          <input type="checkbox" id="endoResection" [aaoForceChecked]="endoResectionChecked" [disabled]="rp().endoResectionDisabled" (change)="onEndoResectionChange($event)" />
           <span>{{ i18n.t('endo.resection') }}</span>
         </label>
         <label [style.display]="rp().parapulpalPinDisabled ? 'none' : null">
-          <input type="checkbox" id="parapulpalPin" [checked]="rp().parapulpalPinChecked" [disabled]="rp().parapulpalPinDisabled" (change)="onParapulpalPinChange($event)" />
+          <input type="checkbox" id="parapulpalPin" [aaoForceChecked]="parapulpalPinChecked" [disabled]="rp().parapulpalPinDisabled" (change)="onParapulpalPinChange($event)" />
           <span>{{ i18n.t('endo.parapulpalPin') }}</span>
         </label>
       </div>
@@ -133,7 +130,7 @@ import { engineState } from "../../engine-state";
     <div id="rpPerioBlock" [class]="rp().perioBlockVisible ? null : 'hidden'">
       <div id="mobilityRow" [class]="rp().mobilityRowVisible ? 'row' : 'row hidden'">
         <span>{{ i18n.t('inflammation.mobilityLabel') }}</span>
-        <select id="mobilitySelect" #mobilitySelect [disabled]="rp().mobilityDisabled" (change)="onMobilityChange($event)">
+        <select id="mobilitySelect" [aaoForceValue]="mobilityValue" [disabled]="rp().mobilityDisabled" (change)="onMobilityChange($event)">
           @for (o of rp().mobilityOptions; track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
           }
@@ -151,20 +148,20 @@ import { engineState } from "../../engine-state";
       <div id="modsChecks" class="check-grid">
         @for (m of rp().mods; track m.value) {
           <label [class]="m.hiddenClass ? 'hidden' : null" [style.display]="m.styleHidden ? 'none' : null">
-            <input type="checkbox" [id]="'chk-' + m.value" [value]="m.value" [checked]="m.checked" [disabled]="m.disabled" (change)="onModChange(m.value, $event)" />
+            <input type="checkbox" [id]="'chk-' + m.value" [value]="m.value" [aaoForceChecked]="modChecked(m.value)" [disabled]="m.disabled" (change)="onModChange(m.value, $event)" />
             <span [id]="'lbl-' + m.value">{{ m.label }}</span>
           </label>
         }
       </div>
       <div id="calculusRow" [class]="rp().calculusRowVisible ? 'row inline-checks' : 'row inline-checks hidden'">
         <label>
-          <input type="checkbox" id="calculusToggle" [checked]="rp().calculusChecked" (change)="onCalculusChange($event)" />
+          <input type="checkbox" id="calculusToggle" [aaoForceChecked]="calculusChecked" (change)="onCalculusChange($event)" />
           <span>{{ i18n.t('calculus.label') }}</span>
         </label>
       </div>
       <div id="periImplantRow" [class]="rp().periImplantRowVisible ? 'row' : 'row hidden'">
         <span>{{ i18n.t('periImplant.label') }}</span>
-        <select id="periImplantSelect" [value]="rp().periImplantValue" (change)="onPeriImplantChange($event)">
+        <select id="periImplantSelect" [aaoForceValue]="periImplantValue" (change)="onPeriImplantChange($event)">
           @for (o of rp().periImplantOptions; track o.value) {
             <option [value]="o.value">{{ o.label }}</option>
           }
@@ -176,8 +173,26 @@ import { engineState } from "../../engine-state";
 export class RootPeriodontiumCardComponent {
   protected readonly i18n = inject(I18nService);
   private readonly elRef = inject(ElementRef<HTMLElement>);
-  private readonly mobilitySelectRef = viewChild<ElementRef<HTMLSelectElement>>("mobilitySelect");
   protected readonly rp = engineState(getActiveRootPerio);
+
+  // Thunks for the `[aaoForceValue]`/`[aaoForceChecked]` directives — stable
+  // bound methods (arrow-function class fields); see
+  // `force-value.directive.ts`'s header for why a STABLE thunk reference
+  // works fine (correctness comes from `this.rp()` being read inside the
+  // directive's own `effect()`, not from the thunk's identity changing).
+  protected readonly pulpEndoValue = () => this.rp().pulpEndoValue;
+  protected readonly apicalDxValue = () => this.rp().apicalDxValue;
+  protected readonly periapicalTypeValue = () => this.rp().periapicalTypeValue;
+  protected readonly resorptionValue = () => this.rp().resorptionValue;
+  protected readonly endoResectionChecked = () => this.rp().endoResectionChecked;
+  protected readonly parapulpalPinChecked = () => this.rp().parapulpalPinChecked;
+  protected readonly mobilityValue = () => this.rp().mobilityValue;
+  protected readonly calculusChecked = () => this.rp().calculusChecked;
+  protected readonly periImplantValue = () => this.rp().periImplantValue;
+
+  protected modChecked(value: string): () => boolean {
+    return () => this.rp().mods.find((m) => m.value === value)?.checked ?? false;
+  }
 
   constructor() {
     // Mirrors the pin's `useLayoutEffect(() => {...})` (no dep array — reruns
@@ -185,15 +200,6 @@ export class RootPeriodontiumCardComponent {
     effect(() => {
       const visible = this.rp().sectionVisible;
       this.elRef.nativeElement.closest("#rootPeriodontiumSection")?.classList.toggle("hidden", !visible);
-    });
-
-    // Force-write #mobilitySelect's DOM value on every notify — see the
-    // file-level "Angular-ism" doc comment above for why a plain `[value]`
-    // binding isn't enough for this one control.
-    effect(() => {
-      const value = this.rp().mobilityValue;
-      const el = this.mobilitySelectRef()?.nativeElement;
-      if (el) el.value = value;
     });
   }
 

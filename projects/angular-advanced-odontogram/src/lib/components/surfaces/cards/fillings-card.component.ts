@@ -43,16 +43,17 @@ import {
   setFissureSealingForSelection,
 } from "../../../core/odontogram";
 import { engineState } from "../../engine-state";
+import { ForceCheckedDirective, ForceValueDirective } from "./force-value.directive";
 import { SurfaceCell, SurfaceCrossComponent } from "./surface-cross.component";
 
 @Component({
   selector: "aao-fillings-card",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SurfaceCrossComponent],
+  imports: [SurfaceCrossComponent, ForceValueDirective, ForceCheckedDirective],
   template: `
     <div class="row">
       <span>{{ i18n.t('filling.typeLabel') }}</span>
-      <select id="fillingSelect" [value]="fillings().fillingMaterial" (change)="onMaterialChange($event)">
+      <select id="fillingSelect" [aaoForceValue]="fillingMaterial" (change)="onMaterialChange($event)">
         @for (o of fillings().fillingOptions; track o.value) {
           <option [value]="o.value">{{ o.label }}</option>
         }
@@ -66,7 +67,7 @@ import { SurfaceCell, SurfaceCrossComponent } from "./surface-cross.component";
          is a .row LABEL (the whole pill is clickable — the native
          checkbox is display:none), like #fissureSealingRow. -->
     <label id="fillingSimpleRow" [class]="fillings().simpleRowVisible ? 'row fissure-row' : 'row fissure-row hidden'">
-      <input type="checkbox" id="fillingSimpleToggle" [checked]="fillings().simpleToggleChecked" (change)="onSimpleToggleChange($event)" />
+      <input type="checkbox" id="fillingSimpleToggle" [aaoForceChecked]="simpleToggleChecked" (change)="onSimpleToggleChange($event)" />
       <span>{{ i18n.t('filling.simpleToggle') }}</span>
     </label>
     <!-- When the filling-defect feature is on, a defect select
@@ -74,14 +75,14 @@ import { SurfaceCell, SurfaceCrossComponent } from "./surface-cross.component";
          per-surface cells). -->
     <div id="fillingSimpleDefectRow" [class]="fillings().simpleDefectRowVisible ? 'row' : 'row hidden'">
       <span>{{ i18n.t('fillingDefect.label') }}</span>
-      <select id="fillingSimpleDefectSelect" [value]="fillings().simpleDefectValue" (change)="onSimpleDefectChange($event)">
+      <select id="fillingSimpleDefectSelect" [aaoForceValue]="simpleDefectValue" (change)="onSimpleDefectChange($event)">
         @for (o of fillings().simpleDefectOptions; track o.value) {
           <option [value]="o.value">{{ o.label }}</option>
         }
       </select>
     </div>
     <label id="fissureSealingRow" [class]="fillings().fissureRowVisible ? 'row fissure-row' : 'row fissure-row hidden'">
-      <input type="checkbox" id="fissureSealing" [checked]="fillings().fissureSealing" (change)="onFissureSealingChange($event)" />
+      <input type="checkbox" id="fissureSealing" [aaoForceChecked]="fissureSealingChecked" (change)="onFissureSealingChange($event)" />
       <span>{{ i18n.t('filling.fissureSealing') }}</span>
     </label>
     <div id="fillingSubcariesSummary" [class]="fillings().subcariesSummary ? 'hint' : 'hint hidden'">{{ fillings().subcariesSummary }}</div>
@@ -92,6 +93,14 @@ export class FillingsCardComponent {
   protected readonly i18n = inject(I18nService);
   private readonly elRef = inject(ElementRef<HTMLElement>);
   protected readonly fillings = engineState(getActiveFillings);
+
+  // Thunks for the `[aaoForceValue]`/`[aaoForceChecked]` directives — see
+  // `force-value.directive.ts`'s header and `ToothDetailsCardComponent`'s
+  // identical rationale note.
+  protected readonly fillingMaterial = () => this.fillings().fillingMaterial;
+  protected readonly simpleToggleChecked = () => this.fillings().simpleToggleChecked;
+  protected readonly simpleDefectValue = () => this.fillings().simpleDefectValue;
+  protected readonly fissureSealingChecked = () => this.fillings().fissureSealing;
 
   constructor() {
     // Mirrors the pin's `useLayoutEffect(() => {...})` (no dep array — reruns

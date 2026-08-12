@@ -24,3 +24,22 @@ export * from "./lib/components/export-options-modal/export-options-modal.compon
 export * from "./lib/components/odontogram-shell/odontogram-shell.component";
 export * from "./lib/components/perio-sidebar/perio-sidebar.component";
 export * from "./lib/components/perio-chart/perio-chart.component";
+export * from "./lib/components/credits-modal/credits-modal.component";
+// Composable UI (1.2.0 resync): the provider port, the engine-state
+// subscription helper, the four presentational surfaces, and the seven
+// declarative control cards — mirrors upstream App.tsx/index.ts's
+// Composable-UI export list (`OdontogramProvider`/`useOdontogramUi`,
+// `useEngineState`, the four surfaces, the seven cards).
+export * from "./lib/components/odontogram-ui.service";
+export * from "./lib/components/engine-state";
+export * from "./lib/components/surfaces/odontogram-topbar.component";
+export * from "./lib/components/surfaces/odontogram-chart-surface.component";
+export * from "./lib/components/surfaces/tooth-info-surface.component";
+export * from "./lib/components/surfaces/tooth-controls-surface.component";
+export * from "./lib/components/surfaces/cards/statuses-card.component";
+export * from "./lib/components/surfaces/cards/tooth-details-card.component";
+export * from "./lib/components/surfaces/cards/caries-card.component";
+export * from "./lib/components/surfaces/cards/fillings-card.component";
+export * from "./lib/components/surfaces/cards/root-periodontium-card.component";
+export * from "./lib/components/surfaces/cards/orthodontics-card.component";
+export * from "./lib/components/surfaces/cards/surface-cross.component";
