@@ -108,6 +108,8 @@ export function makeSettings(overrides: Partial<SettingsState> = {}): SettingsSt
     onScreenToothSpacing: vi.fn(),
     screenToothNumberSize: "normal",
     onScreenToothNumberSize: vi.fn(),
+    toothAnatomy: "classic",
+    onToothAnatomy: vi.fn(),
     showStatusCard: true,
     onShowStatusCard: vi.fn(),
     showOrthoCard: true,

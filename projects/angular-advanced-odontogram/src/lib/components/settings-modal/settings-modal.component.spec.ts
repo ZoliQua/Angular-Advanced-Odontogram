@@ -85,7 +85,7 @@ describe("SettingsModalComponent", () => {
     }
   });
 
-  it("(c) switching to odontogram shows 4 toggles + 2 selects; toggling calls the on* callback", async () => {
+  it("(c) switching to odontogram shows 4 toggles + 3 selects; toggling calls the on* callback", async () => {
     const f = TestBed.createComponent(HostComponent);
     await f.whenStable();
     f.componentInstance.open.set(true);
@@ -100,8 +100,9 @@ describe("SettingsModalComponent", () => {
     const panel = f.nativeElement.querySelector(".odon-settings-panel") as HTMLElement;
     const switches = panel.querySelectorAll('input[type="checkbox"]');
     expect(switches.length).toBe(4);
+    // v2.4.0/1.2.0 resync: screen spacing, screen number size, tooth anatomy.
     const selects = panel.querySelectorAll("select.odon-settings-select");
-    expect(selects.length).toBe(2);
+    expect(selects.length).toBe(3);
 
     // Order: plan-mode, tooth-info, statuses, orthodontics.
     const statusToggle = switches[2] as HTMLInputElement;

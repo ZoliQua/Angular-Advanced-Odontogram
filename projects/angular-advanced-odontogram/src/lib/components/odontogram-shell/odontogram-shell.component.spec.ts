@@ -41,6 +41,7 @@ import {
   formatToothLabel,
   getChartMode,
   getPerioRowVisibility,
+  getToothAnatomy,
   getToothPerio,
   isDualStateConfirmPending,
   isPerioOverlayOpen,
@@ -819,6 +820,29 @@ describe("OdontogramShellComponent Task 2: v2.4.0 App shell deltas", () => {
     expect(grid.getAttribute("data-tooth-num")).toBe("xlarge");
     expect(grid.style.getPropertyValue("--odon-select-rgb")).toBe("255,0,0");
     expect(grid.style.getPropertyValue("--odon-select-border-style")).toBe("dotted");
+  });
+
+  it("#toothGrid's data-anatomy attribute follows the Settings -> Odontogram tooth-anatomy picker (v2.4.0/1.2.0 resync, Task 4)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    const grid = f.nativeElement.querySelector("#toothGrid") as HTMLElement;
+
+    // Classic (the module default) omits the attribute entirely.
+    expect(grid.hasAttribute("data-anatomy")).toBe(false);
+    expect(settings(f).toothAnatomy).toBe("classic");
+
+    settings(f).onToothAnatomy("measured");
+    await f.whenStable();
+
+    expect(grid.getAttribute("data-anatomy")).toBe("measured");
+    expect(settings(f).toothAnatomy).toBe("measured");
+    expect(getToothAnatomy()).toBe("measured");
+
+    settings(f).onToothAnatomy("classic");
+    await f.whenStable();
+
+    expect(grid.hasAttribute("data-anatomy")).toBe(false);
+    expect(getToothAnatomy()).toBe("classic");
   });
 
   it("the tooth-info card renders a grouped dentition table + individual notes from the REAL getOdontogramSummary(), replacing permanentList/missingList (App.tsx 787-834)", async () => {

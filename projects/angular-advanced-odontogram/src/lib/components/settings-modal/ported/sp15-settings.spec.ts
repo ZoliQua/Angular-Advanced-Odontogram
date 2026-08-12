@@ -7,6 +7,9 @@
 //        controls (plan-mode, screen tooth-spacing, screen tooth-number-size)
 //        + toothInfo on top of its original two card toggles -> 4 toggles +
 //        2 selects, in order: plan-mode, tooth-info, statuses, orthodontics.
+//        (v2.4.0/1.2.0 resync, Task 4: a 3rd select — tooth-anatomy
+//        classic/measured — was added between screen tooth-number-size and
+//        tooth-info, per SettingsModal.tsx's own delta.)
 //   B2 — unchanged: the standalone "secondaryCaries" tab stays removed; its
 //        CARS SelectRow stays in "caries", between root-caries and
 //        radiographic-depth.
@@ -105,10 +108,11 @@ describe("SP15 Task 4 (B1): Odontogram settings tab (was Panels)", () => {
     const panel = f.nativeElement.querySelector(".odon-settings-panel") as HTMLElement;
 
     // 4 toggles now, in order: plan-mode, tooth-info, statuses, orthodontics
-    // (plus two selects for screen spacing / number size).
+    // (plus three selects for screen spacing / number size / tooth anatomy —
+    // v2.4.0/1.2.0 resync added the tooth-anatomy select).
     const checkboxes = panel.querySelectorAll('input[type="checkbox"]');
     expect(checkboxes).toHaveLength(4);
-    expect(panel.querySelectorAll("select")).toHaveLength(2);
+    expect(panel.querySelectorAll("select")).toHaveLength(3);
 
     (checkboxes[0] as HTMLInputElement).click();
     await f.whenStable();
@@ -142,6 +146,25 @@ describe("SP15 Task 4 (B1): Odontogram settings tab (was Panels)", () => {
     expect(size).toBeTruthy();
     expect(Array.from(spacing.options).map((o) => o.value)).toEqual(["wide", "normal", "close"]);
     expect(Array.from(size.options).map((o) => o.value)).toEqual(["small", "normal", "xlarge"]);
+  });
+
+  it("renders the tooth-anatomy select (classic/measured) wired to onToothAnatomy", async () => {
+    const onToothAnatomy = vi.fn();
+    const s = makeSettings({ toothAnatomy: "measured", onToothAnatomy });
+    const f = await renderTab("odontogram", s);
+    const panel = f.nativeElement.querySelector(".odon-settings-panel") as HTMLElement;
+
+    const anatomy = panel.querySelector(
+      'select[aria-label="Tooth anatomy"]',
+    ) as HTMLSelectElement;
+    expect(anatomy).toBeTruthy();
+    expect(Array.from(anatomy.options).map((o) => o.value)).toEqual(["classic", "measured"]);
+    expect(anatomy.value).toBe("measured");
+
+    anatomy.value = "classic";
+    anatomy.dispatchEvent(new Event("change"));
+    await f.whenStable();
+    expect(onToothAnatomy).toHaveBeenCalledWith("classic");
   });
 });
 

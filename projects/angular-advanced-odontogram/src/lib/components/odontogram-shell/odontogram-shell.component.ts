@@ -53,6 +53,7 @@ import {
   type FillingComplexity,
 } from "../settings-modal/settings-modal.component";
 import { ExportOptionsModalComponent } from "../export-options-modal/export-options-modal.component";
+import { CreditsModalComponent } from "../credits-modal/credits-modal.component";
 import { PerioChartComponent } from "../perio-chart/perio-chart.component";
 import { PerioSidebarComponent } from "../perio-sidebar/perio-sidebar.component";
 import { OdontogramTopbarComponent } from "../surfaces/odontogram-topbar.component";
@@ -80,6 +81,7 @@ export { ODONTOGRAM_ENGINE_LIFECYCLE } from "../odontogram-engine-lifecycle";
     DualStateConfirmComponent,
     SettingsModalComponent,
     ExportOptionsModalComponent,
+    CreditsModalComponent,
     PerioChartComponent,
     PerioSidebarComponent,
   ],
@@ -163,9 +165,7 @@ export { ODONTOGRAM_ENGINE_LIFECYCLE } from "../odontogram-engine-lifecycle";
 
       <aao-export-options-modal [open]="ui.pdfOpen()" (close)="ui.setPdfOpen(false)" />
 
-      <!-- Credits ("About and credits") modal: Task 4's scope. ui.creditsOpen
-           is already wired (the topbar's #btnCreditsMenu button opens it) —
-           nothing renders here yet. -->
+      <aao-credits-modal [open]="ui.creditsOpen()" (close)="ui.setCreditsOpen(false)" />
     </div>
   `,
 })

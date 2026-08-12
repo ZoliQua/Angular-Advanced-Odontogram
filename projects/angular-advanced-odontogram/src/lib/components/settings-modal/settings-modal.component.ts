@@ -62,6 +62,7 @@ import type {
   RootCariesMode,
   SecondaryCariesMode,
   SurfaceNotation,
+  ToothAnatomy,
   ToothDetailLevel,
 } from "../../core/odontogram";
 import type { PdfColorTheme } from "../../core/perioPdf";
@@ -156,6 +157,10 @@ export interface SettingsState {
   onScreenToothSpacing: (value: ScreenToothSpacing) => void;
   screenToothNumberSize: ScreenToothNumberSize;
   onScreenToothNumberSize: (value: ScreenToothNumberSize) => void;
+  // Tooth-anatomy profile — classic (default) vs. measured two-arch layout
+  // (v2.4.0/1.2.0 resync, SettingsModal.tsx delta).
+  toothAnatomy: ToothAnatomy;
+  onToothAnatomy: (value: ToothAnatomy) => void;
   showStatusCard: boolean;
   onShowStatusCard: (value: boolean) => void;
   showOrthoCard: boolean;
@@ -279,6 +284,10 @@ const SCREEN_NUMBER_SIZE_OPTIONS: ReadonlyArray<{ value: ScreenToothNumberSize; 
   { value: "small", labelKey: "settings.screen.numberSize.small" },
   { value: "normal", labelKey: "settings.screen.numberSize.normal" },
   { value: "xlarge", labelKey: "settings.screen.numberSize.xlarge" },
+];
+const TOOTH_ANATOMY_OPTIONS: ReadonlyArray<{ value: ToothAnatomy; labelKey: string }> = [
+  { value: "classic", labelKey: "settings.toothAnatomy.classic" },
+  { value: "measured", labelKey: "settings.toothAnatomy.measured" },
 ];
 const SELECTION_BORDER_OPTIONS: ReadonlyArray<{ value: SelectionBorderStyle; labelKey: string }> = [
   { value: "solid", labelKey: "settings.selection.border.solid" },
@@ -677,6 +686,30 @@ const TABLIST_NAV_KEYS = ["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Ho
                           <option
                             [attr.value]="opt.value"
                             [selected]="opt.value === settings().screenToothNumberSize"
+                          >
+                            {{ i18n.t(opt.labelKey) }}
+                          </option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+                  <div class="odon-settings-row">
+                    <div class="odon-settings-row-text">
+                      <div class="odon-settings-row-label">{{ i18n.t("settings.toothAnatomy") }}</div>
+                      <div class="odon-settings-row-desc" id="settingsDesc-toothAnatomy">
+                        {{ i18n.t("settings.toothAnatomy.desc") }}
+                      </div>
+                    </div>
+                    <div class="odon-settings-row-control" data-desc="settingsDesc-toothAnatomy">
+                      <select
+                        class="odon-settings-select"
+                        [attr.aria-label]="i18n.t('settings.toothAnatomy')"
+                        (change)="settings().onToothAnatomy($any($event.target).value)"
+                      >
+                        @for (opt of toothAnatomyOptions; track opt.value) {
+                          <option
+                            [attr.value]="opt.value"
+                            [selected]="opt.value === settings().toothAnatomy"
                           >
                             {{ i18n.t(opt.labelKey) }}
                           </option>
@@ -1720,6 +1753,7 @@ export class SettingsModalComponent {
   protected readonly perioRowGroups = PERIO_ROW_GROUPS;
   protected readonly screenSpacingOptions = SCREEN_SPACING_OPTIONS;
   protected readonly screenNumberSizeOptions = SCREEN_NUMBER_SIZE_OPTIONS;
+  protected readonly toothAnatomyOptions = TOOTH_ANATOMY_OPTIONS;
   protected readonly selectionBorderOptions = SELECTION_BORDER_OPTIONS;
   protected readonly fillingComplexityOptions = FILLING_COMPLEXITY_OPTIONS;
   protected readonly fillingMaterialKeys = FILLING_MATERIAL_KEYS;

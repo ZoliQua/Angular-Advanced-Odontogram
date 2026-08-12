@@ -79,6 +79,7 @@ import {
   isDualStateConfirmPending,
   isPerioOverlayOpen,
   onStateChange,
+  rebuildGrid,
   registerPlugins,
   setCariesDepthEnabled,
   setChartMode,
@@ -100,6 +101,7 @@ import {
   setRootCariesMode,
   setSecondaryCariesMode,
   setSurfaceNotation,
+  setToothAnatomy,
   setWearDetailLevel,
   type OdontogramSummary,
   type PdfSettings,
@@ -255,9 +257,8 @@ export class OdontogramUiService {
   readonly confirmOpen = signal(false);
   // Mirrors the module-level tooth-anatomy profile (OdontogramContext.tsx
   // 432-435/646-652) — consumed by OdontogramChartSurfaceComponent's
-  // `data-anatomy` attribute. The Settings-modal picker for it is Task 4's
-  // scope ("Settings anatomy option"); this mirror exists now so the chart
-  // surface's transcription is complete independent of that later UI.
+  // `data-anatomy` attribute AND the Settings-modal picker
+  // (`settingsState.toothAnatomy`/`onToothAnatomy`, wired below).
   readonly toothAnatomy = signal<ToothAnatomy>(getToothAnatomy());
 
   // App.tsx's `isPerioView` (OdontogramContext.tsx 452) — only true in
@@ -390,6 +391,14 @@ export class OdontogramUiService {
     this.screenSpacing.set(v);
   private readonly onScreenToothNumberSize = (v: ScreenToothNumberSize): void =>
     this.screenNumberSize.set(v);
+  // Tooth-anatomy profile picker (OdontogramContext.tsx 725-730): writes the
+  // local mirror, the engine module flag, then rebuilds the grid so the new
+  // profile's layout/artwork takes effect immediately.
+  private readonly onToothAnatomy = (v: ToothAnatomy): void => {
+    this.toothAnatomy.set(v);
+    setToothAnatomy(v);
+    void rebuildGrid();
+  };
   private readonly onShowStatusCard = (v: boolean): void => this.showStatusCard.set(v);
   private readonly onShowOrthoCard = (v: boolean): void => this.showOrthoCard.set(v);
   private readonly onPerioChartAvailable = (v: boolean): void => {
@@ -491,6 +500,8 @@ export class OdontogramUiService {
     onScreenToothSpacing: this.onScreenToothSpacing,
     screenToothNumberSize: this.screenNumberSize(),
     onScreenToothNumberSize: this.onScreenToothNumberSize,
+    toothAnatomy: this.toothAnatomy(),
+    onToothAnatomy: this.onToothAnatomy,
     showStatusCard: this.showStatusCard(),
     onShowStatusCard: this.onShowStatusCard,
     showOrthoCard: this.showOrthoCard(),

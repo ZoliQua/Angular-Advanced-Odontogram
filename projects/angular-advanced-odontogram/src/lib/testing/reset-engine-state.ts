@@ -79,6 +79,7 @@ import {
   setPerioRowVisibility,
   setPerioViewMode,
   setReadOnly,
+  setToothAnatomy,
   type PerioRowId,
 } from "../core/odontogram";
 import { setI18nLanguage } from "../core/i18n/useI18n";
@@ -132,6 +133,14 @@ export function resetEngineStateForTest(): void {
   // Perio chart view-mode toggle (module default — see
   // `core/odontogram.ts`'s `let perioViewMode: PerioViewMode = "toggle"`).
   setPerioViewMode("toggle");
+  // v2.4.0/1.2.0 resync (Task 4 fold-in): the Settings -> Odontogram tab's
+  // tooth-anatomy profile (`core/odontogram.ts`'s `let toothAnatomy:
+  // ToothAnatomy = "classic"`) is the exact same leak class as
+  // `perioViewMode` above — module-level singleton, public setter, no
+  // bulk-reset export. Task 4's own specs (and any future one) that call
+  // `onToothAnatomy("measured")` would otherwise leak the profile to every
+  // later spec file in this `test.isolate: false` run.
+  setToothAnatomy("classic");
   // v2.4.0 resync (Task 3 fold-in, ledgered leak-class item): the Tooth
   // details -> Notes toggle's module-level singleton
   // (`core/odontogram.ts`'s `let notesEnabled = false`) has no reset seam of
