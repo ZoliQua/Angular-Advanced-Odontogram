@@ -6,6 +6,95 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-12
+
+Resync to `react-advanced-odontogram` main @ commit `934a911` (post-v2.4.0;
+payload version unchanged at 2.20) — the composable-UI resync. Engine core +
+test corpus re-copied from the pinned commit; the five sanctioned core
+deviations were re-applied fresh, and the credits-modal identity adaptations
+introduced this release extend deviation #4 (branding) — see the port design
+spec §2. See `docs/superpowers/specs/1.2.0-acceptance.md` for the acceptance
+evidence.
+
+### Added
+- **Composable UI**: the shell's internal state/effects layer is now a
+  public, independently usable API — `OdontogramUiService` (the
+  component-provided injectable port of the upstream `OdontogramProvider`
+  context), the `engineState()` signal helper, 4 presentational surfaces
+  (`OdontogramTopbarComponent`, `OdontogramChartSurfaceComponent`,
+  `ToothInfoSurfaceComponent`, `ToothControlsSurfaceComponent`), and 7
+  declarative control cards (`StatusesCardComponent`,
+  `ToothDetailsCardComponent`, `CariesCardComponent`, `FillingsCardComponent`,
+  `RootPeriodontiumCardComponent`, `OrthodonticsCardComponent`,
+  `SurfaceCrossComponent`) — all exported from the public API for hosts that
+  want to compose a custom layout instead of the full
+  `<aao-odontogram-shell>`. `OdontogramUiService.configure()` takes a fully
+  **optional** config object (every one of its 30 fields defaults to
+  upstream's own default — e.g. `numberingSystem` → `"FDI"`,
+  `pulpDetailLevel` → `"aae"`, `darkMode` → seeded from the host document),
+  so a zero-config `configure()` call reproduces the shell's stock behavior
+  with no boilerplate.
+- **Fillings controlled props** on `OdontogramShellComponent`:
+  `fillingComplexity`/`fillingDefectEnabled`/`fillingMaterialAvailability`/
+  `fissureSealingEnabled` inputs, each paired with a matching `*Change`
+  output, letting a host drive or observe the fillings Settings tab
+  externally (React/Vue-style controlled-prop pattern) instead of only
+  reading it after the fact.
+- **Anatomy profiles**: a new Settings → General "tooth anatomy" picker
+  (`classic`/`measured`, `getToothAnatomy`/`setToothAnatomy`/`ToothAnatomy`
+  exported from core) switches `#toothGrid`'s rendered tooth artwork between
+  the existing schematic SVGs and 13 new **measured** tooth SVGs generated
+  from real anatomical reference figures, wired end-to-end (setting →
+  `data-anatomy` attribute → grid rebuild).
+- **Extended guided tour**: new/renamed tour stops covering the
+  root-periodontium section, the restoration select, the controls action
+  bar, the language menu, and the periodontal inline panel.
+- **Credits / About modal + GitHub toolbar**: a new `CreditsModalComponent`
+  (`#btnCreditsMenu` in the topbar) showing creator/contributors/built-with
+  credits and a "Star on GitHub" link, plus a standalone `#btnGithubLink`
+  toolbar link — both pointing at this repository. Library/CTA identity was
+  adapted to this package (`Angular`/`Angular CLI` in the built-with list,
+  the Angular repo as the GitHub link and star target); a new **"Original
+  Project"** section was added to the modal, mirroring the Creator section's
+  shape, linking and crediting `React Advanced Odontogram` — the upstream
+  project this port is derived from — so the adapted identity strings never
+  come at the cost of losing that attribution from the rendered modal.
+- A new brand logo (`docs/angular-module-logo.png`) replaces the generic
+  header mark in the generated header-logo asset and is now referenced at
+  the top of both READMEs.
+- `README.md`/`lang/README-hu.md` restructure: a contents TOC, a new
+  "Composable surfaces (advanced)" subsection (provider→shell-instance
+  usage pattern, the exported surfaces/cards list), Highlights bullets for
+  the anatomy-profile setting and the Credits popup, and a final `## 🙌
+  Credits` section (creator, contributors, built-with, star CTA, and an
+  "Original project" subsection attributing `react-advanced-odontogram`).
+  New community health files ported from the pinned upstream blobs:
+  `SECURITY.md` (near-verbatim, package name adapted), `CODE_OF_CONDUCT.md`
+  (verbatim, framework-agnostic), and `CONTRIBUTING.md` (rewritten for this
+  repo's actual Angular/`ng-packagr` workflow and npm scripts).
+- `docs/superpowers/specs/1.2.0-acceptance.md`: the 1.2.0 acceptance
+  evidence sheet, same discipline as 1.1.0's.
+
+### Changed
+- **Force-value parity directive**: two new standalone attribute directives
+  (`[aaoForceValue]`, `[aaoForceChecked]`) now back every native
+  select/text/checkbox control across the 7 cards (~43 distinct controls),
+  fixing a class of Angular-vs-React parity gap where a native control's DOM
+  value could desync from engine state after a plan/status dual-state-edit
+  cancel — Angular's `[value]`/`[checked]` bindings skip re-writing the DOM
+  when the bound expression is unchanged (a same-value no-op), whereas
+  React's controlled inputs always re-assert the DOM value on every commit.
+  The directives close that gap by re-applying the DOM value unconditionally
+  on every engine notification, matching React's controlled-input semantics.
+- Root/library `package.json` version, `app-version.ts`'s `LIB_VERSION`
+  literal, and the README version badges bumped to `1.2.0`; parity
+  statements now cite "engine commit `934a911` (post-v2.4.0 main)".
+
+### Known drift
+- `$ENGINE` (the upstream source checkout this port reads from) may continue
+  advancing past the `934a911` pin; a further resync will be due in a
+  future release.
+
 ## [1.1.0] - 2026-08-11
 
 Resync to `react-advanced-odontogram` v2.4.0 (payload version 2.20, superseding
@@ -215,6 +304,7 @@ acceptance evidence.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases/tag/v1.0.0
