@@ -17,6 +17,14 @@ const toothExport = (file) => {
   const [no, variant] = stem.split("_");
   return `tooth${no}${variant ? variant[0].toUpperCase() + variant.slice(1) : ""}Svg`;
 };
+// measured/11.svg -> measuredTooth11Svg, measured/14_occl.svg ->
+// measuredTooth14OcclSvg (Phase 7 / anatomy profiles Stage A-C — must match
+// the `measuredTooth*Svg` import names odontogram.ts pulls from this module).
+const measuredToothExport = (file) => {
+  const stem = basename(file, ".svg");
+  const [no, variant] = stem.split("_");
+  return `measuredTooth${no}${variant ? variant[0].toUpperCase() + variant.slice(1) : ""}Svg`;
+};
 // icon_8.svg -> icon8Svg, icon_gum.svg -> iconGumSvg (match App.tsx names;
 // a digit stem like "8" is unchanged by toUpperCase, so no special case).
 const iconExport = (file) => {
@@ -38,15 +46,43 @@ function emit(dir, outFile, exportName, extra = "") {
   console.log(`wrote generated/${outFile} (${files.length} assets)`);
 }
 
+// Teeth SVGs live in two coexisting sets under assets/teeth-svgs/: the
+// classic templates (flat) and the Phase-7 "measured" candidate-anatomy
+// templates (assets/teeth-svgs/measured/). Both are inlined into the SAME
+// generated module so odontogram.ts's single `from "./generated/teeth-svgs"`
+// import (the ?raw-replacement deviation) covers both sets, mirroring how
+// upstream's Vite `?raw` imports consume them side by side.
+function emitTeethSvgs() {
+  const classicDir = resolve(core, "assets/teeth-svgs");
+  const classicFiles = readdirSync(classicDir).filter((f) => f.endsWith(".svg")).sort();
+  const measuredDir = resolve(core, "assets/teeth-svgs/measured");
+  const measuredFiles = readdirSync(measuredDir).filter((f) => f.endsWith(".svg")).sort();
+
+  let out = HEADER;
+  for (const f of classicFiles) {
+    const markup = readFileSync(resolve(classicDir, f), "utf8");
+    out += `export const ${toothExport(f)} = ${JSON.stringify(markup)};\n`;
+  }
+  for (const f of measuredFiles) {
+    const markup = readFileSync(resolve(measuredDir, f), "utf8");
+    out += `export const ${measuredToothExport(f)} = ${JSON.stringify(markup)};\n`;
+  }
+  writeFileSync(resolve(core, "generated/teeth-svgs.ts"), out);
+  console.log(`wrote generated/teeth-svgs.ts (${classicFiles.length} classic + ${measuredFiles.length} measured assets)`);
+}
+
 import { mkdirSync } from "node:fs";
 mkdirSync(resolve(core, "generated"), { recursive: true });
-emit("teeth-svgs", "teeth-svgs.ts", toothExport);
+emitTeethSvgs();
 const noSel = readFileSync(resolve(core, "assets/icon-svgs/icon_no_selection.svg"), "utf8");
-// react-module-logo.png -> brandLogoUrl: a PNG (not SVG markup), so it is
-// base64-encoded into a data: URI rather than URI-component-encoded like the
-// SVG-sourced iconNoSelectionUrl above. Shell-only asset (App.tsx), emitted
-// here so it ships through the same bundler-agnostic generated-module path.
-const logoBase64 = readFileSync(resolve(core, "assets/react-module-logo.png")).toString("base64");
+// docs/angular-module-logo.png (repo root) -> brandLogoUrl: a PNG (not SVG
+// markup), so it is base64-encoded into a data: URI rather than
+// URI-component-encoded like the SVG-sourced iconNoSelectionUrl above.
+// Shell-only asset (the header logo), emitted here so it ships through the
+// same bundler-agnostic generated-module path. Source is the repo-root
+// docs/ logo (owner directive), NOT the copied assets/react-module-logo.png
+// engine asset — do not repoint this at the engine asset on future resyncs.
+const logoBase64 = readFileSync(resolve(here, "../docs/angular-module-logo.png")).toString("base64");
 emit("icon-svgs", "icon-svgs.ts", iconExport,
   `export const iconNoSelectionUrl = "data:image/svg+xml," + encodeURIComponent(${JSON.stringify(noSel)});\n` +
   `export const brandLogoUrl = "data:image/png;base64,${logoBase64}";\n`);

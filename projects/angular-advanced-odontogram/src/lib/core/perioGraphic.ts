@@ -21,9 +21,28 @@
 //     deterministic in vitest/jsdom.
 //
 // No per-tooth pointer handlers here — this is read-only chart artwork.
-import { TEMPLATES, TOOTH_TEMPLATE } from "./odontogram";
+import { activeAnatomyProfile } from "./odontogram";
 
-export type TemplateNo = 11 | 13 | 14 | 16;
+// Per-template CEJ baseline anchors now live on the active `AnatomyProfile`
+// (`odontogram.ts`), so the perio chart tracks the selected tooth anatomy. The
+// three names below are re-exported under their historical identifiers for
+// backward compatibility (existing importers/tests). These are *binding*
+// re-exports (`export { X as Y } from`), NOT `export const Y = X` — the latter
+// would read the imported value at module-eval time, which throws in the UI
+// tests that fully mock `./odontogram` (they don't provide these bindings, and
+// like every other odontogram import here they're only ever meant to be touched
+// at RUNTIME). The runtime `anchorFor()` reads the ACTIVE profile instead (see
+// below). See `odontogram.ts` (`CLASSIC_CEJ_Y` etc.) for the measurement notes.
+export {
+  CLASSIC_CEJ_Y as CEJ_Y,
+  CLASSIC_IMPLANT_CEJ_Y as IMPLANT_CEJ_Y,
+  CLASSIC_MILKTOOTH_CEJ_Y as MILKTOOTH_CEJ_Y,
+} from "./odontogram";
+
+// The union of every template tooth any anatomy profile can supply. The classic
+// profile realizes only 11/13/14/16; the measured profile adds 12/15/17/31/46.
+// Widened so the profile-aware anchor/template lookups type-check for both.
+export type TemplateNo = 11 | 12 | 13 | 14 | 15 | 16 | 17 | 31 | 46;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -39,73 +58,6 @@ export const EXCLUDED_TOOTH_BASE_IDS: readonly string[] = [
   "tooth-base-beauty",
   "milktooth-base",
 ];
-
-/**
- * Per-template CEJ (cemento-enamel junction / crown-root boundary) y-anchor,
- * in the FINAL crown-up local coordinate frame `getToothBaseGroupFromCache`
- * renders each tooth group in (i.e. AFTER the internal vertical flip below —
- * see that function's comment for why the flip is needed at all).
- *
- * Measured from each template's `gum-base` geometry (the visible gingival
- * tissue drawn over the cervical/root region — its coronal-most edge, i.e.
- * max-Y in the template's RAW/un-flipped coordinate system, approximates the
- * CEJ/gumline) via a one-off control-point bounding-box script over the
- * path's `d` attribute (a close superset of the true curve bbox — gentle
- * curves here, so this is a good anchor, NOT pixel-exact anatomy). Then
- * converted into the flipped frame via `finalY = viewBoxHeight - rawY`:
- *   11: raw 38.6, viewBox h 70.8 -> 32.2
- *   13: raw 38.6, viewBox h 71.0 -> 32.4
- *   14: raw 39.1, viewBox h 71.2 -> 32.1
- *   16: raw 39.9, viewBox h 70.9 -> 31.0
- * Row-baseline alignment only needs these to be mutually consistent across
- * templates (they are, within ~1 unit) — visual placement should still be
- * confirmed in a browser.
- */
-export const CEJ_Y: Record<TemplateNo, number> = {
-  11: 32.2,
-  13: 32.4,
-  14: 32.1,
-  16: 31.0,
-};
-
-/**
- * Per-template baseline anchor for an IMPLANT tooth — the implant fixture's
- * neck/platform (its CEJ-equivalent: the coronal collar where the abutment
- * emerges, which should sit on the same row baseline as a natural neighbour's
- * CEJ line). An implant renders the template's `#implant-base` layer (the
- * greyscale fixture body) instead of `#tooth-base`, and `#implant-base`'s
- * platform sits at a slightly different y than the natural CEJ, so it needs its
- * OWN anchor to line up.
- *
- * Measured from `#implant-base`'s coronal-most control point (max-Y in the
- * template's RAW/un-flipped coordinate system — the same one-off control-point
- * bounding-box technique CEJ_Y above was measured with; a close superset of the
- * true platform edge), then converted into the final crown-up flipped frame via
- * `finalY = viewBoxHeight - rawY` (same frame `getToothBaseGroupFromCache`
- * renders in — see that function's flip comment):
- *   11: platform raw 37.8, viewBox h 70.8 -> 33.0
- *   13: platform raw 35.6, viewBox h 71.0 -> 35.4
- *   14: platform raw 36.6, viewBox h 71.2 -> 34.6
- *   16: platform raw 36.6, viewBox h 70.9 -> 34.3
- * As with CEJ_Y, row-baseline alignment only needs these mutually consistent
- * (they place every implant platform on ROW_BASELINE_Y); exact anatomical
- * placement should still be confirmed in a browser.
- */
-export const IMPLANT_CEJ_Y: Record<TemplateNo, number> = {
-  11: 33.0,
-  13: 35.4,
-  14: 34.6,
-  16: 34.3,
-};
-
-/** Per-template baseline anchor for a MILKTOOTH (deciduous) rendering — the
- *  `#milktooth-base` layer's CEJ-equivalent. A permanent position marked as a
- *  milk tooth in the odontogram must render the deciduous artwork here too.
- *  Approximated as the natural `CEJ_Y` (the milk crown's neck sits in roughly
- *  the same cervical band); a milk tooth in a permanent perio column is an edge
- *  case, so exact per-template measurement is deferred — visual placement should
- *  be confirmed in a browser, same caveat as CEJ_Y / IMPLANT_CEJ_Y. */
-export const MILKTOOTH_CEJ_Y: Record<TemplateNo, number> = { ...CEJ_Y };
 
 /** Predicate telling the arch builders whether a given tooth is an implant on
  *  the active chart, so its graphic uses the implant fixture artwork
@@ -128,9 +80,10 @@ export type ToothKindFn = (toothNo: number) => PerioArtworkKind;
  *  for an implant, the milk-tooth anchor for a deciduous rendering, else the
  *  natural CEJ. */
 function anchorFor(tplNo: TemplateNo, kind: PerioArtworkKind): number {
-  if (kind === "implant") return IMPLANT_CEJ_Y[tplNo];
-  if (kind === "milktooth") return MILKTOOTH_CEJ_Y[tplNo];
-  return CEJ_Y[tplNo];
+  const profile = activeAnatomyProfile();
+  if (kind === "implant") return profile.implantCejY[tplNo];
+  if (kind === "milktooth") return profile.milktoothCejY[tplNo];
+  return profile.cejY[tplNo];
 }
 
 /** Canine (FDI position 3) root-elongation factor — position 3 renders
@@ -162,7 +115,7 @@ export async function loadTemplateCache(): Promise<TemplateDocCache> {
   if (!cachedPromise) {
     cachedPromise = (async () => {
       const cache: TemplateDocCache = new Map();
-      const entries = Object.entries(TEMPLATES) as [string, string][];
+      const entries = Object.entries(activeAnatomyProfile().templates) as [string, string][];
       for (const [tplNoStr, svgText] of entries) {
         const tplNo = Number(tplNoStr) as TemplateNo;
         if (!svgText) throw new Error(`perioGraphic: missing template SVG for ${tplNoStr}`);
@@ -177,6 +130,13 @@ export async function loadTemplateCache(): Promise<TemplateDocCache> {
     });
   }
   return cachedPromise;
+}
+
+/** Drop the memoized template cache so the next `loadTemplateCache()` re-parses
+ *  from the (now possibly different) active anatomy profile's templates. Called
+ *  when the tooth-anatomy profile switches, so the perio chart tracks it. */
+export function resetTemplateCache(): void {
+  cachedPromise = null;
 }
 
 function viewBoxOf(doc: Document): { w: number; h: number } {
@@ -272,7 +232,7 @@ export function getToothBaseGroupFromCache(
   toothNo: number,
   opts: { implant?: boolean; milktooth?: boolean } = {},
 ): SVGGElement {
-  const map = TOOTH_TEMPLATE.get(toothNo);
+  const map = activeAnatomyProfile().toothTemplate.get(toothNo);
   if (!map) throw new Error(`perioGraphic: no TOOTH_TEMPLATE entry for tooth ${toothNo}`);
   const tplNo = map.tpl as TemplateNo;
   const doc = cache.get(tplNo);
@@ -477,8 +437,9 @@ export function archToothLayout(
 ): ArchLayout {
   const out: ArchToothLayout[] = [];
   let cursorX = 0;
+  const toothTemplate = activeAnatomyProfile().toothTemplate;
   for (const toothNo of teeth) {
-    const map = TOOTH_TEMPLATE.get(toothNo);
+    const map = toothTemplate.get(toothNo);
     if (!map) continue;
     const tplNo = map.tpl as TemplateNo;
     const doc = cache.get(tplNo);
@@ -513,7 +474,7 @@ function buildBuccalRowGroup(
     // number rows aligned), milktooth → deciduous artwork, implant → fixture body.
     const kind: PerioArtworkKind = kindFn ? kindFn(toothNo) : (isImplant(toothNo) ? "implant" : "normal");
     if (kind === "missing") continue;
-    const tplNo = TOOTH_TEMPLATE.get(toothNo)!.tpl as TemplateNo;
+    const tplNo = activeAnatomyProfile().toothTemplate.get(toothNo)!.tpl as TemplateNo;
     const toothGroup = getToothBaseGroupFromCache(cache, toothNo, {
       implant: kind === "implant",
       milktooth: kind === "milktooth",

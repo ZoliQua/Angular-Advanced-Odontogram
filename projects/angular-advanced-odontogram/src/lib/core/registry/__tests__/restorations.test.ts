@@ -17,6 +17,11 @@ describe("restoration matrix", () => {
     expect(composeRestorationLayers("crown", "telescope", "front"))
       .toEqual(["telescope-crown", "telescope-crown-inside", "telescope-crown-outside"]);
     expect(composeRestorationLayers("onlay", "gold", "occlusal")).toEqual(["gold-onlay"]);
+    // A lateral-view onlay renders the material's inlay layer (an onlay is
+    // visually identical to an inlay in the lateral view), so an onlay tooth is
+    // not blank laterally — only the occlusal view uses the dedicated onlay layer.
+    expect(composeRestorationLayers("onlay", "gold", "front")).toEqual(["gold-inlay"]);
+    expect(composeRestorationLayers("onlay", "emax", "front")).toEqual(["emax-inlay"]);
     expect(composeRestorationLayers("none", "none", "front")).toEqual([]);
   });
   it("validity follows the artwork matrix (onlay occlusal-only; metal crown/bridge-only; onlay materials incl. zircon)", () => {

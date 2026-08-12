@@ -16,11 +16,18 @@ import { defineConfig } from "vitest/config";
 // the `test:corpus` run permanently.
 const REACT_DEPENDENT = [
   "App.test.tsx", // ported: components/odontogram-shell/ported/App.spec.ts (settings/numbering-modal subset stays phase-3, noted in that spec's header)
+  "caries-card.test.tsx", // phase-7: new Composable-UI card test (surfaces/cards/CariesCard.tsx via OdontogramProvider) — pending port in T2-T4
+  "composable-surfaces.test.tsx", // phase-7: new Composable-UI surfaces test (surfaces/**, OdontogramProvider) — pending port in T2-T4
+  "credits-modal.test.tsx", // phase-7: new CreditsModal.tsx test — pending port in T2-T4 (Credits/About toolbar)
   "ds1-confirm-revert.test.tsx", // ported: components/odontogram-shell/ported/ds1-confirm-revert.spec.ts
   "ds1-confirm.test.ts", // ported: components/odontogram-shell/ported/ds1-confirm.spec.ts (its <DualStateConfirm> component block was already ported earlier as dual-state-confirm.component.spec.ts)
+  "fillings-card.test.tsx", // phase-7: new Composable-UI card test (surfaces/cards/FillingsCard.tsx via OdontogramProvider) — pending port in T2-T4
+  "measured-anatomy.test.tsx", // phase-7: new anatomy-profile test mounting <App> (measured/candidate-anatomy Stages A-C) — pending port in T2-T4
+  "orthodontics-card.test.tsx", // phase-7: new Composable-UI card test (surfaces/cards/OrthodonticsCard.tsx via OdontogramProvider) — pending port in T2-T4
   "p4a-case-meta.test.ts", // ported: components/odontogram-shell/ported/p4a-case-meta.spec.ts
   "p4a-case-panel.test.ts", // ported: components/odontogram-shell/ported/p4a-case-panel.spec.ts
   "p4b-classification-ui.test.ts", // ported: components/odontogram-shell/ported/p4b-classification-ui.spec.ts
+  "parity/shell-dom.test.tsx", // phase-7: upstream's OWN self-parity harness (mounts <App> against parity/shell-dom-golden.html) — proves React's OdontogramProvider decomposition byte-identical to pre-decomposition markup; not a port target itself. Angular's DOM-parity discipline (Global Constraints) asserts the same ids independently in each surface/card's own spec.
   "perio-graphic-rows.test.ts", // ported: components/perio-chart/ported/perio-graphic-rows.spec.ts (Task 4; annotation was left stale until Task 6)
   "perio-graphical-presentation.test.ts", // ported: components/odontogram-shell/ported/perio-graphical-presentation.spec.ts
   "perio-p1-ui.test.ts", // ported: components/odontogram-shell/ported/perio-p1-ui.spec.ts
@@ -41,6 +48,7 @@ const REACT_DEPENDENT = [
   "r2b-plan-diff.test.ts", // ported: components/odontogram-shell/ported/r2b-plan-diff.spec.ts
   "r2c-proposed-legend.test.ts", // ported: components/odontogram-shell/ported/r2c-proposed-legend.spec.ts
   "restoration-summary.test.ts", // ported: components/odontogram-shell/ported/restoration-summary.spec.ts
+  "root-periodontium-card.test.tsx", // phase-7: new Composable-UI card test (surfaces/cards/RootPeriodontiumCard.tsx via OdontogramProvider) — pending port in T2-T4
   "secondary-caries-parity.test.ts", // ported: components/odontogram-shell/ported/secondary-caries-parity.spec.ts
   "settings-modal-a11y.test.tsx", // ported: components/settings-modal/ported/settings-modal-a11y.spec.ts
   "sp10-filling-defect-summary.test.ts", // ported: components/odontogram-shell/ported/sp10-filling-defect-summary.spec.ts
@@ -58,6 +66,7 @@ const REACT_DEPENDENT = [
   "sp15-filling-defect-summary.test.ts", // ported: components/odontogram-shell/ported/sp15-filling-defect-summary.spec.ts (framework-free; not in the task-6 brief's explicit list but satisfies the same rule)
   "sp15-settings.test.ts", // ported: components/settings-modal/ported/sp15-settings.spec.ts
   "sp15-stale-render.test.ts", // ported: components/odontogram-shell/ported/sp15-stale-render.spec.ts
+  "sp16-filling-props.test.tsx", // phase-7: new fillings-controlled-props test (2.4.0 #17/#19) mounting <App> — pending port in T2-T4
   "sp16-fillings-card.test.ts", // ported: components/odontogram-shell/ported/sp16-fillings-card.spec.ts
   "sp17-followups.test.ts", // ported: components/odontogram-shell/ported/sp17-followups.spec.ts
   "sp18-periimplant-roundtrip.test.ts", // ported: components/odontogram-shell/ported/sp18-periimplant-roundtrip.spec.ts
@@ -66,7 +75,11 @@ const REACT_DEPENDENT = [
   "sp7-card-merge.test.ts", // ported: components/odontogram-shell/ported/sp7-card-merge.spec.ts
   "sp8-peri-implant-ui.test.ts", // ported: components/odontogram-shell/ported/sp8-peri-implant-ui.spec.ts
   "sp9-summary-tooltip.test.ts", // ported: components/odontogram-shell/ported/sp9-summary-tooltip.spec.ts
+  "statuses-card.test.tsx", // phase-7: new Composable-UI card test (surfaces/cards/StatusesCard.tsx via OdontogramProvider) — pending port in T2-T4
   "summary.test.ts", // ported: components/odontogram-shell/ported/summary.spec.ts
+  "tier2-rewire.test.tsx", // phase-7: new Composable-UI Tier-2 rewireControls/rebuildGrid mount-on-demand test mounting <App> — pending port in T2-T4
+  "tooth-details-card.test.tsx", // phase-7: new Composable-UI card test (surfaces/cards/ToothDetailsCard.tsx via OdontogramProvider) — pending port in T2-T4
+  "tooth-details-selection.test.tsx", // phase-7: new tooth-selection/ToothDetailsCard test mounting <App> — pending port in T2-T4
   "ui-ar-rtl.test.tsx", // ported: components/odontogram-shell/ported/ui-ar-rtl.spec.ts
   "ui1-dynamic-scale.test.ts", // ported: components/perio-chart/ported/ui1-dynamic-scale.spec.ts
   "ui1-perio-sidebar.test.tsx", // ported: components/perio-sidebar/ported/ui1-perio-sidebar.spec.ts (standalone parts, Task 2) + components/odontogram-shell/ported/ui1-perio-sidebar.spec.ts (App view-gate, Task 5 — corrected assertions, see that file's header staleness note)

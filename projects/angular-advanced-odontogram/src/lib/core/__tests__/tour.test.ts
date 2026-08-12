@@ -1,31 +1,94 @@
 // Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
-import { describe, it, expect } from "vitest";
-import { TOUR_STEPS, clampStep } from "../tour";
+import { describe, it, expect, afterEach } from "vitest";
+import { TOUR_STEPS, clampStep, startIntroTour } from "../tour";
 import { translations } from "../i18n/translations";
 
+function counterText(): string | null {
+  return document.querySelector(".odon-tour-counter")?.textContent ?? null;
+}
+function press(key: string){
+  document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+}
+
+afterEach(() => {
+  press("Escape"); // full teardown (removes overlay + key handler)
+  document.body.innerHTML = "";
+});
+
 describe("intro tour model", () => {
-  it("has exactly 12 steps, each with a selector and i18n keys", () => {
-    expect(TOUR_STEPS).toHaveLength(12);
+  it("has 16 steps with semantic i18n keys and no dead selectors", () => {
+    expect(TOUR_STEPS).toHaveLength(16);
     for (const s of TOUR_STEPS) {
       expect(typeof s.selector).toBe("string");
-      expect(s.titleKey).toMatch(/^intro\.step\d+\.title$/);
-      expect(s.textKey).toMatch(/^intro\.step\d+\.text$/);
+      expect(s.titleKey).toMatch(/^intro\.[a-zA-Z]+\.title$/);
+      expect(s.textKey).toMatch(/^intro\.[a-zA-Z]+\.text$/);
     }
+    const selectors = TOUR_STEPS.map((s) => s.selector);
+    // The old broken target is gone; the real controls are targeted.
+    expect(selectors).not.toContain("#crownSelect");
+    expect(selectors).toContain("#restorationSelect");   // step 6 fix
+    expect(selectors).toContain("#rootPeriodontiumSection"); // root canal (new)
+    expect(selectors).toContain("#languageMenu");         // step 9 language (fix)
+    expect(selectors).toContain("#btnSettingsMenu");      // settings/numbering (fix)
+    expect(selectors).toContain("#appViewToggle");        // perio view (new)
+    expect(selectors).toContain("#perioInlinePanel");     // perio charting (new)
   });
-  it("has the tour i18n keys in all 8 languages", () => {
-    for (const lang of Object.keys(translations)) {
+
+  it("has every tour i18n key in all 12 languages", () => {
+    const langs = Object.keys(translations);
+    expect(langs).toHaveLength(12);
+    for (const lang of langs) {
+      const table = translations[lang as keyof typeof translations];
       for (const s of TOUR_STEPS) {
-        expect(translations[lang as keyof typeof translations][s.titleKey], `${lang}:${s.titleKey}`).toBeDefined();
-        expect(translations[lang as keyof typeof translations][s.textKey], `${lang}:${s.textKey}`).toBeDefined();
+        expect(table[s.titleKey], `${lang}:${s.titleKey}`).toBeDefined();
+        expect(table[s.textKey], `${lang}:${s.textKey}`).toBeDefined();
       }
-      expect(translations[lang as keyof typeof translations]["intro.start"]).toBeDefined();
+      for (const k of ["intro.start", "intro.next", "intro.back", "intro.skip", "intro.finish"]) {
+        expect(table[k], `${lang}:${k}`).toBeDefined();
+      }
     }
   });
+
   it("clampStep keeps the index within bounds", () => {
     expect(clampStep(-1)).toBe(0);
-    expect(clampStep(99)).toBe(11);
+    expect(clampStep(99)).toBe(15);
     expect(clampStep(5)).toBe(5);
+  });
+});
+
+describe("intro tour navigation (jsdom)", () => {
+  it("renders a card and steps forward with the ArrowRight key across re-renders", () => {
+    // Regression: render() used to null the key handler, so arrow stepping died
+    // after the first step. It must survive repeated re-renders.
+    startIntroTour();
+    expect(document.querySelector(".odon-tour-card")).not.toBeNull();
+    // No #appViewToggle in the DOM -> the two perio steps are skipped -> 14 shown.
+    expect(counterText()).toBe("1 / 14");
+    press("ArrowRight");
+    expect(counterText()).toBe("2 / 14");
+    press("ArrowRight");
+    expect(counterText()).toBe("3 / 14"); // handler persisted
+    press("ArrowLeft");
+    expect(counterText()).toBe("2 / 14");
+  });
+
+  it("Escape tears the overlay down", () => {
+    startIntroTour();
+    expect(document.querySelector(".odon-tour-backdrop")).not.toBeNull();
+    press("Escape");
+    expect(document.querySelector(".odon-tour-backdrop")).toBeNull();
+    expect(document.querySelector(".odon-tour-card")).toBeNull();
+  });
+
+  it("includes the perio steps only when the periodontal view toggle is present", () => {
+    const toggle = document.createElement("div");
+    toggle.id = "appViewToggle";
+    toggle.innerHTML =
+      '<button id="appViewOdontogram" class="is-active"></button><button id="appViewDentalChart"></button>';
+    document.body.appendChild(toggle);
+    startIntroTour();
+    expect(counterText()).toBe("1 / 16"); // perio steps now available
   });
 });

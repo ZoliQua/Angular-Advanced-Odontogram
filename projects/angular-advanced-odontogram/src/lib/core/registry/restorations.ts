@@ -42,6 +42,14 @@ function crownLayerIds(material: RestorationMaterial): string[] {
 
 export function composeRestorationLayers(type: RestorationType, material: RestorationMaterial, view: ToothView): string[] {
   if (type === "none" || material === "none") return [];
+  // An onlay is authored occlusal-only (it is never offered in the lateral-view
+  // dropdown), but a tooth bearing one must still render in the lateral (front)
+  // view, where an onlay is visually identical to an inlay. Fall back to the
+  // material's inlay layer there — every onlay material is also a valid inlay
+  // material, and the front-view tooth SVGs carry the `{material}-inlay` layers.
+  if (type === "onlay" && view !== "occlusal") {
+    return isValidRestoration("inlay", material, view) ? [`${material}-inlay`] : [];
+  }
   if (!isValidRestoration(type, material, view)) return [];
   // B8: a bridge tooth shows both the crown cap and the saddle connector.
   // composeRestorationLayers has no pillar-vs-pontic context (that lives in

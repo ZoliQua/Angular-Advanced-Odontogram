@@ -57,6 +57,7 @@ function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
     planModeAvailable: true, onPlanModeAvailable: vi.fn(),
     screenToothSpacing: "normal", onScreenToothSpacing: vi.fn(),
     screenToothNumberSize: "normal", onScreenToothNumberSize: vi.fn(),
+    toothAnatomy: "classic", onToothAnatomy: vi.fn(),
     exportPng: true, onExportPng: vi.fn(),
     exportJpg: true, onExportJpg: vi.fn(),
     exportSvg: true, onExportSvg: vi.fn(),

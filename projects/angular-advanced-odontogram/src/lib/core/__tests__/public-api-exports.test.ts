@@ -25,6 +25,12 @@ import {
   disablePersistence,
   clearPersistedState,
   isPersistenceEnabled,
+  OdontogramProvider,
+  useOdontogramUi,
+  OdontogramTopbar,
+  OdontogramChartSurface,
+  ToothInfoSurface,
+  ToothControlsSurface,
 } from "../App";
 
 describe("public API exports — App.tsx re-exports", () => {
@@ -100,5 +106,14 @@ describe("public API exports — App.tsx re-exports", () => {
     expect(typeof clearPersistedState).toBe("function");
     expect(isPersistenceEnabled).toBeDefined();
     expect(typeof isPersistenceEnabled).toBe("function");
+  });
+
+  it("exports the composable-UI provider, hook, and surface components", () => {
+    expect(typeof OdontogramProvider).toBe("function");
+    expect(typeof useOdontogramUi).toBe("function");
+    expect(typeof OdontogramTopbar).toBe("function");
+    expect(typeof OdontogramChartSurface).toBe("function");
+    expect(typeof ToothInfoSurface).toBe("function");
+    expect(typeof ToothControlsSurface).toBe("function");
   });
 });

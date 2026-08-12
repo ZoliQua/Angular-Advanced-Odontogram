@@ -40,6 +40,7 @@ function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
     planModeAvailable: true, onPlanModeAvailable: vi.fn(),
     screenToothSpacing: "normal", onScreenToothSpacing: vi.fn(),
     screenToothNumberSize: "normal", onScreenToothNumberSize: vi.fn(),
+    toothAnatomy: "classic", onToothAnatomy: vi.fn(),
     exportPng: true, onExportPng: vi.fn(),
     exportJpg: true, onExportJpg: vi.fn(),
     exportSvg: true, onExportSvg: vi.fn(),
@@ -118,10 +119,11 @@ describe("SP15 Task 4 (B1): Odontogram settings tab (was Panels)", () => {
     const { container } = render(tab.render({ t, s }));
 
     // Round 2 (Stage 3): 4 toggles now, in order: plan-mode, tooth-info,
-    // statuses, orthodontics (plus two SelectRows for screen spacing / number size).
+    // statuses, orthodontics (plus three SelectRows: screen spacing / number
+    // size / tooth-anatomy).
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
     expect(checkboxes).toHaveLength(4);
-    expect(container.querySelectorAll("select")).toHaveLength(2);
+    expect(container.querySelectorAll("select")).toHaveLength(3);
 
     (checkboxes[0] as HTMLInputElement).click();
     expect(onPlanModeAvailable).toHaveBeenCalledWith(false);

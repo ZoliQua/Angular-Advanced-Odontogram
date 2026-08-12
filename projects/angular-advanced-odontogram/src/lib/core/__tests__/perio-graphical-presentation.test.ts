@@ -46,6 +46,72 @@ vi.mock("../odontogram", async () => {
       return Promise.resolve(undefined);
     }),
     destroyOdontogram: vi.fn(),
+    rewireControls: vi.fn(),
+    // Composable-UI Tier 3: OrthodonticsCard reads these engine exports.
+    getActiveOrtho: actual.getActiveOrtho,
+    getActiveCaries: actual.getActiveCaries,
+    getCariesDepthOptions: actual.getCariesDepthOptions,
+    rootCariesOptions: actual.rootCariesOptions,
+    setCariesSurfaceForSelection: actual.setCariesSurfaceForSelection,
+    setCariesActiveDepthForSelection: actual.setCariesActiveDepthForSelection,
+    setRootCariesForSelection: actual.setRootCariesForSelection,
+    openCariesDepthPopup: actual.openCariesDepthPopup,
+    getActiveFillings: actual.getActiveFillings,
+    setFillingMaterialForSelection: actual.setFillingMaterialForSelection,
+    setFillingSurfaceForSelection: actual.setFillingSurfaceForSelection,
+    setFillingSimpleToggleForSelection: actual.setFillingSimpleToggleForSelection,
+    setFillingSimpleDefectForSelection: actual.setFillingSimpleDefectForSelection,
+    setFissureSealingForSelection: actual.setFissureSealingForSelection,
+    openFillingDefectPopup: actual.openFillingDefectPopup,
+    getActiveRootPerio: actual.getActiveRootPerio,
+    setPulpEndoForSelection: actual.setPulpEndoForSelection,
+    setApicalDxForSelection: actual.setApicalDxForSelection,
+    setPeriapicalTypeForSelection: actual.setPeriapicalTypeForSelection,
+    setResorptionForSelection: actual.setResorptionForSelection,
+    setEndoResectionForSelection: actual.setEndoResectionForSelection,
+    setParapulpalPinForSelection: actual.setParapulpalPinForSelection,
+    setMobilityForSelection: actual.setMobilityForSelection,
+    setModForSelection: actual.setModForSelection,
+    setCalculusForSelection: actual.setCalculusForSelection,
+    setPeriImplantForSelection: actual.setPeriImplantForSelection,
+    getActiveToothDetails: actual.getActiveToothDetails,
+    setToothSelectionForSelection: actual.setToothSelectionForSelection,
+    setSubstrateForSelection: actual.setSubstrateForSelection,
+    setRestorationForSelection: actual.setRestorationForSelection,
+    setExtractionWoundForSelection: actual.setExtractionWoundForSelection,
+    setExtractionPlanForSelection: actual.setExtractionPlanForSelection,
+    setMissingClosedForSelection: actual.setMissingClosedForSelection,
+    setCrownLeakageForSelection: actual.setCrownLeakageForSelection,
+    setBrokenMesialForSelection: actual.setBrokenMesialForSelection,
+    setBrokenIncisalForSelection: actual.setBrokenIncisalForSelection,
+    setBrokenDistalForSelection: actual.setBrokenDistalForSelection,
+    setContactMesialForSelection: actual.setContactMesialForSelection,
+    setContactDistalForSelection: actual.setContactDistalForSelection,
+    setWearEdgeForSelection: actual.setWearEdgeForSelection,
+    setWearCervicalForSelection: actual.setWearCervicalForSelection,
+    setWearEdgeToggleForSelection: actual.setWearEdgeToggleForSelection,
+    setWearCervicalToggleForSelection: actual.setWearCervicalToggleForSelection,
+    setDiscolorationForSelection: actual.setDiscolorationForSelection,
+    setDiscolorationToggleForSelection: actual.setDiscolorationToggleForSelection,
+    setBridgePillarForSelection: actual.setBridgePillarForSelection,
+    setCrownReplaceForSelection: actual.setCrownReplaceForSelection,
+    setCrownNeededForSelection: actual.setCrownNeededForSelection,
+    resetTooth: actual.resetTooth,
+    getEdentulous: actual.getEdentulous,
+    setEdentulous: actual.setEdentulous,
+    resetMouth: actual.resetMouth,
+    applyPrimaryDentition: actual.applyPrimaryDentition,
+    applyMixedDentition: actual.applyMixedDentition,
+    getStatusExtras: actual.getStatusExtras,
+    applyStatusExtra: actual.applyStatusExtra,
+    getOrthoApplianceOptions: actual.getOrthoApplianceOptions,
+    getOrthoDriftOptions: actual.getOrthoDriftOptions,
+    getOrthoVerticalOptions: actual.getOrthoVerticalOptions,
+    setOrthoApplianceForSelection: actual.setOrthoApplianceForSelection,
+    setOrthoDriftForSelection: actual.setOrthoDriftForSelection,
+    setOrthoVerticalForSelection: actual.setOrthoVerticalForSelection,
+    setOrthoRotationForSelection: actual.setOrthoRotationForSelection,
+    rebuildGrid: vi.fn().mockResolvedValue(undefined),
     setNumberingSystem: vi.fn(),
     clearSelection: vi.fn(),
     setOcclusalVisible: vi.fn(),
@@ -105,6 +171,8 @@ vi.mock("../odontogram", async () => {
     getFillingMaterialAvailability: actual.getFillingMaterialAvailability,
     setFillingMaterialAvailability: actual.setFillingMaterialAvailability,
     setPerioViewMode: actual.setPerioViewMode,
+    getToothAnatomy: vi.fn().mockReturnValue("classic"),
+    setToothAnatomy: vi.fn(),
     getPerioRowVisibility: actual.getPerioRowVisibility,
     setPerioRowVisibility: actual.setPerioRowVisibility,
     getPerioIndexNameMode: actual.getPerioIndexNameMode,
@@ -237,20 +305,17 @@ describe("Task 1: toggle mode housing (default)", () => {
     expect(document.getElementById("openPerioOverlayBtn")).toBeNull();
   });
 
-  it("selecting \"Dental Chart\" hides .chart-column via CSS (display:none) but keeps the odontogram SVG mounted, and shows the perio content inline", async () => {
+  it("selecting \"Dental Chart\" unmounts .chart-column and shows the perio content inline", async () => {
     render(createElement(App));
     await Promise.resolve();
-    const toothSvgBefore = document.querySelector("#toothGrid [data-fake-tooth-svg]");
-    expect(toothSvgBefore).toBeTruthy();
+    expect(document.querySelector("#toothGrid [data-fake-tooth-svg]")).toBeTruthy();
 
     fireEvent.click(document.getElementById("appViewDentalChart")!);
 
-    const chartColumn = document.querySelector(".chart-column") as HTMLElement;
-    expect(chartColumn).toBeTruthy();
-    expect(chartColumn.style.display).toBe("none");
-
-    // The odontogram SVG root must still be in the DOM — never unmounted.
-    expect(document.querySelector("#toothGrid [data-fake-tooth-svg]")).toBe(toothSvgBefore);
+    // Composable-UI Tier 2: the odontogram column is now UNMOUNTED in the perio
+    // view (control wiring is re-runnable, so a remount re-wires cleanly via
+    // rewireControls()/rebuildGrid()) rather than hidden with display:none.
+    expect(document.querySelector(".chart-column")).toBeNull();
 
     // Perio content shown inline (no modal dialog chrome).
     expect(document.getElementById("perioOverlay")).toBeNull();
@@ -262,17 +327,17 @@ describe("Task 1: toggle mode housing (default)", () => {
     expect(odontogramBtn.classList.contains("is-active")).toBe(false);
   });
 
-  it("selecting \"Odontogram\" again reverses it: .chart-column visible, inline perio content gone", async () => {
+  it("selecting \"Odontogram\" again reverses it: .chart-column remounts, inline perio content gone", async () => {
     render(createElement(App));
     await Promise.resolve();
 
     fireEvent.click(document.getElementById("appViewDentalChart")!);
-    expect((document.querySelector(".chart-column") as HTMLElement).style.display).toBe("none");
+    expect(document.querySelector(".chart-column")).toBeNull();
     expect(document.getElementById("perioInlineGrid")).toBeTruthy();
 
     fireEvent.click(document.getElementById("appViewOdontogram")!);
 
-    expect((document.querySelector(".chart-column") as HTMLElement).style.display).not.toBe("none");
+    expect(document.querySelector(".chart-column")).toBeTruthy();
     expect(document.getElementById("perioInlineGrid")).toBeNull();
   });
 });

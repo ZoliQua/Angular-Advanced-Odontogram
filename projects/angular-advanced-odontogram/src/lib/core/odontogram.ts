@@ -28,6 +28,7 @@ import {
 } from "./bridgeOverlay";
 import { derivePerioClassification, type PerioClassification, type PerioDerivationInput, type ToothDerivationInput } from "./perioClassification";
 import { buildPerioSvg } from "./perioExport";
+import { resetTemplateCache as resetPerioTemplateCache } from "./perioGraphic";
 import { assemblePdf, PDF_PALETTES, DEFAULT_PDF_THEME, type PdfExportOptions, type PdfAssembleData, type PdfDocLike, type PdfColorTheme } from "./perioPdf";
 // Tooth-template SVGs are imported with Vite's `?raw` suffix so their markup is
 // INLINED into the JS bundle as string literals at build time — no runtime
@@ -35,8 +36,16 @@ import { assemblePdf, PDF_PALETTES, DEFAULT_PDF_THEME, type PdfExportOptions, ty
 // self-contained and portable to any consumer bundler (a fetched hashed asset
 // URL would 404 in a downstream app). `TEMPLATES` therefore holds SVG *text*,
 // not URLs.
+// Measured ("candidate anatomy") tooth-template set — coexists with the classic
+// set above (never overwrites it), inlined the same way so both ship in
+// the bundle. Consumed only by the `measured` AnatomyProfile below; the classic
+// profile keeps reading the classic imports, so classic output is byte-identical.
 import {
   tooth11Svg, tooth13Svg, tooth14Svg, tooth16Svg, tooth14OcclSvg, tooth16OcclSvg,
+  measuredTooth11Svg, measuredTooth12Svg, measuredTooth13Svg, measuredTooth14Svg,
+  measuredTooth15Svg, measuredTooth16Svg, measuredTooth17Svg, measuredTooth31Svg,
+  measuredTooth46Svg, measuredTooth14OcclSvg, measuredTooth34OcclSvg,
+  measuredTooth16OcclSvg, measuredTooth46OcclSvg,
 } from "./generated/teeth-svgs";
 /* Tooth SVG Test UI (v2) - vanilla JS */
 
@@ -84,14 +93,205 @@ export const TOOTH_TEMPLATE = new Map([
   [46,{tpl:16,rot:180,mirror:true}],[47,{tpl:16,rot:180,mirror:true}],[48,{tpl:16,rot:180,mirror:true}],
 ]);
 
+// ---- Tooth-anatomy profile (Stage A: classic only) ----
+// An `AnatomyProfile` bundles everything anatomy-specific — the tooth-template
+// SVG text maps, the per-tooth template/orientation map, the tpl/occl id lists,
+// the grid layout kind, and the perio-chart CEJ baseline anchors — so a runtime
+// "tooth anatomy" switch can swap the whole set at once. Stage A ships ONLY the
+// CLASSIC profile (today's artwork/layout/anchors verbatim), so behavior and all
+// goldens are byte-identical; a later stage adds a "measured" profile.
+
+/** Per-template CEJ (crown-root boundary) y-anchor for the CLASSIC anatomy — the
+ *  perio-chart row-baseline anchor. Owned here (as part of the profile) and
+ *  re-exported by `perioGraphic.ts` for backward compatibility. Values measured
+ *  from each template's `gum-base` geometry (see `perioGraphic.ts` for the full
+ *  measurement note). */
+export const CLASSIC_CEJ_Y: Record<number, number> = { 11: 32.2, 13: 32.4, 14: 32.1, 16: 31.0 };
+/** Per-template baseline anchor for an IMPLANT tooth (the `#implant-base`
+ *  platform), CLASSIC anatomy. */
+export const CLASSIC_IMPLANT_CEJ_Y: Record<number, number> = { 11: 33.0, 13: 35.4, 14: 34.6, 16: 34.3 };
+/** Per-template baseline anchor for a MILKTOOTH rendering, CLASSIC anatomy —
+ *  approximated as the natural `CLASSIC_CEJ_Y`. */
+export const CLASSIC_MILKTOOTH_CEJ_Y: Record<number, number> = { ...CLASSIC_CEJ_Y };
+
+/** Selectable tooth-anatomy profiles. Stage A: only `classic` is realized;
+ *  `measured` is accepted but falls back to the classic profile (harmless). */
+export type ToothAnatomy = "classic" | "measured";
+
+/** Everything anatomy-specific, bundled so a runtime switch swaps it atomically.
+ *  `templates`/`templatesOccl` hold inlined SVG text; `toothTemplate` maps each
+ *  FDI tooth to its `{tpl,rot,mirror}`; `occlusalTemplate` is optional (only a
+ *  profile that splits front/occlusal artwork populates it — classic reuses
+ *  `toothTemplate`); `layout` drives the `buildGrid` branch; the three `*CejY`
+ *  records are the perio-chart baseline anchors. */
+export type AnatomyProfile = {
+  templates: Record<number, string>;
+  templatesOccl: Record<number, string>;
+  toothTemplate: Map<number, { tpl: number; rot: number; mirror: boolean }>;
+  occlusalTemplate?: Map<number, { tpl: number; rot: number; mirror: boolean }>;
+  tplNos: number[];
+  occlNos: number[];
+  layout: "uniform16" | "twoArch";
+  cejY: Record<number, number>;
+  implantCejY: Record<number, number>;
+  milktoothCejY: Record<number, number>;
+};
+
+/** The CLASSIC profile — today's exact values. Referencing the existing
+ *  `TEMPLATES`/`TEMPLATES_OCCL`/`TOOTH_TEMPLATE` objects (not copies) keeps the
+ *  live grid and perio chart reading the identical artwork → byte-identical. */
+const CLASSIC_PROFILE: AnatomyProfile = {
+  templates: TEMPLATES,
+  templatesOccl: TEMPLATES_OCCL,
+  toothTemplate: TOOTH_TEMPLATE,
+  tplNos: [11, 13, 14, 16],
+  occlNos: [14, 16],
+  layout: "uniform16",
+  cejY: CLASSIC_CEJ_Y,
+  implantCejY: CLASSIC_IMPLANT_CEJ_Y,
+  milktoothCejY: CLASSIC_MILKTOOTH_CEJ_Y,
+};
+
+// ---- MEASURED anatomy profile (Stage B) ----
+// The "candidate anatomy" — nine measured front templates + four measured
+// occlusal templates, arranged as a two-arch, per-tooth-width grid. The SVGs
+// carry the SAME semantic layer ids as the classic set (only their gradient
+// `defs` are `toothgen-N-` namespaced), so `applyStateToSvg` works unchanged.
+// Measured 17/46 legitimately lack a handful of milktooth / pulp-inflammation
+// ids — those layers simply no-op on those two molar positions.
+
+/** Measured front (side-view) template SVG text, keyed by template tooth. */
+const MEASURED_TEMPLATES: Record<number, string> = {
+  11: measuredTooth11Svg,
+  12: measuredTooth12Svg,
+  13: measuredTooth13Svg,
+  14: measuredTooth14Svg,
+  15: measuredTooth15Svg,
+  16: measuredTooth16Svg,
+  17: measuredTooth17Svg,
+  31: measuredTooth31Svg,
+  46: measuredTooth46Svg,
+};
+/** Measured occlusal template SVG text. A lower molar/premolar occlusal is NOT
+ *  an upper one rotated, so 34/46 are their own drawings (not 14/16 flipped). */
+const MEASURED_TEMPLATES_OCCL: Record<number, string> = {
+  14: measuredTooth14OcclSvg,
+  34: measuredTooth34OcclSvg,
+  16: measuredTooth16OcclSvg,
+  46: measuredTooth46OcclSvg,
+};
+
+/** Measured front-view per-tooth template/orientation map (nine templates). */
+const MEASURED_TOOTH_TEMPLATE = new Map<number, { tpl: number; rot: number; mirror: boolean }>([
+  // upper central incisor
+  [11,{tpl:11,rot:0,mirror:false}],
+  [21,{tpl:11,rot:0,mirror:true}],
+  // upper lateral incisor
+  [12,{tpl:12,rot:0,mirror:false}],
+  [22,{tpl:12,rot:0,mirror:true}],
+  // lower incisors
+  [31,{tpl:31,rot:180,mirror:false}],[32,{tpl:31,rot:180,mirror:false}],
+  [41,{tpl:31,rot:180,mirror:true}],[42,{tpl:31,rot:180,mirror:true}],
+  // canines
+  [13,{tpl:13,rot:0,mirror:false}],
+  [23,{tpl:13,rot:0,mirror:true}],
+  [33,{tpl:13,rot:180,mirror:false}],
+  [43,{tpl:13,rot:180,mirror:true}],
+  // upper 1st premolar - two roots
+  [14,{tpl:14,rot:0,mirror:false}],
+  [24,{tpl:14,rot:0,mirror:true}],
+  // single-rooted premolars
+  [15,{tpl:15,rot:0,mirror:false}],
+  [25,{tpl:15,rot:0,mirror:true}],
+  [34,{tpl:15,rot:180,mirror:false}],[35,{tpl:15,rot:180,mirror:false}],
+  [44,{tpl:15,rot:180,mirror:true}],[45,{tpl:15,rot:180,mirror:true}],
+  // upper molars - three roots
+  [16,{tpl:16,rot:0,mirror:false}],
+  [26,{tpl:16,rot:0,mirror:true}],
+  [17,{tpl:17,rot:0,mirror:false}],[18,{tpl:17,rot:0,mirror:false}],
+  [27,{tpl:17,rot:0,mirror:true}],[28,{tpl:17,rot:0,mirror:true}],
+  // lower molars - two roots
+  [36,{tpl:46,rot:180,mirror:false}],[37,{tpl:46,rot:180,mirror:false}],[38,{tpl:46,rot:180,mirror:false}],
+  [46,{tpl:46,rot:180,mirror:true}],[47,{tpl:46,rot:180,mirror:true}],[48,{tpl:46,rot:180,mirror:true}],
+]);
+
+/** Measured occlusal-view per-tooth template/orientation map — its own mapping,
+ *  distinct from the front map (a lower posterior is a separate drawing). */
+const MEASURED_OCCLUSAL_TEMPLATE = new Map<number, { tpl: number; rot: number; mirror: boolean }>([
+  [14,{tpl:14,rot:0,mirror:false}],[15,{tpl:14,rot:0,mirror:false}],
+  [16,{tpl:16,rot:0,mirror:false}],[17,{tpl:16,rot:0,mirror:false}],[18,{tpl:16,rot:0,mirror:false}],
+  [24,{tpl:14,rot:0,mirror:true}],[25,{tpl:14,rot:0,mirror:true}],
+  [26,{tpl:16,rot:0,mirror:true}],[27,{tpl:16,rot:0,mirror:true}],[28,{tpl:16,rot:0,mirror:true}],
+  [34,{tpl:34,rot:180,mirror:false}],[35,{tpl:34,rot:180,mirror:false}],
+  [36,{tpl:46,rot:180,mirror:false}],[37,{tpl:46,rot:180,mirror:false}],[38,{tpl:46,rot:180,mirror:false}],
+  [44,{tpl:34,rot:180,mirror:true}],[45,{tpl:34,rot:180,mirror:true}],
+  [46,{tpl:46,rot:180,mirror:true}],[47,{tpl:46,rot:180,mirror:true}],[48,{tpl:46,rot:180,mirror:true}],
+]);
+
+/** Measured per-template CEJ baseline anchors (perio chart), measured from each
+ *  measured template's geometry (values from the candidate-anatomy work). */
+const MEASURED_CEJ_Y: Record<number, number> = {
+  11: 40.8, 12: 37.8, 13: 38.1, 14: 37.2, 15: 34.6, 16: 37.7, 17: 38.3, 31: 35.6, 46: 32.9,
+};
+/** Measured per-template implant-platform baseline anchor. */
+const MEASURED_IMPLANT_CEJ_Y: Record<number, number> = {
+  11: 35.0, 12: 32.5, 13: 35.2, 14: 33.2, 15: 31.0, 16: 32.9, 17: 33.4, 31: 30.7, 46: 28.9,
+};
+/** Measured per-template milktooth baseline anchor (approximated as CEJ_Y). */
+const MEASURED_MILKTOOTH_CEJ_Y: Record<number, number> = { ...MEASURED_CEJ_Y };
+
+/** The MEASURED profile — two-arch layout, split front/occlusal artwork. */
+const MEASURED_PROFILE: AnatomyProfile = {
+  templates: MEASURED_TEMPLATES,
+  templatesOccl: MEASURED_TEMPLATES_OCCL,
+  toothTemplate: MEASURED_TOOTH_TEMPLATE,
+  occlusalTemplate: MEASURED_OCCLUSAL_TEMPLATE,
+  tplNos: [11, 12, 13, 14, 15, 16, 17, 31, 46],
+  occlNos: [14, 16, 34, 46],
+  layout: "twoArch",
+  cejY: MEASURED_CEJ_Y,
+  implantCejY: MEASURED_IMPLANT_CEJ_Y,
+  milktoothCejY: MEASURED_MILKTOOTH_CEJ_Y,
+};
+
+// Registry keyed by `ToothAnatomy`. A missing key falls back to
+// `CLASSIC_PROFILE` via `activeAnatomyProfile()`.
+const ANATOMY_PROFILES: Partial<Record<ToothAnatomy, AnatomyProfile>> = {
+  classic: CLASSIC_PROFILE,
+  measured: MEASURED_PROFILE,
+};
+
+// Session-only selected anatomy (mirrors `perioViewMode`): a module `let` +
+// getter/setter that notifies on change. NOT part of the export payload — never
+// referenced by `collectExportPayload`/`getPlanChart`/hydrate.
+let toothAnatomy: ToothAnatomy = "classic";
+
+/** Current tooth-anatomy profile selector. Defaults to `"classic"`. */
+export function getToothAnatomy(): ToothAnatomy {
+  return toothAnatomy;
+}
+
+/** Switch the tooth-anatomy profile. No-op (does not notify) if unchanged.
+ *  Invalidates the perio-chart template cache so that chart re-parses the new
+ *  profile's templates on its next load (the odontogram grid is rebuilt by the
+ *  caller via `rebuildGrid()`). */
+export function setToothAnatomy(v: ToothAnatomy): void {
+  if(v === toothAnatomy) return;
+  toothAnatomy = v;
+  resetPerioTemplateCache();
+  notifyStateChange();
+}
+
+/** The active `AnatomyProfile` per the current flag; falls back to classic for
+ *  any profile not (yet) realized in the registry. */
+export function activeAnatomyProfile(): AnatomyProfile {
+  return ANATOMY_PROFILES[toothAnatomy] ?? CLASSIC_PROFILE;
+}
+
 const ALL_TEETH = [
   18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,
   48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38
 ];
-
-const GROUPS = {
-  fillingSurfaces: ["buccal","lingual","mesial","distal","occlusal"],
-};
 
 const MILKTOOTH_BLOCKED = new Set([16,17,18,26,27,28,36,37,38,46,47,48]);
 // Fissure sealing applies to the occlusal posterior teeth — premolars and
@@ -154,22 +354,8 @@ function getPeriapicalTypeOptions(){
   return optionsFor("periapicalType").map(o => ({ value: o.value, label: t(o.labelKey) }));
 }
 
-const CARIES_OPTIONS = [
-  { value: "caries-mesial", labelKey: "surface.mesial" },
-  { value: "caries-distal", labelKey: "surface.distal" },
-  { value: "caries-buccal", labelKey: "surface.buccal" },
-  { value: "caries-lingual", labelKey: "surface.lingualPalatal" },
-  { value: "caries-occlusal", labelKey: "surface.occlusal" },
-  { value: "caries-subcrown", labelKey: "surface.subcrown" },
-];
-
-const FILLING_SURFACE_LABELS: Record<string, string> = {
-  buccal: "surface.buccal",
-  lingual: "surface.lingualPalatal",
-  mesial: "surface.mesial",
-  distal: "surface.distal",
-  occlusal: "surface.occlusal",
-};
+// (The former `CARIES_OPTIONS` relabel table was removed with PR 3c — the
+// declarative `CariesCard` owns the caries surface-cross labels/letters now.)
 
 type Any = any;
 
@@ -840,8 +1026,9 @@ export function setChartMode(mode: ChartMode): void {
     updateToothLabelNoteIcon(toothNo);
   }
   // The tooth-base picker's option set is mode-dependent (Plan omits
-  // milk/subgingival) — rebuild it whenever the mode changes.
-  refreshToothSelectOptions();
+  // milk/subgingival); the declarative `ToothDetailsCard` (composable-UI Tier 3,
+  // PR 3f) rebuilds it from `getActiveToothDetails()` on the notifyStateChange()
+  // re-render below.
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
   notifyStateChange();
   syncChartModeUi();
@@ -1090,25 +1277,27 @@ let isPinching = false;
 let archMode: "both" | "upper" | "lower" = "both";
 let archToggleBar: HTMLElement | null = null;
 
-// ---- UI builders ----
-function buildChecks(container: Any, items: Any, onToggle: Any){
-  container.innerHTML = "";
-  for(const it of items){
-    const id = `chk-${it.value}`;
-    const labelId = `lbl-${it.value}`;
-    const labelText = it.labelKey ? t(it.labelKey) : it.label;
-    const label = el("label", {}, [
-      el("input", { type:"checkbox", id, value:it.value }),
-      el("span", { id: labelId, text: labelText })
-    ]);
-    const input = label.querySelector("input") as HTMLInputElement;
-    input.addEventListener("change", (e)=>onToggle(it.value, (e.target as HTMLInputElement).checked));
-    if(container.id === "cariesChecks" && it.value === "caries-subcrown"){
-      setDisabled(input, true);
-    }
-    container.appendChild(label);
-  }
+// ---- Idempotent event binding (composable-UI Tier 2) ----
+// Persistent JSX control nodes are wired imperatively by wireControls(). Since a
+// surface can now unmount and remount, wireControls() may run more than once over
+// a session. `bindOnce` records each (element, event-type) it has already wired in
+// a WeakMap, so a still-mounted node is never double-bound; a fresh remounted node
+// (absent from the map) does get wired; a destroyed node GCs out of the map on its
+// own. Idempotency is thus per-element — no module-level "wired once" flag.
+const wiredHandlers = new WeakMap<Element, Set<string>>();
+function bindOnce(el: Any, type: string, handler: Any){
+  if(!el) return;
+  let set = wiredHandlers.get(el);
+  if(!set){ set = new Set<string>(); wiredHandlers.set(el, set); }
+  if(set.has(type)) return;
+  set.add(type);
+  el.addEventListener(type, handler);
 }
+
+// ---- UI builders ----
+// (The former `buildChecks()` container builder was removed with PR 3e — the
+// declarative `RootPeriodontiumCard` owns the `#modsChecks` inflammation/
+// parodontal checkboxes now, and it was the last remaining caller.)
 
 /**
  * Render surface toggles in an anatomical cross/plus layout:
@@ -1118,6 +1307,7 @@ function buildChecks(container: Any, items: Any, onToggle: Any){
  * Keeps a hidden checkbox input (value=item.value) so existing state-sync works.
  */
 export function buildSurfaceCross(container: Any, items: Any, onToggle: Any){
+  if(!container || container.childElementCount > 0) return;
   container.innerHTML = "";
   const cross = el("div", { class: "surface-cross" });
   for(const it of items){
@@ -1134,16 +1324,6 @@ export function buildSurfaceCross(container: Any, items: Any, onToggle: Any){
     cross.appendChild(label);
   }
   container.appendChild(cross);
-}
-
-function buildSelect(selectEl: Any, options: Any, onChange: Any){
-  selectEl.innerHTML = "";
-  for(const opt of options){
-    const o = el("option", { value: opt.value, text: opt.label });
-    if(opt.title) o.title = opt.title;
-    selectEl.appendChild(o);
-  }
-  selectEl.addEventListener("change", (e)=>onChange((e.target as HTMLSelectElement).value));
 }
 
 // `data-icon-src` carries inlined SVG markup (from a `?raw` import in App.tsx),
@@ -1275,7 +1455,6 @@ function onGlobalToggleClick(e: Any){
     case "btnOcclView": setOcclusalVisible(!occlusalVisible); break;
     case "btnBoneVisible": setShowBase(!showBase); break;
     case "btnPulpVisible": setHealthyPulpVisible(!showHealthyPulp); break;
-    case "btnEdentulous": setEdentulous(!edentulous); break;
   }
 }
 
@@ -1428,8 +1607,10 @@ function getEndoOptions(isMilktooth: Any){
 
 // ── Fillings-card session configuration ─────────────────────────────────────
 // App-level UI config (not part of the export payload), read by the Fillings
-// card render/wiring. Each setter updates the flag then re-syncs the active
-// tooth's controls.
+// card render/wiring. Each setter is idempotent (early-returns when the value
+// is unchanged), re-syncs the active tooth's controls, then fires
+// notifyStateChange() so onStateChange subscribers observe the change — the
+// same session-flag convention as setPulpDetailLevel/setSurfaceNotation.
 let fillingDefectEnabled = true;
 let fillingComplexity: "complex" | "simple" = "complex";
 let fissureSealingEnabled = true;
@@ -1437,17 +1618,37 @@ const FILLING_MATERIALS = ["amalgam", "composite", "gic", "temporary"] as const;
 const fillingMaterialAvail: Record<string, boolean> = { amalgam: true, composite: true, gic: true, temporary: true };
 
 export function getFillingDefectEnabled(){ return fillingDefectEnabled; }
-export function setFillingDefectEnabled(v: boolean){ fillingDefectEnabled = !!v; if(activeTooth) syncControlsFromState(toothState.get(activeTooth)); }
+export function setFillingDefectEnabled(v: boolean){
+  const next = !!v;
+  if(next === fillingDefectEnabled) return;
+  fillingDefectEnabled = next;
+  if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
+}
 export function getFillingComplexity(): "complex" | "simple" { return fillingComplexity; }
-export function setFillingComplexity(v: "complex" | "simple"){ fillingComplexity = v === "simple" ? "simple" : "complex"; if(activeTooth) syncControlsFromState(toothState.get(activeTooth)); }
+export function setFillingComplexity(v: "complex" | "simple"){
+  const next = v === "simple" ? "simple" : "complex";
+  if(next === fillingComplexity) return;
+  fillingComplexity = next;
+  if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
+}
 export function getFissureSealingEnabled(){ return fissureSealingEnabled; }
-export function setFissureSealingEnabled(v: boolean){ fissureSealingEnabled = !!v; if(activeTooth) syncControlsFromState(toothState.get(activeTooth)); }
+export function setFissureSealingEnabled(v: boolean){
+  const next = !!v;
+  if(next === fissureSealingEnabled) return;
+  fissureSealingEnabled = next;
+  if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
+}
 export function getFillingMaterialAvailability(): Record<string, boolean> { return { ...fillingMaterialAvail }; }
 export function setFillingMaterialAvailability(material: string, v: boolean){
-  if(Object.prototype.hasOwnProperty.call(fillingMaterialAvail, material)){
-    fillingMaterialAvail[material] = !!v;
-    if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
-  }
+  if(!Object.prototype.hasOwnProperty.call(fillingMaterialAvail, material)) return;
+  const next = !!v;
+  if(fillingMaterialAvail[material] === next) return;
+  fillingMaterialAvail[material] = next;
+  if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
 }
 /** The filling materials currently available, in canonical order. */
 function availableFillingMaterials(): readonly string[] {
@@ -1747,7 +1948,7 @@ function getToothSelectOptions(){
   return all.filter(o => allowed.has(o.value));
 }
 
-function getStatusExtras(){
+export function getStatusExtras(){
   if(!STATUS_EXTRAS || !Array.isArray(STATUS_EXTRAS.options)) return [];
   return STATUS_EXTRAS.options.map((opt)=>({
     ...opt,
@@ -1793,7 +1994,7 @@ export function icdasTier(code: number): 1|2|3 { return code <= 2 ? 1 : code <= 
 export function threeLevelToIcdas(level: string): number { return level === "deep" ? 6 : level === "dentin" ? 4 : 2; }
 export function icdasToThreeLevel(code: number): string { const t = icdasTier(code); return t === 3 ? "deep" : t === 2 ? "dentin" : "surface"; }
 
-function getCariesDepthOptions(): Array<{ value: number; label: string; title?: string }>{
+export function getCariesDepthOptions(): Array<{ value: number; label: string; title?: string }>{
   if(icdasEnabled){
     return [1,2,3,4,5,6].map((n)=>({ value:n, label:`${n} — ${t(`icdas.code.${n}`)}`, title:t(`icdas.desc.${n}`) }));
   }
@@ -2105,14 +2306,16 @@ function getDiscolorationOptions(): { value: string; label: string }[]{
   return Array.from(VALID_DISCOLORATION).map(v => ({ value: v, label: t("discoloration." + v) }));
 }
 
-// Orthodontic axis option builders.
-function getOrthoApplianceOptions(): { value: string; label: string }[]{
+// Orthodontic axis option builders. Exported so the declarative
+// `OrthodonticsCard` (composable-UI Tier 3) renders the same `<option>` sets the
+// imperative `buildSelect(...)` wiring produced.
+export function getOrthoApplianceOptions(): { value: string; label: string }[]{
   return Array.from(VALID_ORTHO_APPLIANCE).map(v => ({ value: v, label: t("ortho.appliance." + v) }));
 }
-function getOrthoDriftOptions(): { value: string; label: string }[]{
+export function getOrthoDriftOptions(): { value: string; label: string }[]{
   return Array.from(VALID_ORTHO_DRIFT).map(v => ({ value: v, label: t("ortho.drift." + v) }));
 }
-function getOrthoVerticalOptions(): { value: string; label: string }[]{
+export function getOrthoVerticalOptions(): { value: string; label: string }[]{
   return Array.from(VALID_ORTHO_VERTICAL).map(v => ({ value: v, label: t("ortho.vertical." + v) }));
 }
 
@@ -2155,6 +2358,421 @@ export function __orthoAllowedForTest(s: Record<string, unknown>): boolean { ret
 // gate above — the card's visibility must never contradict the chart.
 export function __orthoCardAllowedForTest(s: Record<string, unknown>): boolean { return orthoAllowed(s); }
 
+// ── Orthodontics card engine API (composable-UI Tier 3) ─────────────────────
+// The declarative `OrthodonticsCard` reads/writes the ortho axes through these
+// functions instead of the former imperative `wireControls()`/
+// `syncControlsFromState()` `#orthoCard` block. `getActiveOrtho()` returns the
+// ACTIVE tooth's ortho values plus the whole-selection `orthoCardAllowed`
+// visibility predicate the sync used; the setters wrap the exact
+// `applyToSelected(...)` closures `wireControls()` bound, so behavior is
+// identical — only the call site moves from a DOM listener to a React onChange.
+export type ActiveOrtho = {
+  appliance: string;
+  drift: string;
+  vertical: string;
+  rotation: boolean;
+  visible: boolean;
+};
+
+export function getActiveOrtho(): ActiveOrtho | null {
+  if(activeTooth == null) return null;
+  // A selected tooth may be unedited (state lazily vivified on first edit); read
+  // it as its defaultState() so the card follows selection, like the other cards.
+  const state = toothState.get(activeTooth) ?? defaultState();
+  // Fold in the write-back-if-out-of-set normalization the old sync block did:
+  // if a stored value isn't in its current option set, snap it to the first
+  // option and write it back to state (a no-op for ortho's static enums, kept
+  // for behavior parity with every other synced select).
+  const applianceOpts = getOrthoApplianceOptions();
+  if(!applianceOpts.some(o => o.value === state.orthoAppliance)) state.orthoAppliance = applianceOpts[0]?.value ?? "none";
+  const driftOpts = getOrthoDriftOptions();
+  if(!driftOpts.some(o => o.value === state.orthoDrift)) state.orthoDrift = driftOpts[0]?.value ?? "none";
+  const verticalOpts = getOrthoVerticalOptions();
+  if(!verticalOpts.some(o => o.value === state.orthoVertical)) state.orthoVertical = verticalOpts[0]?.value ?? "none";
+  // Same whole-selection gate the sync block used: visible only when every
+  // selected tooth (or the lone active tooth) passes `orthoAllowed`.
+  const selectedList = selectedTeeth.size > 0 ? Array.from(selectedTeeth) : [activeTooth];
+  const visible = selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    return s && orthoAllowed(s);
+  });
+  return {
+    appliance: state.orthoAppliance,
+    drift: state.orthoDrift,
+    vertical: state.orthoVertical,
+    rotation: state.orthoRotation === true,
+    visible,
+  };
+}
+
+export function setOrthoApplianceForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ s.orthoAppliance = value; });
+}
+export function setOrthoDriftForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ s.orthoDrift = value; });
+}
+export function setOrthoVerticalForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ s.orthoVertical = value; });
+}
+export function setOrthoRotationForSelection(on: boolean): void {
+  applyToSelected((s: Any)=>{ s.orthoRotation = on; });
+}
+
+// ── Caries card engine API (composable-UI Tier 3, PR 3c) ────────────────────
+// The declarative `CariesCard` reads/writes the caries axes through these
+// functions instead of the former imperative `wireControls()`/
+// `syncControlsFromState()` `#cariesSection` block. `getActiveCaries()` returns
+// the ACTIVE tooth's per-surface caries/severity/disabled state, the subcrown
+// row state, the depth/root-caries values, and the row/card visibility flags the
+// sync used; the setters wrap the exact `applyToSelected(...)` closures
+// `wireControls()` bound (the `cariesOnToggle`, depth, and root-caries handlers),
+// so behavior is identical — only the call site moves from a DOM listener to a
+// React onChange. Reuses the same helpers the imperative sync used
+// (`syncSurfaceDepthIndicator`'s badge math, `surfaceLetter`/`surfaceLabelKey`,
+// `rootCariesDisplayValue`) so the rendered cell/indicator DOM is byte-identical.
+
+/** One caries surface-cross cell's fully-resolved render state. */
+export type ActiveCariesSurface = {
+  value: string;       // checkbox value + id source, e.g. "caries-buccal"
+  surface: string;     // stored surface key, e.g. "buccal"
+  pos: string;         // grid position class suffix (pos-{pos})
+  letter: string;      // arch/notation-aware boxed letter (surfaceLetter)
+  label: string;       // arch/notation-aware caption (surfaceLabelKey → t)
+  checked: boolean;
+  disabled: boolean;   // when true the whole cell is display:none (parity)
+  depth: string;       // .surf-depth data-depth (icdasToThreeLevel)
+  icdas: number;       // .surf-depth data-icdas
+  isIcdas: boolean;    // badge (true) vs 3-bar (false) rendering
+  radio: string | null;// .surf-depth data-radio (or null → attr omitted)
+};
+
+export type ActiveCaries = {
+  surfaces: ActiveCariesSurface[];   // 5 cells, in buildSurfaceCross order
+  subcrownChecked: boolean;
+  subcrownDisabled: boolean;         // display:none on the subcrown label
+  subcrownLabel: string;
+  cariesActiveDepth: number;         // #cariesDepthSelect value
+  rootCariesDisplay: string;         // #rootCariesSelect value (NON-collapsing)
+  cariesDepthVisible: boolean;       // #cariesDepthRow
+  rootCariesVisible: boolean;        // #rootCariesRow
+  cariesSectionVisible: boolean;     // #cariesSection
+};
+
+// The 5 caries surface cells, in the exact order + labelling
+// `buildSurfaceCross($("#cariesChecks"), …)` emitted.
+const CARIES_SURFACE_CELLS: Array<{ value: string; surface: string; pos: string }> = [
+  { value: "caries-buccal", surface: "buccal", pos: "buccal" },
+  { value: "caries-mesial", surface: "mesial", pos: "mesial" },
+  { value: "caries-occlusal", surface: "occlusal", pos: "occlusal" },
+  { value: "caries-distal", surface: "distal", pos: "distal" },
+  { value: "caries-lingual", surface: "lingual", pos: "lingual" },
+];
+
+export function getActiveCaries(): ActiveCaries {
+  // No active tooth → derive from a default state so the cross always renders
+  // (buildSurfaceCross built it once at init regardless of selection) and the
+  // visibility flags default to "shown" (matching the pre-sync static shell).
+  const state = (activeTooth != null ? toothState.get(activeTooth) : null) ?? defaultState();
+  const isPlan = getChartMode() === "plan";
+  const toothNo = activeTooth ?? null;
+
+  const hasCrown = state.restorationType !== "none";
+  const hasRemovable = state.toothSelection === "none"
+    && (state.prosthesis === "removable-partial" || state.prosthesis === "removable-full");
+  const hasRestoration = hasCrown || hasRemovable;
+
+  const surfaces: ActiveCariesSurface[] = CARIES_SURFACE_CELLS.map((cell) => {
+    // Mirrors syncSurfaceDepthIndicator's per-cell badge math.
+    const code = state.cariesSeverity.get(cell.surface) || 2;
+    const radioVal = state.radiographicDepth?.get(cell.surface);
+    const radio = (radiographicDepthMode !== "off" && radioVal && radioVal !== "none")
+      ? radioVal : null;
+    return {
+      value: cell.value,
+      surface: cell.surface,
+      pos: cell.pos,
+      letter: surfaceLetter(cell.surface, toothNo),
+      label: t(surfaceLabelKey(cell.surface, toothNo)),
+      checked: state.caries.has(cell.value),
+      // Same disable predicate the sync used for the 5 surface checkboxes.
+      disabled: hasRestoration || hasCrown,
+      depth: icdasToThreeLevel(code),
+      icdas: code,
+      isIcdas: icdasEnabled,
+      radio,
+    };
+  });
+
+  return {
+    surfaces,
+    subcrownChecked: state.caries.has("caries-subcrown"),
+    subcrownDisabled: !hasCrown,
+    subcrownLabel: t("surface.subcrown"),
+    cariesActiveDepth: state.cariesActiveDepth,
+    rootCariesDisplay: rootCariesDisplayValue(rootCariesMode, state.rootCaries),
+    cariesDepthVisible: cariesDepthEnabled && !isPlan,
+    rootCariesVisible: isToothPresent(state.toothSelection) && !isPlan,
+    cariesSectionVisible: cariesSectionVisible(state, isPlan),
+  };
+}
+
+// The `#cariesSection` hide predicate, folded out of `syncControlsFromState`
+// verbatim (hideByBase || hideByRadix || isPlan), including the whole-selection
+// `hiddenSelected` term.
+function cariesSectionVisible(state: Any, isPlan: boolean): boolean {
+  const underGum = isUnderGum(state.toothSelection);
+  const extraction = isExtraction(state.toothSelection) || (state.toothSelection === "none" && state.extractionWound);
+  const selectedArr = selectedTeeth.size > 0 ? Array.from(selectedTeeth) : [];
+  const hiddenSelected = selectedArr.length > 0 && selectedArr.some((tn) => {
+    const sel = toothState.get(tn)?.toothSelection;
+    return sel === "implant" || sel === "none" || sel === "tooth-under-gum" || sel === "no-tooth-after-extraction";
+  });
+  const hideByBase = state.toothSelection === "implant" || state.toothSelection === "none" || underGum || extraction || hiddenSelected;
+  const hideByRadix = state.toothSubstrate === "radix";
+  return !(hideByBase || hideByRadix || isPlan);
+}
+
+/** Toggle one caries surface (or the subcrown) on the current selection —
+ *  wraps the exact `cariesOnToggle` closure `wireControls()` bound. */
+export function setCariesSurfaceForSelection(id: string, on: boolean): void {
+  applyToSelected((s: Any)=>{
+    if(on){
+      s.caries.add(id);
+      if(id !== "caries-subcrown") s.cariesSeverity.set(id.replace("caries-", ""), s.cariesActiveDepth);
+    }else{
+      s.caries.delete(id);
+      s.cariesSeverity.delete(id.replace("caries-", ""));
+    }
+  });
+}
+
+/** Set the default (active) caries depth for newly-tapped surfaces. */
+export function setCariesActiveDepthForSelection(value: number): void {
+  applyToSelected((s: Any)=>{ s.cariesActiveDepth = Number(value); });
+}
+
+/** Set the per-tooth root-caries value (the picker already emits the canonical
+ *  enum value; simple-mode "present" maps to "active-cavitated"). */
+export function setRootCariesForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ s.rootCaries = value; });
+}
+
+// ── Fillings card engine API (composable-UI Tier 3, PR 3d) ──────────────────
+// The declarative `FillingsCard` reads/writes the filling axes through these
+// functions instead of the former imperative `wireControls()`/
+// `syncControlsFromState()` `#fillingSection` block. `getActiveFillings()`
+// returns the ACTIVE tooth's filling-material value + (milktooth-aware,
+// write-back-normalized) option set, the 5 per-surface cells with the TWO
+// injected indicators (RIGHT-side `.surf-depth` recurrent-caries mirroring
+// `syncFillingSubcariesIndicator`, LEFT-side `.surf-defect` mirroring
+// `syncFillingDefectIndicator`), the simple/complex-swap flags, the fissure
+// toggle + its whole-selection gate, the whole-selection summary lines, and the
+// section-visibility flag. The setters wrap the exact `applyToSelected(...)`
+// closures `wireControls()` bound, so behavior is identical — only the call site
+// moves from a DOM listener to a React onChange.
+
+/** One filling-surface cell's fully-resolved render state (mirrors the DOM the
+ *  imperative `buildSurfaceCross` + `syncFillingSubcariesIndicator` +
+ *  `syncFillingDefectIndicator` produced for `#fillingSurfaceChecks`). */
+export type ActiveFillingSurface = {
+  value: string;         // checkbox value + id source (chk-{value}); == surface
+  surface: string;       // stored surface key (buccal/mesial/occlusal/distal/lingual)
+  pos: string;           // grid position class suffix (pos-{pos})
+  letter: string;        // arch/notation-aware boxed letter (surfaceLetter)
+  label: string;         // arch/notation-aware caption (surfaceLabelKey → t)
+  labelId: string;       // id on the caption span (lbl-{surface})
+  checked: boolean;      // surface is filled (fillingSurfaceMaterials.has)
+  material: string;      // data-material attribute ("" when unfilled)
+  // RIGHT-side `.surf-depth` recurrent-caries indicator state.
+  hasSubcaries: boolean;
+  subDepth: string;      // data-depth (icdasToThreeLevel)
+  subIcdas: number;      // data-icdas
+  isIcdas: boolean;      // badge (true) vs 3-bar (false) rendering
+  // LEFT-side `.surf-defect` structural-defect indicator state.
+  hasDefect: boolean;
+  defectValue: string | null;  // data-defect (or null → attr omitted)
+};
+
+export type ActiveFillings = {
+  surfaces: ActiveFillingSurface[];  // 5 cells, in buildSurfaceCross order
+  fillingMaterial: string;           // #fillingSelect value (write-back normalized)
+  fillingOptions: { value: string; label: string }[];  // milktooth-aware
+  surfaceGridVisible: boolean;       // #fillingSurfaceChecks not-hidden
+  defectDisabled: boolean;           // #fillingSurfaceChecks .defect-disabled
+  simpleMode: boolean;               // fillingComplexity === "simple"
+  simpleRowVisible: boolean;         // #fillingSimpleRow
+  simpleToggleChecked: boolean;      // #fillingSimpleToggle
+  simpleDefectRowVisible: boolean;   // #fillingSimpleDefectRow
+  simpleDefectValue: string;         // #fillingSimpleDefectSelect value
+  simpleDefectOptions: { value: string; label: string }[];
+  fissureSealing: boolean;           // #fissureSealing checked
+  fissureRowVisible: boolean;        // #fissureSealingRow
+  fillingSectionVisible: boolean;    // #fillingSection
+  subcariesSummary: string;          // #fillingSubcariesSummary text
+  defectSummary: string;             // #fillingDefectSummary text
+};
+
+// The 5 filling surface cells, in the exact order `buildSurfaceCross(
+// $("#fillingSurfaceChecks"), …)` emitted (value == the plain surface key).
+const FILLING_SURFACE_CELLS: Array<{ value: string; surface: string; pos: string }> = [
+  { value: "buccal", surface: "buccal", pos: "buccal" },
+  { value: "mesial", surface: "mesial", pos: "mesial" },
+  { value: "occlusal", surface: "occlusal", pos: "occlusal" },
+  { value: "distal", surface: "distal", pos: "distal" },
+  { value: "lingual", surface: "lingual", pos: "lingual" },
+];
+
+export function getActiveFillings(): ActiveFillings {
+  // No active tooth → derive from a default state so the cross always renders
+  // (buildSurfaceCross built it once at init regardless of selection) and the
+  // visibility flags default to the static shell's pre-sync state.
+  const realState = activeTooth != null ? toothState.get(activeTooth) : null;
+  const state = realState ?? defaultState();
+  const toothNo = activeTooth ?? null;
+
+  const isMilktooth = state.toothSelection === "milktooth";
+  const fillingOptions = getFillingOptions(isMilktooth);
+  // Fold in the write-back-if-out-of-set normalization the old sync block did:
+  // if the stored material isn't in its current option set, snap it to the first
+  // option and write it back to state (only for a real active tooth).
+  let fillingMaterial = state.fillingMaterial;
+  if(!fillingOptions.some(o => o.value === fillingMaterial)){
+    fillingMaterial = fillingOptions[0]?.value ?? "none";
+    if(realState) realState.fillingMaterial = fillingMaterial;
+  }
+
+  const surfaces: ActiveFillingSurface[] = FILLING_SURFACE_CELLS.map((cell) => {
+    const surface = cell.surface;
+    const filled = state.fillingSurfaceMaterials.has(surface);
+    const hasSubcaries = filled && state.caries.has(`caries-${surface}`);
+    const code = state.cariesSeverity.get(surface) || 2;
+    const defVal = state.fillingDefect?.get(surface);
+    const hasDefect = filled && !!defVal && defVal !== "none";
+    return {
+      value: cell.value,
+      surface,
+      pos: cell.pos,
+      letter: surfaceLetter(surface, toothNo),
+      label: t(surfaceLabelKey(surface, toothNo)),
+      labelId: `lbl-${surface}`,
+      checked: filled,
+      material: state.fillingSurfaceMaterials.get(surface) || "",
+      hasSubcaries,
+      subDepth: icdasToThreeLevel(code),
+      subIcdas: code,
+      isIcdas: icdasEnabled,
+      hasDefect,
+      defectValue: hasDefect ? String(defVal) : null,
+    };
+  });
+
+  const hasCrown = state.restorationType !== "none";
+  const showFillingSurfaces = fillingMaterial !== "none" && !hasCrown;
+  const simpleMode = fillingComplexity === "simple";
+  const filledCount = state.fillingSurfaceMaterials.size;
+  const firstSurf = [...state.fillingSurfaceMaterials.keys()][0];
+  const simpleDefectValue = firstSurf ? (state.fillingDefect?.get(firstSurf) ?? "none") : "none";
+
+  // Whole-selection fissure gate (mirrors the sync's `fissureAllowed`). With no
+  // active tooth AND no selection (the not-yet-synced static shell), the row
+  // stays shown — matching the pre-sync markup.
+  const selectedArr = selectedTeeth.size > 0 ? Array.from(selectedTeeth) : [];
+  const selectedList = selectedArr.length > 0 ? selectedArr : (activeTooth != null ? [activeTooth] : []);
+  const fissureAllowed = selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    return !!s && s.toothSelection === "tooth-base" && FISSURE_ALLOWED.has(tn as number);
+  });
+  const fissureRowVisible = selectedList.length === 0 ? true : (fissureAllowed && fissureSealingEnabled);
+
+  // Section-visibility gate, folded verbatim out of syncControlsFromState
+  // (hideByBase || hideFillingsByCrown; NOT plan-gated).
+  const underGum = isUnderGum(state.toothSelection);
+  const extraction = isExtraction(state.toothSelection) || (state.toothSelection === "none" && state.extractionWound);
+  const hiddenSelected = selectedArr.length > 0 && selectedArr.some(tn => {
+    const sel = toothState.get(tn)?.toothSelection;
+    return sel === "implant" || sel === "none" || sel === "tooth-under-gum" || sel === "no-tooth-after-extraction";
+  });
+  const hideByBase = state.toothSelection === "implant" || state.toothSelection === "none" || underGum || extraction || hiddenSelected;
+  const hideFillingsByCrown = state.toothSelection === "tooth-base" && hasCrown;
+
+  return {
+    surfaces,
+    fillingMaterial,
+    fillingOptions,
+    surfaceGridVisible: showFillingSurfaces && !simpleMode,
+    defectDisabled: !fillingDefectEnabled,
+    simpleMode,
+    simpleRowVisible: showFillingSurfaces && simpleMode,
+    simpleToggleChecked: filledCount > 0,
+    simpleDefectRowVisible: showFillingSurfaces && simpleMode && fillingDefectEnabled && filledCount > 0,
+    simpleDefectValue,
+    simpleDefectOptions: fillingDefectOptions(),
+    fissureSealing: !!state.fissureSealing,
+    fissureRowVisible,
+    fillingSectionVisible: !(hideByBase || hideFillingsByCrown),
+    subcariesSummary: computeFillingSubcariesSummaryLine(selectedArr as number[], (tn) => toothState.get(tn)),
+    defectSummary: computeFillingDefectSummaryLine(selectedArr as number[], (tn) => toothState.get(tn)),
+  };
+}
+
+/** Set the active filling material on the current selection — wraps the exact
+ *  `#fillingSelect` closure `wireControls()` bound (clearing "none" removes any
+ *  orphaned per-surface fillings). */
+export function setFillingMaterialForSelection(mat: string): void {
+  applyToSelected((s: Any)=>{
+    s.fillingMaterial = mat;
+    if(mat === "none"){
+      s.fillingSurfaces.clear();
+      s.fillingSurfaceMaterials.clear();
+    }
+  });
+}
+
+/** Toggle one filling surface on the current selection — wraps the exact
+ *  `buildSurfaceCross($("#fillingSurfaceChecks"), …)` closure. */
+export function setFillingSurfaceForSelection(surf: string, on: boolean): void {
+  applyToSelected((s: Any)=>{
+    if(on && s.fillingMaterial !== "none"){
+      s.fillingSurfaces.add(surf);
+      s.fillingSurfaceMaterials.set(surf, s.fillingMaterial);
+    }else{
+      s.fillingSurfaces.delete(surf);
+      s.fillingSurfaceMaterials.delete(surf);
+    }
+  });
+}
+
+/** Simple-mode filled/not-filled toggle — applies the current material to ALL
+ *  surfaces (or clears them). Wraps the `#fillingSimpleToggle` closure. */
+export function setFillingSimpleToggleForSelection(on: boolean): void {
+  applyToSelected((s: Any)=>{
+    if(on){
+      const mat = s.fillingMaterial !== "none" ? s.fillingMaterial : "composite";
+      for(const surf of ["buccal", "mesial", "occlusal", "distal", "lingual"]){ s.fillingSurfaceMaterials.set(surf, mat); s.fillingSurfaces.add(surf); }
+    }else{
+      s.fillingSurfaceMaterials.clear();
+      s.fillingSurfaces.clear();
+      s.fillingDefect.clear();
+    }
+  });
+}
+
+/** Simple-mode filling-defect select — applies a defect to EVERY filled surface.
+ *  Wraps the `#fillingSimpleDefectSelect` closure. */
+export function setFillingSimpleDefectForSelection(value: string): void {
+  applyToSelected((s: Any)=>{
+    for(const surf of (s.fillingSurfaceMaterials as Map<string, string>).keys()){
+      applyFillingDefect(s.fillingDefect, surf, value);
+    }
+  });
+}
+
+/** Fissure-sealing toggle on the current selection. Wraps the `#fissureSealing`
+ *  closure. */
+export function setFissureSealingForSelection(on: boolean): void {
+  applyToSelected((s: Any)=>{ s.fissureSealing = on; });
+}
+
 function getPeriImplantOptions(): { value: string; label: string }[]{
   return Array.from(VALID_PERI_IMPLANT).map(v => ({ value: v, label: t("periImplant." + kebabToCamel(v)) }));
 }
@@ -2169,6 +2787,700 @@ function applyPeriImplantSelection(s: Any, value: string){
  *  the change handler does. Not part of the public API. */
 export function __applyPeriImplantSelectionForTest(s: Record<string, unknown>, value: string): void {
   applyPeriImplantSelection(s, value);
+}
+
+// ── Root / periodontium card engine API (composable-UI Tier 3, PR 3e) ────────
+// The declarative `RootPeriodontiumCard` reads/writes the root (endo/apical/
+// lesion/resorption/resection/pin) and periodontal (mobility/mods/calculus/
+// peri-implant) axes through these functions instead of the former imperative
+// `wireControls()`/`syncControlsFromState()` Root/perio block.
+// `getActiveRootPerio()` returns the ACTIVE tooth's values + (write-back-
+// normalized) option sets, the grouped pulp/endo optgroups mirroring
+// `buildPulpEndoSelect`, ALL row/sub-block/section visibility flags, the
+// per-control disabled flags, and — crucially — the ALREADY-RESOLVED
+// mod-checkbox visibility + dynamic label strings (the ordering-dependent
+// `syncInflammationModVisibility`-after-`syncPeriImplantVisibility` logic is
+// folded in here so the card never has to replay it). The setters wrap the
+// exact `applyToSelected(...)` closures `wireControls()` bound (incl. the
+// pulp/endo `pulpEndoOnSelect` mutual exclusion and the apical→periapical
+// reset), so behavior is identical — only the call site moves from a DOM
+// listener to a React onChange. The 6-site `#perioGrid` probing subsystem
+// stays imperative (`buildPerioGrid`/`syncPerioRow`); this card renders it as a
+// static empty container.
+
+export type RootPerioOption = { value: string; label: string };
+export type RootPerioOptGroup = { label: string; options: RootPerioOption[] };
+
+/** One `#modsChecks` checkbox's fully-resolved render state. `hiddenClass`
+ *  reproduces the `.hidden` class the sub-syncs toggled on the wrapping
+ *  `<label>`; `styleHidden` reproduces the `style.display:none` the
+ *  `setDisabled()`→`syncControlLabelVisibility()` path applied. */
+export type ActiveRootPerioMod = {
+  value: string;         // "parodontal" | "inflammation"
+  label: string;         // resolved (dynamic) caption text
+  checked: boolean;
+  disabled: boolean;
+  hiddenClass: boolean;
+  styleHidden: boolean;
+};
+
+export type ActiveRootPerio = {
+  // Section + sub-block visibility (reconciled hide predicates).
+  sectionVisible: boolean;
+  rootBlockVisible: boolean;
+  perioBlockVisible: boolean;
+  // Pulp / endo merged optgroup select.
+  pulpEndoValue: string;
+  pulpEndoNoneOption: RootPerioOption | null; // Plan-mode standalone "none"
+  pulpEndoGroups: RootPerioOptGroup[];
+  pulpEndoDisabled: boolean;
+  // Apical (AAE) diagnosis.
+  apicalDxValue: string;
+  apicalDxOptions: RootPerioOption[];
+  apicalDxDisabled: boolean;
+  apicalDxRowVisible: boolean;
+  // Periapical lesion subtype.
+  periapicalTypeValue: string;
+  periapicalTypeOptions: RootPerioOption[];
+  periapicalRowVisible: boolean;
+  // Root resorption.
+  resorptionValue: string;
+  resorptionOptions: RootPerioOption[];
+  resorptionDisabled: boolean;
+  resorptionRowVisible: boolean;
+  // Resection / parapulpal pin.
+  endoResectionChecked: boolean;
+  endoResectionDisabled: boolean;
+  parapulpalPinChecked: boolean;
+  parapulpalPinDisabled: boolean;
+  // Mobility.
+  mobilityValue: string;
+  mobilityOptions: RootPerioOption[];
+  mobilityDisabled: boolean;
+  mobilityRowVisible: boolean;
+  // 6-site probing grid (imperative carve-out) — row visibility only.
+  perioRowVisible: boolean;
+  // Inflammation / parodontal mod checkboxes.
+  mods: ActiveRootPerioMod[];
+  // Calculus.
+  calculusChecked: boolean;
+  calculusRowVisible: boolean;
+  // Peri-implant status (implant-only).
+  periImplantValue: string;
+  periImplantOptions: RootPerioOption[];
+  periImplantRowVisible: boolean;
+};
+
+export function getActiveRootPerio(): ActiveRootPerio {
+  // No active tooth → derive from a default state so the card always renders
+  // (its selects/checks were built once at init regardless of selection),
+  // mirroring getActiveCaries/getActiveFillings.
+  const state = (activeTooth != null ? toothState.get(activeTooth) : null) ?? defaultState();
+  const isPlan = getChartMode() === "plan";
+  const isMilktooth = state.toothSelection === "milktooth";
+  const isImplant = state.toothSelection === "implant";
+  const present = isToothPresent(state.toothSelection);
+  const underGum = isUnderGum(state.toothSelection);
+  const extraction = isExtraction(state.toothSelection) || (state.toothSelection === "none" && state.extractionWound);
+
+  // Fold in the write-back-if-out-of-set normalization each old sync block did:
+  // if a stored value isn't in its current option set, snap it to the first
+  // option and write it back to state (a no-op for these static enums, kept for
+  // behavior parity with every synced select — mirrors getActiveOrtho).
+  const apicalDxOptions = getApicalDxOptions();
+  if(!apicalDxOptions.some(o => o.value === state.apicalDx)) state.apicalDx = apicalDxOptions[0]?.value ?? "normal";
+  const periapicalTypeOptions = getPeriapicalTypeOptions();
+  if(!periapicalTypeOptions.some(o => o.value === state.periapicalType)) state.periapicalType = periapicalTypeOptions[0]?.value ?? "none";
+  const resorptionOptions = getResorptionOptions();
+  if(!resorptionOptions.some(o => o.value === state.resorptionType)) state.resorptionType = resorptionOptions[0]?.value ?? "none";
+  const mobilityOptions = getMobilityOptions();
+  if(!mobilityOptions.some(o => o.value === state.mobility)) state.mobility = mobilityOptions[0]?.value ?? "none";
+  const periImplantOptions = getPeriImplantOptions();
+  if(!periImplantOptions.some(o => o.value === state.periImplant)) state.periImplant = periImplantOptions[0]?.value ?? "none";
+
+  // Merged pulp/endo grouped select — mirrors buildPulpEndoSelect (Status: the
+  // vital-pulp diagnosis group + treated-endo group; Plan: a standalone "none"
+  // + the treated-endo group only, collapsing any non-endo state to "none").
+  const pulpEndoSelected = pulpEndoDisplayValue(state);
+  let pulpEndoNoneOption: RootPerioOption | null = null;
+  let pulpEndoGroups: RootPerioOptGroup[];
+  let pulpEndoValue: string;
+  if(!isPlan){
+    pulpEndoGroups = [
+      { label: t("pulpEndo.groupVital"), options: getPulpOptions() },
+      { label: t("pulpEndo.groupTreated"), options: getEndoOptions(isMilktooth).filter(o => o.value !== "none") },
+    ];
+    pulpEndoValue = pulpEndoSelected;
+  }else{
+    const endoOpts = getEndoOptions(isMilktooth);
+    const none = endoOpts.find(o => o.value === "none");
+    pulpEndoNoneOption = none ?? null;
+    pulpEndoGroups = [
+      { label: t("pulpEndo.groupTreated"), options: endoOpts.filter(o => o.value !== "none") },
+    ];
+    pulpEndoValue = isEndoValue(pulpEndoSelected) ? pulpEndoSelected : "none";
+  }
+
+  // Per-control disabled: endo/apical/resorption/resection/pin are enabled only
+  // on a present, non-under-gum, non-extraction tooth.
+  const endoDisabled = !present || underGum || extraction;
+
+  // Whole-selection block/section hide predicates, folded verbatim from the old
+  // syncControlsFromState() Root/perio block.
+  const selectedArr = selectedTeeth.size > 0 ? Array.from(selectedTeeth) : [];
+  const hiddenSelected = selectedArr.length > 0 && selectedArr.some(tn => {
+    const sel = toothState.get(tn)?.toothSelection;
+    return sel === "implant" || sel === "none" || sel === "tooth-under-gum" || sel === "no-tooth-after-extraction";
+  });
+  const noneSelected = selectedArr.length > 0 && selectedArr.some(tn => toothState.get(tn)?.toothSelection === "none");
+  const hideByBase = isImplant || state.toothSelection === "none" || underGum || extraction || hiddenSelected;
+  const hideByNone = state.toothSelection === "none" || noneSelected;
+
+  // Mod checkboxes — resolve the ordering-dependent visibility here.
+  // syncPeriImplantVisibility() ran FIRST (an implant hides BOTH mods), then
+  // syncInflammationModVisibility() ran AFTER and is authoritative for the
+  // `inflammation` checkbox (hidden for a present non-socket tooth or an
+  // implant, visible for a missing tooth / extraction-socket). The `parodontal`
+  // checkbox's disabled/`style.display` mirrors the setDisabled(extraction) the
+  // sync applied; the `inflammation` checkbox is only ever explicitly enabled
+  // (on extraction), i.e. never disabled.
+  const mods: ActiveRootPerioMod[] = MOD_OPTIONS.map((opt) => {
+    if(opt.value === "parodontal"){
+      return {
+        value: "parodontal",
+        label: t("mods.parodontal"),
+        checked: state.mods.has("parodontal"),
+        disabled: extraction,
+        hiddenClass: isImplant,
+        styleHidden: extraction,
+      };
+    }
+    return {
+      value: "inflammation",
+      label: extraction ? t("mods.periodontalInflammation") : t("mods.periapicalInflammation"),
+      checked: state.mods.has("inflammation"),
+      disabled: false,
+      hiddenClass: isImplant || (present && !extraction),
+      styleHidden: false,
+    };
+  });
+
+  return {
+    // The section collapses only when BOTH blocks would be gone; the root block
+    // stays visible in Plan so endo TREATMENT remains plannable.
+    sectionVisible: !(hideByBase && (hideByNone || isPlan)),
+    rootBlockVisible: !hideByBase,
+    perioBlockVisible: !(hideByNone || isPlan),
+    pulpEndoValue,
+    pulpEndoNoneOption,
+    pulpEndoGroups,
+    pulpEndoDisabled: endoDisabled,
+    apicalDxValue: state.apicalDx,
+    apicalDxOptions,
+    apicalDxDisabled: endoDisabled,
+    apicalDxRowVisible: !isPlan,
+    periapicalTypeValue: state.periapicalType,
+    periapicalTypeOptions,
+    periapicalRowVisible: periapicalRowVisible(state) && !isPlan,
+    resorptionValue: state.resorptionType,
+    resorptionOptions,
+    resorptionDisabled: endoDisabled,
+    resorptionRowVisible: !isPlan,
+    endoResectionChecked: !!state.endoResection,
+    endoResectionDisabled: endoDisabled,
+    parapulpalPinChecked: !!state.parapulpalPin,
+    parapulpalPinDisabled: endoDisabled,
+    mobilityValue: state.mobility,
+    mobilityOptions,
+    mobilityDisabled: mobilityDisabled(state),
+    mobilityRowVisible: !mobilityRowHidden(state),
+    perioRowVisible: !perioRowHidden(state),
+    mods,
+    calculusChecked: !!state.calculus,
+    // The old static shell authored #calculusRow hidden (the imperative sync
+    // then showed it for a natural tooth); with no active tooth keep it hidden,
+    // so the mocked-init shell-DOM golden stays byte-identical.
+    calculusRowVisible: activeTooth != null && (state.toothSelection === "tooth-base" || state.toothSelection === "milktooth"),
+    periImplantValue: state.periImplant,
+    periImplantOptions,
+    periImplantRowVisible: isImplant,
+  };
+}
+
+/** Merged pulp/endo selection on the current selection — wraps the exact
+ *  `pulpEndoOnSelect` closure `wireControls()` bound (incl. the endo↔pulpDx
+ *  mutual-exclusion normalization). */
+export function setPulpEndoForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ pulpEndoOnSelect(s, value); });
+}
+
+/** Apical (AAE) diagnosis on the current selection — clears the periapical
+ *  lesion subtype unless the diagnosis is (a)symptomatic apical periodontitis. */
+export function setApicalDxForSelection(value: string): void {
+  applyToSelected((s: Any)=>{
+    s.apicalDx = value;
+    if(value !== "symptomatic-apical-periodontitis" && value !== "asymptomatic-apical-periodontitis"){
+      s.periapicalType = "none";
+    }
+  });
+}
+
+/** Periapical lesion subtype on the current selection. */
+export function setPeriapicalTypeForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ s.periapicalType = value; });
+}
+
+/** Root resorption type on the current selection. */
+export function setResorptionForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ s.resorptionType = value; });
+}
+
+/** Apicoectomy (resected tooth) toggle on the current selection. */
+export function setEndoResectionForSelection(on: boolean): void {
+  applyToSelected((s: Any)=>{ s.endoResection = on; });
+}
+
+/** Parapulpal pin toggle on the current selection. */
+export function setParapulpalPinForSelection(on: boolean): void {
+  applyToSelected((s: Any)=>{ s.parapulpalPin = on; });
+}
+
+/** Tooth mobility grade on the current selection. */
+export function setMobilityForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ s.mobility = value; });
+}
+
+/** Toggle one `#modsChecks` modifier (parodontal / inflammation) on the current
+ *  selection — wraps the exact set add/delete closure `wireControls()` bound. */
+export function setModForSelection(id: string, on: boolean): void {
+  applyToSelected((s: Any)=>{ if(on) s.mods.add(id); else s.mods.delete(id); });
+}
+
+/** Calculus toggle on the current selection. */
+export function setCalculusForSelection(on: boolean): void {
+  applyToSelected((s: Any)=>{ s.calculus = on; });
+}
+
+/** Peri-implant status on the current selection. */
+export function setPeriImplantForSelection(value: string): void {
+  applyToSelected((s: Any)=>{ applyPeriImplantSelection(s, value); });
+}
+
+// ── Tooth-details card engine API (composable-UI Tier 3, PR 3f) ──────────────
+// The declarative `ToothDetailsCard` reads/writes the per-tooth base / substrate /
+// restoration / broken / contact / wear / discoloration / crown-action axes
+// through these functions instead of the former imperative `wireControls()`/
+// `syncControlsFromState()` Tooth-details block (the largest one).
+// `getActiveToothDetails()` returns the ACTIVE tooth's values + per-tooth option
+// lists (folding the write-back normalization the sync did), all checkbox states,
+// every row's visibility flag + the wear/discoloration detail-level select-vs-
+// toggle mode, and the resolved `#extractionPlanRow` parent (the imperative
+// DOM-reparenting quirk, resolved to a parent id). With NO active tooth it returns
+// the exact static-shell defaults (the imperative sync only ran on an active
+// tooth; with none, the rows kept their authored classes) so the shell-DOM golden
+// stays byte-identical. The setters wrap the exact `applyToSelected(...)` closures
+// `wireControls()` bound (incl. the base-picker `defaultState()` reset +
+// `setEdentulous(false)` side-effects and the restoration `${type}|${material}`
+// decode via `applyRestorationSelection`), so behavior is identical — only the
+// call site moves from a DOM listener to a React onChange.
+
+export type ToothDetailsOption = { value: string; label: string; disabled?: boolean };
+export type ExtractionPlanParent = "brokenCrownRow" | "bruxismRow" | "crownActionsRow";
+
+export type ActiveToothDetails = {
+  // Base tooth picker (#toothSelect); the milk option carries the MILKTOOTH_BLOCKED disable.
+  toothSelectValue: string;
+  toothSelectOptions: ToothDetailsOption[];
+  // Substrate (#substrateSelect / #substrateRow).
+  substrateValue: string;
+  substrateOptions: ToothDetailsOption[];
+  substrateRowVisible: boolean;
+  // Extraction wound (#extractionRow / #extractionWound).
+  extractionWoundChecked: boolean;
+  extractionRowVisible: boolean;
+  // Missing closed (#missingClosedRow / #missingClosed).
+  missingClosedChecked: boolean;
+  missingClosedRowVisible: boolean;
+  // Combined restoration dropdown (#restorationSelect / #restorationRow).
+  restorationValue: string;
+  restorationOptions: ToothDetailsOption[];
+  restorationRowVisible: boolean;
+  // Crown marginal leakage (#crownLeakageRow / #crownLeakage).
+  crownLeakageChecked: boolean;
+  crownLeakageRowVisible: boolean;
+  // Broken crown parts (#brokenCrownRow: #brokenMesial/#brokenIncisal/#brokenDistal).
+  brokenMesialChecked: boolean;
+  brokenIncisalChecked: boolean;
+  brokenDistalChecked: boolean;
+  brokenCrownRowVisible: boolean;
+  // Contact points (#contactPointRow: #contactMesial/#contactDistal).
+  contactMesialChecked: boolean;
+  contactDistalChecked: boolean;
+  contactPointRowVisible: boolean;
+  // Wear (#bruxismRow → #wearEdgeRow/#wearCervicalRow); detail-level select-vs-toggle.
+  bruxismRowVisible: boolean;
+  wearSimple: boolean;
+  wearEdgeValue: string;
+  wearEdgeOptions: ToothDetailsOption[];
+  wearEdgeToggleChecked: boolean;
+  wearCervicalValue: string;
+  wearCervicalOptions: ToothDetailsOption[];
+  wearCervicalToggleChecked: boolean;
+  // Discoloration (#discolorationRow); detail-level select-vs-toggle.
+  discolorationRowVisible: boolean;
+  discoSimple: boolean;
+  discolorationValue: string;
+  discolorationOptions: ToothDetailsOption[];
+  discolorationToggleChecked: boolean;
+  // Crown actions (#crownActionsRow: #bridgePillarRow + #extractionPlanRow).
+  crownActionsRowVisible: boolean;
+  bridgePillarChecked: boolean;
+  bridgePillarRowVisible: boolean;
+  extractionPlanChecked: boolean;
+  extractionPlanRowVisible: boolean;
+  // The resolved parent the #extractionPlanRow is imperatively reparented into.
+  extractionPlanParent: ExtractionPlanParent;
+  // Crown replace / needed (#crownReplaceRow / #crownNeededRow).
+  crownReplaceChecked: boolean;
+  crownReplaceRowVisible: boolean;
+  crownNeededChecked: boolean;
+  crownNeededRowVisible: boolean;
+};
+
+/** The #toothSelect option list with the milk option's MILKTOOTH_BLOCKED disable
+ *  folded in (mirrors the `milkOption.disabled = anyBlocked` sync). */
+function toothSelectOptionsForCard(): ToothDetailsOption[] {
+  const selectedArr = selectedTeeth.size > 0 ? Array.from(selectedTeeth) : [];
+  const anyBlocked = selectedArr.length > 0
+    ? selectedArr.some(tn => MILKTOOTH_BLOCKED.has(Number(tn)))
+    : (activeTooth ? MILKTOOTH_BLOCKED.has(activeTooth) : false);
+  return getToothSelectOptions().map(o => o.value === "milktooth" ? { ...o, disabled: anyBlocked } : o);
+}
+
+export function getActiveToothDetails(): ActiveToothDetails {
+  const isPlan = getChartMode() === "plan";
+  const toothSelectOptions = toothSelectOptionsForCard();
+  const substrateOptions = getSubstrateOptions();
+  const wearEdgeOptions = getWearEdgeOptions();
+  const wearCervicalOptions = getWearCervicalOptions();
+  const discolorationOptions = getDiscolorationOptions();
+  const restoView = restorationViewFor(activeTooth);
+
+  // A tooth is "active" as soon as it is selected — even if it hasn't been
+  // edited yet (its state is lazily vivified on first edit). Reading an unedited
+  // selected tooth as its `defaultState()` (below) is what makes the card show
+  // that tooth's real base/rows (e.g. a permanent tooth hides the
+  // extraction-wound / closed-gap rows) instead of the no-selection shell.
+  const hasActive = activeTooth != null;
+
+  if(!hasActive){
+    // No active tooth → reproduce the static shell verbatim. The imperative
+    // syncControlsFromState only touched these rows when a tooth was active; with
+    // none selected the rows kept their authored classes (all visible except the
+    // crown-leakage row, wear/discoloration in select mode, extractionPlanRow in
+    // #crownActionsRow). Keeps the shell-DOM golden byte-identical.
+    const d = defaultState();
+    const restorationOptions = getRestorationOptions(restoView, { isImplant: false, toothSelection: d.toothSelection });
+    return {
+      toothSelectValue: d.toothSelection,
+      toothSelectOptions,
+      substrateValue: d.toothSubstrate,
+      substrateOptions,
+      substrateRowVisible: true,
+      extractionWoundChecked: false,
+      extractionRowVisible: true,
+      missingClosedChecked: false,
+      missingClosedRowVisible: true,
+      restorationValue: `${d.restorationType}|${d.restorationMaterial}`,
+      restorationOptions,
+      restorationRowVisible: true,
+      crownLeakageChecked: false,
+      crownLeakageRowVisible: false,
+      brokenMesialChecked: false,
+      brokenIncisalChecked: false,
+      brokenDistalChecked: false,
+      brokenCrownRowVisible: true,
+      contactMesialChecked: false,
+      contactDistalChecked: false,
+      contactPointRowVisible: true,
+      bruxismRowVisible: true,
+      wearSimple: false,
+      wearEdgeValue: d.wearEdge,
+      wearEdgeOptions,
+      wearEdgeToggleChecked: false,
+      wearCervicalValue: d.wearCervical,
+      wearCervicalOptions,
+      wearCervicalToggleChecked: false,
+      discolorationRowVisible: true,
+      discoSimple: false,
+      discolorationValue: d.discoloration,
+      discolorationOptions,
+      discolorationToggleChecked: false,
+      crownActionsRowVisible: true,
+      bridgePillarChecked: false,
+      bridgePillarRowVisible: true,
+      extractionPlanChecked: false,
+      extractionPlanRowVisible: true,
+      extractionPlanParent: "crownActionsRow",
+      crownReplaceChecked: false,
+      crownReplaceRowVisible: true,
+      crownNeededChecked: false,
+      crownNeededRowVisible: true,
+    };
+  }
+
+  const state = (toothState.get(activeTooth) ?? defaultState()) as Any; // selected tooth may be unedited (state lazily vivified on first edit)
+  const isMilktooth = state.toothSelection === "milktooth";
+  const isImplant = state.toothSelection === "implant";
+  const underGum = isUnderGum(state.toothSelection);
+  const extraction = isExtraction(state.toothSelection) || (state.toothSelection === "none" && state.extractionWound);
+
+  // ── write-back-if-out-of-set normalization (folded verbatim from the sync) ──
+  if(!wearEdgeOptions.some(o => o.value === state.wearEdge)) state.wearEdge = wearEdgeOptions[0]?.value ?? "none";
+  if(!wearCervicalOptions.some(o => o.value === state.wearCervical)) state.wearCervical = wearCervicalOptions[0]?.value ?? "none";
+  if(!discolorationOptions.some(o => o.value === state.discoloration)) state.discoloration = discolorationOptions[0]?.value ?? "none";
+  if(!substrateOptions.some(o => o.value === state.toothSubstrate)) state.toothSubstrate = substrateOptions[0]?.value ?? "natural";
+
+  // Combined restoration dropdown — one value encodes `${type}|${material}` OR a
+  // `prosthesis|<value>`; clamp to the available option set, then write BOTH axes
+  // back (mirrors setSelectOptions' clamp + the sync's write-back block).
+  const restorationOptions = getRestorationOptions(restoView, { isImplant, toothSelection: state.toothSelection });
+  const restoSelected = state.prosthesis && state.prosthesis !== "none"
+    ? `prosthesis|${state.prosthesis}`
+    : `${state.restorationType}|${state.restorationMaterial}`;
+  let restorationValue = restorationOptions.some(o => o.value === restoSelected)
+    ? restoSelected
+    : (restorationOptions[0]?.value ?? "");
+  if(restorationValue.startsWith("prosthesis|")){
+    const p = restorationValue.slice("prosthesis|".length);
+    if(state.prosthesis !== p){ state.prosthesis = p; }
+    state.restorationType = "none";
+    state.restorationMaterial = "none";
+  }else{
+    const [selType, selMat] = restorationValue.split("|");
+    if(selType !== state.restorationType || selMat !== state.restorationMaterial){
+      state.restorationType = selType || "none";
+      state.restorationMaterial = selMat || "none";
+    }
+    if(state.prosthesis !== "none"){ state.prosthesis = "none"; }
+  }
+  // milk / under-gum / extraction / radix carry no fixed restoration (clear a
+  // stored crown that no longer has a control to remove it).
+  if(isMilktooth || underGum || extraction || state.toothSubstrate === "radix"){
+    state.restorationType = "none";
+    state.restorationMaterial = "none";
+    restorationValue = "none|none";
+  }
+  // Substrate applies only to a present permanent tooth.
+  if(state.toothSelection !== "tooth-base"){
+    state.toothSubstrate = "natural";
+  }
+
+  // ── row-visibility sweep (folded verbatim from the sync) ──
+  const selectedArr = selectedTeeth.size > 0 ? Array.from(selectedTeeth) : [];
+  const selectedList = selectedArr.length > 0 ? selectedArr : (activeTooth ? [activeTooth] : []);
+  const hideRestorationRow = restorationRowHidden(state);
+  const hideSubstrateRow = state.toothSelection !== "tooth-base";
+  const contactAllowed = selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    const allowedBase = s && (s.toothSelection === "tooth-base" || s.toothSelection === "milktooth" || BROKEN_VARIANTS.has(s.toothSelection));
+    if(!allowedBase) return false;
+    if(s.toothSelection === "tooth-base" && s.restorationType !== "none") return false;
+    return true;
+  });
+  const bruxismAllowed = !isPlan && selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    return s && wearRowAllowed(s);
+  });
+  const discolorationRowAllowed = !isPlan && selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    return s && discolorationAllowed(s);
+  });
+  const extractionPlanAllowed = selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    return s && ["tooth-base","milktooth","implant","tooth-under-gum"].includes(s.toothSelection);
+  });
+  const crownReplaceAllowed = selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    return s && s.toothSelection === "tooth-base" && s.restorationType !== "none";
+  });
+  const crownNeededAllowed = selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    return s && s.toothSelection === "tooth-base" && s.restorationType === "none" && ["natural","broken","crownprep"].includes(s.toothSubstrate);
+  });
+  const missingClosedAllowed = selectedList.length > 0 && selectedList.every(tn => {
+    const s = toothState.get(tn);
+    return s && s.toothSelection === "none";
+  });
+  const restorationRowCurrentlyHidden = hideRestorationRow;
+  const bridgePillarAllowed = !restorationRowCurrentlyHidden && state.restorationType !== "none";
+  const crownLeakageAllowed = !restorationRowCurrentlyHidden && (state.restorationType === "crown" || state.restorationType === "bridge");
+
+  // #extractionPlanRow DOM-reparent, resolved to a parent id (mirrors the
+  // brokenMode → #brokenCrownRow / bruxism-visible → #bruxismRow / else
+  // #crownActionsRow imperative appendChild dance + the crownActionsRow hide).
+  const brokenMode = state.toothSubstrate === "broken" && state.toothSelection === "tooth-base";
+  let extractionPlanParent: ExtractionPlanParent;
+  let crownActionsRowVisible: boolean;
+  if(brokenMode){
+    extractionPlanParent = "brokenCrownRow";
+    crownActionsRowVisible = false;
+  }else if(bruxismAllowed){
+    extractionPlanParent = "bruxismRow";
+    crownActionsRowVisible = false;
+  }else{
+    extractionPlanParent = "crownActionsRow";
+    crownActionsRowVisible = extractionPlanAllowed;
+  }
+
+  return {
+    toothSelectValue: state.toothSelection,
+    toothSelectOptions,
+    substrateValue: state.toothSubstrate,
+    substrateOptions,
+    substrateRowVisible: !hideSubstrateRow,
+    extractionWoundChecked: !!state.extractionWound,
+    extractionRowVisible: state.toothSelection === "none",
+    missingClosedChecked: !!state.missingClosed,
+    missingClosedRowVisible: missingClosedAllowed,
+    restorationValue,
+    restorationOptions,
+    restorationRowVisible: !hideRestorationRow,
+    crownLeakageChecked: !!state.crownLeakage,
+    crownLeakageRowVisible: crownLeakageAllowed,
+    brokenMesialChecked: !!state.brokenMesial,
+    brokenIncisalChecked: !!state.brokenIncisal,
+    brokenDistalChecked: !!state.brokenDistal,
+    brokenCrownRowVisible: !(state.toothSubstrate !== "broken" || hideSubstrateRow),
+    contactMesialChecked: !!state.contactMesial,
+    contactDistalChecked: !!state.contactDistal,
+    contactPointRowVisible: contactAllowed,
+    bruxismRowVisible: bruxismAllowed,
+    wearSimple: getWearDetailLevel() === "simple",
+    wearEdgeValue: state.wearEdge,
+    wearEdgeOptions,
+    wearEdgeToggleChecked: state.wearEdge !== "none",
+    wearCervicalValue: state.wearCervical,
+    wearCervicalOptions,
+    wearCervicalToggleChecked: state.wearCervical !== "none",
+    discolorationRowVisible: discolorationRowAllowed,
+    discoSimple: getDiscolorationDetailLevel() === "simple",
+    discolorationValue: state.discoloration,
+    discolorationOptions,
+    discolorationToggleChecked: state.discoloration !== "none",
+    crownActionsRowVisible,
+    bridgePillarChecked: !!state.bridgePillar,
+    bridgePillarRowVisible: bridgePillarAllowed,
+    extractionPlanChecked: !!state.extractionPlan,
+    extractionPlanRowVisible: extractionPlanAllowed,
+    extractionPlanParent,
+    crownReplaceChecked: !!state.crownReplace,
+    crownReplaceRowVisible: crownReplaceAllowed,
+    crownNeededChecked: !!state.crownNeeded,
+    crownNeededRowVisible: crownNeededAllowed,
+  };
+}
+
+/** Base tooth picker on the current selection — wraps the exact `#toothSelect`
+ *  closure `wireControls()` bound (the `defaultState()` reset with the milk-block
+ *  guard + the extraction/caries/endo/filling clears, and the trailing
+ *  `setEdentulous(false)` when the base is not "none"). */
+export function setToothSelectionForSelection(value: string): void {
+  applyToSelected((s: Any, toothNo: number)=>{
+    if(value === "milktooth" && MILKTOOTH_BLOCKED.has(toothNo)){
+      return;
+    }
+    const next = defaultState();
+    next.toothSelection = value;
+    if(!["tooth-base","milktooth","implant","tooth-under-gum"].includes(value)){
+      next.extractionPlan = false;
+    }
+    if(value !== "none"){
+      next.extractionWound = false;
+    }
+    if(value === "implant" || value === "none"){
+      next.caries.clear();
+      next.endo = "none";
+      next.pulpDx = "normal";
+      next.fillingMaterial = "none";
+      next.fillingSurfaces.clear();
+    }
+    toothState.set(toothNo, next);
+  });
+  if(value !== "none") setEdentulous(false);
+}
+
+/** Substrate (natural / radix / broken / crown-prep) on the current selection —
+ *  wraps the exact `#substrateSelect` closure (broken-part + crown-needed clears
+ *  and the trailing `setEdentulous(false)`). */
+export function setSubstrateForSelection(value: string): void {
+  applyToSelected((s: Any)=>{
+    s.toothSubstrate = value;
+    if(value !== "broken"){
+      s.brokenMesial = false;
+      s.brokenIncisal = false;
+      s.brokenDistal = false;
+    }
+    if(!["natural","broken","crownprep"].includes(value) || s.restorationType !== "none"){
+      s.crownNeeded = false;
+    }
+  });
+  setEdentulous(false);
+}
+
+/** Combined restoration dropdown on the current selection — wraps the exact
+ *  `#restorationSelect` closure (`applyRestorationSelection` decode of
+ *  `${type}|${material}` / `prosthesis|<value>` + the trailing
+ *  `setEdentulous(false)`). */
+export function setRestorationForSelection(value: string): void {
+  const v = String(value);
+  applyToSelected((s: Any)=>{ applyRestorationSelection(s, v); });
+  setEdentulous(false);
+}
+
+/** Extraction-wound toggle on the current selection. */
+export function setExtractionWoundForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.extractionWound = on; }); }
+/** Planned-extraction toggle on the current selection. */
+export function setExtractionPlanForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.extractionPlan = on; }); }
+/** Crown-replacement toggle on the current selection. */
+export function setCrownReplaceForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.crownReplace = on; }); }
+/** Crown-needed toggle on the current selection. */
+export function setCrownNeededForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.crownNeeded = on; }); }
+/** Crown marginal-leakage toggle on the current selection. */
+export function setCrownLeakageForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.crownLeakage = on; }); }
+/** Closed-gap toggle on the current selection. */
+export function setMissingClosedForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.missingClosed = on; }); }
+/** Mesial contact-loss toggle on the current selection. */
+export function setContactMesialForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.contactMesial = on; }); }
+/** Distal contact-loss toggle on the current selection. */
+export function setContactDistalForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.contactDistal = on; }); }
+/** Bridge-abutment toggle on the current selection. */
+export function setBridgePillarForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.bridgePillar = on; }); }
+/** Broken mesial corner toggle on the current selection. */
+export function setBrokenMesialForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.brokenMesial = on; }); }
+/** Broken incisal corner toggle on the current selection. */
+export function setBrokenIncisalForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.brokenIncisal = on; }); }
+/** Broken distal corner toggle on the current selection. */
+export function setBrokenDistalForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.brokenDistal = on; }); }
+/** Incisal/occlusal wear type on the current selection (complex-mode select). */
+export function setWearEdgeForSelection(value: string): void { applyToSelected((s: Any)=>{ s.wearEdge = value; }); }
+/** Cervical wear type on the current selection (complex-mode select). */
+export function setWearCervicalForSelection(value: string): void { applyToSelected((s: Any)=>{ s.wearCervical = value; }); }
+/** Discoloration cause on the current selection (complex-mode select). */
+export function setDiscolorationForSelection(value: string): void { applyToSelected((s: Any)=>{ s.discoloration = value; }); }
+/** Incisal/occlusal wear simple-mode toggle (attrition / none) on the selection. */
+export function setWearEdgeToggleForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.wearEdge = on ? "attrition" : "none"; }); }
+/** Cervical wear simple-mode toggle (abrasion / none) on the selection. */
+export function setWearCervicalToggleForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.wearCervical = on ? "abrasion" : "none"; }); }
+/** Discoloration simple-mode toggle (other / none) on the selection. */
+export function setDiscolorationToggleForSelection(on: boolean): void { applyToSelected((s: Any)=>{ s.discoloration = on ? "other" : "none"; }); }
+
+/** Reset the whole current selection to `defaultState()` — the exact closure the
+ *  imperative `#btnResetTooth` handler used, now called from the declarative card
+ *  title button's onClick. */
+export function resetTooth(): void {
+  if(selectedTeeth.size === 0) return;
+  resetTeethGated(Array.from(selectedTeeth) as number[]);
 }
 
 // Symmetrically set the 8 flame sublayers (and their "-N1" variants) of the
@@ -2890,6 +4202,16 @@ export function __setActiveToothForTest(toothNo: number | null): void {
   if(toothNo != null && !toothState.get(toothNo)) toothState.set(toothNo, defaultState());
 }
 
+/** TEST-ONLY: seed the current selection (and active tooth) so selection-scoped
+ *  setters (`applyToSelected`, e.g. `setOrtho*ForSelection`) act on a known set
+ *  without a live grid. Vivifies a `defaultState()` for any unseen tooth, like
+ *  the real selection path. Not part of the public API. */
+export function __setSelectionForTest(toothNos: number[]): void {
+  selectedTeeth = new Set(toothNos);
+  activeTooth = toothNos.length > 0 ? toothNos[0] : null;
+  for(const tn of toothNos){ if(!toothState.get(tn)) toothState.set(tn, defaultState()); }
+}
+
 /** TEST-ONLY: snapshot of the teeth currently flagged as plan-edited (a COPY —
  *  mutating it never touches module state). Not part of the public API. */
 export function __planEditedTeethForTest(): number[] {
@@ -3437,15 +4759,10 @@ export function computeFillingSubcariesSummaryLine(
   return t(key, { teeth: entries.join(", ") });
 }
 
-/** DOM sync for the fillings-panel subcaries-summary line (`#fillingSubcariesSummary`).
- *  No-op when the element isn't present (e.g. in a DOM-free test harness). */
-function updateFillingSubcariesSummary(): void {
-  const lineEl = $("#fillingSubcariesSummary");
-  if(!lineEl) return;
-  const line = computeFillingSubcariesSummaryLine(Array.from(selectedTeeth) as number[], (toothNo) => toothState.get(toothNo));
-  lineEl.textContent = line;
-  lineEl.classList.toggle("hidden", !line);
-}
+// The DOM-sync writer for `#fillingSubcariesSummary` is retired: the declarative
+// `FillingsCard` (composable-UI Tier 3, PR 3d) renders that line from
+// `getActiveFillings().subcariesSummary`, computed by the still-shared pure
+// `computeFillingSubcariesSummaryLine` helper below.
 
 /** A minimal shape covering what {@link fillingDefectLettersForTooth} and
  *  {@link computeFillingDefectSummaryLine} read from a tooth state. */
@@ -3505,16 +4822,9 @@ export function computeFillingDefectSummaryLine(
   return t(key, { teeth: entries.join(", ") });
 }
 
-/** DOM sync for the fillings-panel filling-defect-summary line
- *  (`#fillingDefectSummary`), parallel to {@link updateFillingSubcariesSummary}.
- *  No-op when the element isn't present (e.g. in a DOM-free test harness). */
-function updateFillingDefectSummary(): void {
-  const lineEl = $("#fillingDefectSummary");
-  if(!lineEl) return;
-  const line = computeFillingDefectSummaryLine(Array.from(selectedTeeth) as number[], (toothNo) => toothState.get(toothNo));
-  lineEl.textContent = line;
-  lineEl.classList.toggle("hidden", !line);
-}
+// The DOM-sync writer for `#fillingDefectSummary` is retired in the same way as
+// its subcaries sibling above — `FillingsCard` renders it from
+// `getActiveFillings().defectSummary` (pure `computeFillingDefectSummaryLine`).
 
 /** Toggle the wear (edge + cervical, shared wearDetailLevel) and discoloration
  *  (own discolorationDetailLevel) controls between their "complex" <select> and
@@ -3622,7 +4932,7 @@ export function __syncPerioRowForTest(state: Record<string, unknown>, toothNo: n
  * doc comment).
  */
 function buildPerioGrid(container: Any): void {
-  if(!container) return;
+  if(!container || container.childElementCount > 0) return;
   container.innerHTML = "";
   const buildSiteRow = (sites: readonly string[], rowClass: string) => {
     const rowEl = el("div", { class: `perio-site-row ${rowClass}` });
@@ -3689,418 +4999,36 @@ export function __buildPerioGridForTest(container: Element): void {
 }
 
 function syncControlsFromState(state: Any){
-  // Plan-mode gating: the Plan chart records TREATMENT ("what a dentist will
-  // DO"), so diagnosis-only / status-only controls are hidden while in Plan.
-  // Woven into the individual show/hide predicates below (Base picker, caries,
-  // wear, discoloration, pulp/apical/resorption diagnosis, and the whole perio
-  // block) rather than a single post-hoc sweep, so each control's Status behavior
-  // is untouched.
-  const isPlan = getChartMode() === "plan";
-  // Apical (AAE) diagnosis picker.
-  setSelectOptions($("#apicalDxSelect"), getApicalDxOptions(), state.apicalDx);
-  if($("#apicalDxSelect").value !== state.apicalDx){
-    state.apicalDx = $("#apicalDxSelect").value;
-  }
-  $("#endoResection").checked = !!state.endoResection;
-  $("#fissureSealing").checked = !!state.fissureSealing;
-  $("#contactMesial").checked = !!state.contactMesial;
-  $("#contactDistal").checked = !!state.contactDistal;
-  setSelectOptions($("#wearEdgeSelect"), getWearEdgeOptions(), state.wearEdge);
-  if($("#wearEdgeSelect").value !== state.wearEdge) state.wearEdge = $("#wearEdgeSelect").value;
-  setSelectOptions($("#wearCervicalSelect"), getWearCervicalOptions(), state.wearCervical);
-  if($("#wearCervicalSelect").value !== state.wearCervical) state.wearCervical = $("#wearCervicalSelect").value;
-  setSelectOptions($("#discolorationSelect"), getDiscolorationOptions(), state.discoloration);
-  if($("#discolorationSelect").value !== state.discoloration) state.discoloration = $("#discolorationSelect").value;
-  setSelectOptions($("#orthoApplianceSelect"), getOrthoApplianceOptions(), state.orthoAppliance);
-  if($("#orthoApplianceSelect").value !== state.orthoAppliance) state.orthoAppliance = $("#orthoApplianceSelect").value;
-  setSelectOptions($("#orthoDriftSelect"), getOrthoDriftOptions(), state.orthoDrift);
-  if($("#orthoDriftSelect").value !== state.orthoDrift) state.orthoDrift = $("#orthoDriftSelect").value;
-  setSelectOptions($("#orthoVerticalSelect"), getOrthoVerticalOptions(), state.orthoVertical);
-  if($("#orthoVerticalSelect").value !== state.orthoVertical) state.orthoVertical = $("#orthoVerticalSelect").value;
-  ($("#orthoRotationToggle") as HTMLInputElement).checked = state.orthoRotation === true;
-  syncToothDetailControls(state);
-  $("#brokenMesial").checked = !!state.brokenMesial;
-  $("#brokenIncisal").checked = !!state.brokenIncisal;
-  $("#brokenDistal").checked = !!state.brokenDistal;
-  $("#extractionWound").checked = !!state.extractionWound;
-  $("#extractionPlan").checked = !!state.extractionPlan;
-  $("#parapulpalPin").checked = !!state.parapulpalPin;
-  $("#crownReplace").checked = !!state.crownReplace;
-  $("#crownNeeded").checked = !!state.crownNeeded;
-  $("#missingClosed").checked = !!state.missingClosed;
-  $("#bridgePillar").checked = !!state.bridgePillar;
-  $("#crownLeakage").checked = !!state.crownLeakage;
-  const isMilktooth = state.toothSelection === "milktooth";
-  const isImplant = state.toothSelection === "implant";
-  const underGum = isUnderGum(state.toothSelection);
-  const extraction = isExtraction(state.toothSelection) || (state.toothSelection === "none" && state.extractionWound);
+  // Every control card body is now declarative (composable-UI Tier 3); this
+  // function only drives the imperative `#perioGrid` probing carve-out (PR 3e)
+  // and re-resolves the mod/surface labels. Plan-mode gating lives inside each
+  // card's getter now.
+  // The Tooth-details card body (base picker, substrate, combined restoration
+  // dropdown, all the extraction/broken/contact/crown checkboxes, the
+  // wear/discoloration select-vs-toggle rows, and the #crownActionsRow with its
+  // reparented #extractionPlanRow) is now the declarative `ToothDetailsCard`
+  // (composable-UI Tier 3, PR 3f) via `getActiveToothDetails()`; no imperative
+  // sync here. The Root/perio card body (#rpRootBlock + #rpPerioBlock) is the
+  // declarative `RootPeriodontiumCard` (PR 3e) via `getActiveRootPerio()`; the
+  // fissure/caries/fillings/ortho controls are their own declarative cards too.
 
-  // tooth selection
-  $("#toothSelect").value = state.toothSelection;
-
-  // Substrate control (natural / radix / broken / crown-prep).
-  setSelectOptions($("#substrateSelect"), getSubstrateOptions(), state.toothSubstrate);
-  if($("#substrateSelect").value !== state.toothSubstrate){
-    state.toothSubstrate = $("#substrateSelect").value;
-  }
-
-  // Combined restoration dropdown — one <select> encodes `${type}|${material}`
-  // and writes BOTH fields. Options are filtered by the active tooth's view.
-  const restoView = restorationViewFor(activeTooth);
-  // The ONE dropdown reflects EITHER a fixed restoration OR a "Kivehető:"
-  // prosthesis (never both). Prefer the prosthesis encoding when one is set.
-  const restoSelected = state.prosthesis && state.prosthesis !== "none"
-    ? `prosthesis|${state.prosthesis}`
-    : `${state.restorationType}|${state.restorationMaterial}`;
-  setSelectOptions($("#restorationSelect"), getRestorationOptions(restoView, { isImplant, toothSelection: state.toothSelection }), restoSelected);
-  {
-    const val = String($("#restorationSelect").value);
-    if(val.startsWith("prosthesis|")){
-      const p = val.slice("prosthesis|".length);
-      if(state.prosthesis !== p){ state.prosthesis = p; }
-      state.restorationType = "none";
-      state.restorationMaterial = "none";
-    }else{
-      const [selType, selMat] = val.split("|");
-      if(selType !== state.restorationType || selMat !== state.restorationMaterial){
-        state.restorationType = selType || "none";
-        state.restorationMaterial = selMat || "none";
-      }
-      if(state.prosthesis !== "none"){ state.prosthesis = "none"; }
-    }
-  }
-
-  // Gating: milktooth / under-gum / extraction / radix substrate carry no
-  // fixed restoration. Implants are exempt — a fixed crown/bridge on an abutment
-  // is first-class: the restorationOptions(ctx) call above already restricts an
-  // implant's dropdown to crown/bridge × material. A radix substrate (root
-  // remnant) is included here: the restoration row is hidden for it
-  // (restorationRowHidden above), so a
-  // stored crown must be cleared too — otherwise it keeps rendering
-  // (emax-crown over tooth-radix) with no control left to clear it.
-  if(isMilktooth || underGum || extraction || state.toothSubstrate === "radix"){
-    state.restorationType = "none";
-    state.restorationMaterial = "none";
-    $("#restorationSelect").value = "none|none";
-  }
-  // Substrate applies only to a present permanent tooth.
-  if(state.toothSelection !== "tooth-base"){
-    state.toothSubstrate = "natural";
-    $("#substrateSelect").value = "natural";
-  }
-  // Merged pulp/endo status selector (two optgroups). Displayed value derives
-  // from (endo, pulpDx) via pulpEndoDisplayValue; the change handler
-  // (wireControls) routes selection through pulpEndoOnSelect, which enforces the
-  // mutual-exclusion invariant, so no post-sync normalization is needed here.
-  buildPulpEndoSelect($("#pulpEndoSelect"), isMilktooth, pulpEndoDisplayValue(state), isPlan);
-  setSelectOptions($("#fillingSelect"), getFillingOptions(isMilktooth), state.fillingMaterial);
-  if($("#fillingSelect").value !== state.fillingMaterial){
-    state.fillingMaterial = $("#fillingSelect").value;
-  }
-  setSelectOptions($("#mobilitySelect"), getMobilityOptions(), state.mobility);
-  if($("#mobilitySelect").value !== state.mobility){
-    state.mobility = $("#mobilitySelect").value;
-  }
-  // mods
-  $$("#modsChecks input[type=checkbox]").forEach(c => c.checked = state.mods.has(c.value));
-  // The periapical lesion-subtype row follows the apical diagnosis on a present
-  // tooth (apicalDx !== "normal"). A non-present tooth (implant/missing) never
-  // derives apicalDx but CAN still carry `mods.inflammation` (peri-implant /
-  // periodontal, still toggleable) — for those, show the subtype row when the
-  // inflammation mod is set, so the lesion subtype stays authorable.
-  $("#periapicalTypeRow").classList.toggle("hidden", !periapicalRowVisible(state) || isPlan);
-  setSelectOptions($("#periapicalTypeSelect"), getPeriapicalTypeOptions(), state.periapicalType);
-  if($("#periapicalTypeSelect").value !== state.periapicalType){
-    state.periapicalType = $("#periapicalTypeSelect").value;
-  }
-  $("#calculusToggle").checked = !!state.calculus;
-  const calculusAllowed = state.toothSelection === "tooth-base" || state.toothSelection === "milktooth";
-  $("#calculusRow").classList.toggle("hidden", !calculusAllowed);
-  // periImplant (enum) is authored via a picker, shown only for an implant; on
-  // an implant it also supersedes the parodontal/inflammation mods.
-  setSelectOptions($("#periImplantSelect"), getPeriImplantOptions(), state.periImplant);
-  if($("#periImplantSelect").value !== state.periImplant){
-    state.periImplant = $("#periImplantSelect").value;
-  }
-  syncPeriImplantVisibility($("#periImplantRow"), $("#modsChecks"), state.toothSelection);
-  // The periapical-inflammation mod is retired as an authoring control on a
-  // PRESENT tooth (apicalDx drives the glyph) AND on an implant (periImplant
-  // covers implant inflammation). It stays visible for a missing tooth or an
-  // extraction-socket, where it marks periodontal inflammation that neither
-  // apicalDx nor periImplant cover. MUST run after syncPeriImplantVisibility()
-  // above — see that function's and syncInflammationModVisibility's doc comments
-  // for why the order matters.
-  syncInflammationModVisibility($("#modsChecks"), state.toothSelection);
-  // resorptionType (enum) is authored via a none/internal/external-cervical
-  // picker (both subtypes render identically; the picker only records which).
-  setSelectOptions($("#resorptionSelect"), getResorptionOptions(), state.resorptionType);
-  if($("#resorptionSelect").value !== state.resorptionType){
-    state.resorptionType = $("#resorptionSelect").value;
-  }
-
-  // caries (cross surfaces + the separate subcrown row) + per-surface depth indicator
-  // (ICDAS `data-depth`/`data-icdas` badge + `data-radio` — see
-  // syncSurfaceDepthIndicator())
-  $$("#cariesChecks input[type=checkbox], #cariesSubcrownRow input[type=checkbox]").forEach(c => c.checked = state.caries.has(c.value));
-  $$("#cariesChecks .surface-cell").forEach(cell => syncSurfaceDepthIndicator(cell, state));
-
-  // Depth selector at the top sets the DEFAULT depth for newly tapped surfaces.
-  // The whole visual caries-depth UI is gated by `cariesDepthEnabled`.
-  $("#cariesDepthRow").classList.toggle("hidden", !cariesDepthEnabled || isPlan);
-  setSelectOptions($("#cariesDepthSelect"), getCariesDepthOptions(), state.cariesActiveDepth);
-  if($("#cariesDepthSelect").value !== String(state.cariesActiveDepth)){
-    state.cariesActiveDepth = Number($("#cariesDepthSelect").value);
-  }
-
-  // Per-tooth root-caries picker. Options come from the current
-  // `rootCariesMode`; the stored value is displayed collapsed to that list but
-  // NEVER written back (non-collapsing — widening the mode reveals it again).
-  // Shown only on a present tooth (mirrors the endo/pulp per-tooth controls).
-  setSelectOptions($("#rootCariesSelect"), rootCariesOptions(), rootCariesDisplayValue(rootCariesMode, state.rootCaries));
-  $("#rootCariesRow").classList.toggle("hidden", !isToothPresent(state.toothSelection) || isPlan);
-
-  // filling surfaces
-  $$("#fillingSurfaceChecks input[type=checkbox]").forEach(c => {
-    c.checked = state.fillingSurfaceMaterials.has(c.value);
-    const cell = c.closest(".surface-cell") as HTMLElement | null;
-    if(cell){
-      const mat = state.fillingSurfaceMaterials.get(c.value);
-      cell.setAttribute("data-material", mat || "");
-    }
-  });
-  // Recurrent-caries dark-border indicator on filled surfaces.
-  $$("#fillingSurfaceChecks .surface-cell").forEach(cell => syncFillingSubcariesIndicator(cell, state));
-  // Structural filling-defect dark-border indicator (LEFT side).
-  $$("#fillingSurfaceChecks .surface-cell").forEach(cell => syncFillingDefectIndicator(cell, state));
-
-  // disable logic in UI
-  const hasCrown = state.restorationType !== "none";
-  const hasRemovable = state.toothSelection === "none"
-    && (state.prosthesis === "removable-partial" || state.prosthesis === "removable-full");
-  const hasRestoration = hasCrown || hasRemovable;
-  $$("#cariesChecks input[type=checkbox], #cariesSubcrownRow input[type=checkbox]").forEach(c => {
-    if(c.value === "caries-subcrown") setDisabled(c, !hasCrown);
-    else setDisabled(c, hasRestoration || hasCrown);
-  });
-  const showFillingSurfaces = state.fillingMaterial !== "none" && !hasCrown;
-  // In "simple" complexity, the per-surface grid is replaced by a single
-  // filled/not-filled toggle (both gated on showFillingSurfaces).
-  const simpleFilling = fillingComplexity === "simple";
-  $("#fillingSurfaceChecks").classList.toggle("hidden", !showFillingSurfaces || simpleFilling);
-  const simpleRow = $("#fillingSimpleRow") as HTMLElement | null;
-  if(simpleRow){
-    simpleRow.classList.toggle("hidden", !showFillingSurfaces || !simpleFilling);
-    const simpleInput = simpleRow.querySelector("input") as HTMLInputElement | null;
-    if(simpleInput) simpleInput.checked = state.fillingSurfaceMaterials.size > 0;
-  }
-  // In simple mode, a defect button (applying to ALL filled surfaces) shows only
-  // when the defect feature is on and the tooth is filled.
-  const simpleDefectRow = $("#fillingSimpleDefectRow") as HTMLElement | null;
-  if(simpleDefectRow){
-    const showSimpleDefect = showFillingSurfaces && simpleFilling && fillingDefectEnabled && state.fillingSurfaceMaterials.size > 0;
-    simpleDefectRow.classList.toggle("hidden", !showSimpleDefect);
-    const sel = $("#fillingSimpleDefectSelect") as HTMLSelectElement | null;
-    if(sel){
-      // Reflect the representative (first filled surface's) defect; applying via
-      // the select writes the chosen value to EVERY filled surface.
-      const firstSurf = [...state.fillingSurfaceMaterials.keys()][0];
-      const cur = firstSurf ? (state.fillingDefect?.get(firstSurf) ?? "none") : "none";
-      setSelectOptions(sel, fillingDefectOptions(), cur);
-    }
-  }
-  // Hide the per-surface filling-defect indicator when the defect feature is
-  // turned off in Settings → Fillings.
-  $("#fillingSurfaceChecks").classList.toggle("defect-disabled", !fillingDefectEnabled);
-
-  // endo only if tooth present
-  const endoDisabled = !isToothPresent(state.toothSelection) || underGum || extraction;
-  setDisabled($("#pulpEndoSelect"), endoDisabled);
-  setDisabled($("#apicalDxSelect"), endoDisabled);
-  setDisabled($("#resorptionSelect"), endoDisabled);
-  setDisabled($("#endoResection"), endoDisabled);
-  setDisabled($("#parapulpalPin"), endoDisabled);
-  setDisabled($("#mobilitySelect"), mobilityDisabled(state));
-
-  const selectedArr = selectedTeeth.size > 0 ? Array.from(selectedTeeth) : [];
-  const hiddenSelected = selectedArr.length > 0 && selectedArr.some(tn => {
-    const sel = toothState.get(tn)?.toothSelection;
-    return sel === "implant" || sel === "none" || sel === "tooth-under-gum" || sel === "no-tooth-after-extraction";
-  });
-  const hideByBase = state.toothSelection === "implant" || state.toothSelection === "none" || underGum || extraction || hiddenSelected;
-  const noneSelected = selectedArr.length > 0 && selectedArr.some(tn => toothState.get(tn)?.toothSelection === "none");
-  const hideByNone = state.toothSelection === "none" || noneSelected;
-  const hideByRadix = state.toothSubstrate === "radix";
-  // Plan-mode: caries is a status finding (a diagnosis), so the whole caries
-  // section is hidden in Plan — a filling/restoration is still plannable via the
-  // Fillings + Restoration controls, which stay visible.
-  $("#cariesSection").classList.toggle("hidden", hideByBase || hideByRadix || isPlan);
-  const hideFillingsByCrown = state.toothSelection === "tooth-base" && hasCrown;
-  $("#fillingSection").classList.toggle("hidden", hideByBase || hideFillingsByCrown);
-  // Combined restoration dropdown: available on a present permanent tooth and on
-  // a gap (bridge pontic); hidden for milk/implant/under-gum/extraction.
-  const hideRestorationRow = restorationRowHidden(state);
-  $("#restorationRow").classList.toggle("hidden", hideRestorationRow);
-  // Substrate control: only for a present permanent tooth.
-  const hideSubstrateRow = state.toothSelection !== "tooth-base";
-  $("#substrateRow").classList.toggle("hidden", hideSubstrateRow);
-  $("#brokenCrownRow").classList.toggle("hidden", state.toothSubstrate !== "broken" || hideSubstrateRow);
-  $("#extractionRow").classList.toggle("hidden", state.toothSelection !== "none");
-  // The merged Root+Periodontium card reconciles the two original cards'
-  // different hide predicates — the root block (endo/apical/lesion/
-  // resorption/resection/pin) keeps the old #endoSection predicate
-  // (hideByBase), the perio block (mobility/mods/calculus) keeps the old
-  // #inflammationSection predicate (hideByNone); the card itself only
-  // collapses away when BOTH blocks would be empty.
-  $("#rpRootBlock").classList.toggle("hidden", hideByBase);
-  // Plan-mode: the entire periodontal block (mobility, 6-site probing grid,
-  // inflammation/parodontal mods, calculus, peri-implant status) is status-only
-  // diagnosis — hidden in Plan. The root block stays visible so endo TREATMENT
-  // remains plannable.
-  $("#rpPerioBlock").classList.toggle("hidden", hideByNone || isPlan);
-  // Section collapses only when BOTH blocks are gone; in Plan the root block
-  // still shows, so the section stays (unless the base already hides it).
-  $("#rootPeriodontiumSection").classList.toggle("hidden", hideByBase && (hideByNone || isPlan));
-  // Plan-mode: inside the still-visible root block, hide the diagnosis-only rows
-  // (apical diagnosis, periapical lesion subtype above, root resorption). Endo
-  // TREATMENT (root canal/post via #pulpEndoSelect, apicoectomy, parapulpal pin)
-  // stays plannable.
-  $("#apicalDxRow").classList.toggle("hidden", isPlan);
-  $("#resorptionRow").classList.toggle("hidden", isPlan);
-  const selectedList = selectedArr.length > 0 ? selectedArr : (activeTooth ? [activeTooth] : []);
-  const contactAllowed = selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    const allowedBase = s && (s.toothSelection === "tooth-base" || s.toothSelection === "milktooth" || BROKEN_VARIANTS.has(s.toothSelection));
-    if(!allowedBase) return false;
-    if(s.toothSelection === "tooth-base" && s.restorationType !== "none") return false;
-    return true;
-  });
-  // Plan-mode: tooth wear is a status finding — not plannable treatment.
-  const bruxismAllowed = !isPlan && selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    return s && wearRowAllowed(s);
-  });
-  // #discolorationRow visibility gate — reuses the same discolorationAllowed
-  // predicate the render tint and tooltip use, so the dropdown's visibility never
-  // contradicts the chart. Plan-mode: discoloration is a status finding — hidden
-  // in Plan.
-  const discolorationRowAllowed = !isPlan && selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    return s && discolorationAllowed(s);
-  });
-  // #orthoCard visibility gate — reuses the same orthoAllowed predicate the
-  // render glyphs and tooltip use, so the card's visibility never contradicts the
-  // chart.
-  const orthoCardAllowed = selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    return s && orthoAllowed(s);
-  });
-  const fissureAllowed = selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    return s && s.toothSelection === "tooth-base" && FISSURE_ALLOWED.has(tn);
-  });
-  $("#contactPointRow").classList.toggle("hidden", !contactAllowed);
-  $("#bruxismRow").classList.toggle("hidden", !bruxismAllowed);
-  $("#discolorationRow").classList.toggle("hidden", !discolorationRowAllowed);
-  $("#orthoCard").classList.toggle("hidden", !orthoCardAllowed);
-  // Also hidden when fissure sealing is turned off in Settings.
-  $("#fissureSealingRow").classList.toggle("hidden", !fissureAllowed || !fissureSealingEnabled);
-  const extractionPlanAllowed = selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    return s && ["tooth-base","milktooth","implant","tooth-under-gum"].includes(s.toothSelection);
-  });
-  $("#extractionPlanRow").classList.toggle("hidden", !extractionPlanAllowed);
-  // crown-replace: visible when permanent tooth carries a fixed restoration
-  const crownReplaceAllowed = selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    return s && s.toothSelection === "tooth-base" && s.restorationType !== "none";
-  });
-  $("#crownReplaceRow").classList.toggle("hidden", !crownReplaceAllowed);
-  // crown-needed: visible when permanent tooth has no restoration yet (natural/broken/crown-prep substrate)
-  const crownNeededAllowed = selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    return s && s.toothSelection === "tooth-base" && s.restorationType === "none" && ["natural","broken","crownprep"].includes(s.toothSubstrate);
-  });
-  $("#crownNeededRow").classList.toggle("hidden", !crownNeededAllowed);
-  // missing-closed: visible when foghiány
-  const missingClosedAllowed = selectedList.length > 0 && selectedList.every(tn => {
-    const s = toothState.get(tn);
-    return s && s.toothSelection === "none";
-  });
-  $("#missingClosedRow").classList.toggle("hidden", !missingClosedAllowed);
-  const restorationRowCurrentlyHidden = $("#restorationRow").classList.contains("hidden");
-  const bridgePillarAllowed = !restorationRowCurrentlyHidden && state.restorationType !== "none";
-  $("#bridgePillarRow").classList.toggle("hidden", !bridgePillarAllowed);
-  // Crown-leakage toggle: only meaningful on a fixed crown/bridge restoration
-  // (mirrors the crownLeakage axis's appliesWhen in src/registry/axes.ts).
-  const crownLeakageAllowed = !restorationRowCurrentlyHidden && (state.restorationType === "crown" || state.restorationType === "bridge");
-  $("#crownLeakageRow").classList.toggle("hidden", !crownLeakageAllowed);
-
-  const extractionPlanRow = $("#extractionPlanRow");
-  const brokenCrownRow = $("#brokenCrownRow");
-  const bruxismRow = $("#bruxismRow");
-  const crownActionsRow = $("#crownActionsRow");
-  if(extractionPlanRow && brokenCrownRow && bruxismRow && crownActionsRow){
-    const brokenMode = state.toothSubstrate === "broken" && state.toothSelection === "tooth-base";
-    if(brokenMode){
-      if(extractionPlanRow.parentElement !== brokenCrownRow){
-        brokenCrownRow.appendChild(extractionPlanRow);
-      }
-      crownActionsRow.classList.add("hidden");
-    }else if(!bruxismRow.classList.contains("hidden")){
-      if(extractionPlanRow.parentElement !== bruxismRow){
-        bruxismRow.appendChild(extractionPlanRow);
-      }
-      crownActionsRow.classList.add("hidden");
-    }else{
-      if(extractionPlanRow.parentElement !== crownActionsRow){
-        crownActionsRow.appendChild(extractionPlanRow);
-      }
-      crownActionsRow.classList.toggle("hidden", !extractionPlanAllowed);
-    }
-    extractionPlanRow.classList.toggle("hidden", !extractionPlanAllowed);
-  }
-  // The dedicated periImplant axis owns "peri-implantitis"; the parodontal mod
-  // keeps its plain label on every tooth type.
-  const parodontLabel = $("#lbl-parodontal");
-  if(parodontLabel){ parodontLabel.textContent = t("mods.parodontal"); }
-
-  const milkOption = $("#toothSelect").querySelector('option[value="milktooth"]');
-  if(milkOption){
-    const anyBlocked = selectedArr.length > 0
-      ? selectedArr.some(tn => MILKTOOTH_BLOCKED.has(Number(tn)))
-      : (activeTooth ? MILKTOOTH_BLOCKED.has(activeTooth) : false);
-    milkOption.disabled = anyBlocked;
-  }
-
-  const inflammationLabel = $("#lbl-inflammation");
-  if(inflammationLabel){
-    inflammationLabel.textContent = extraction ? t("mods.periodontalInflammation") : t("mods.periapicalInflammation");
-  }
-  $("#mobilityRow").classList.toggle("hidden", mobilityRowHidden(state));
+  // The #modsChecks label relabel (#lbl-inflammation/#lbl-parodontal), the
+  // #mobilityRow visibility, and the mod-checkbox disabled logic are now the
+  // declarative `RootPeriodontiumCard`'s job via `getActiveRootPerio()`.
   // Sync the #perioRow six-site grid + derived read-out from state on every
-  // syncControlsFromState() call — i.e. on tooth select, mirroring how mobility
-  // syncs its own control above.
+  // syncControlsFromState() call — i.e. on tooth select. This 6-site probing
+  // grid is the Tier 3 PR 3e imperative carve-out (`buildPerioGrid`/
+  // `syncPerioRow`); everything else in the Root/perio block is declarative.
   syncPerioRow(state);
-  const parodontalInput = $("#chk-parodontal");
-  if(parodontalInput){
-    setDisabled(parodontalInput, extraction);
-  }
-  if(extraction){
-    const inflammationInput = $("#chk-inflammation");
-    if(inflammationInput) setDisabled(inflammationInput, false);
-  }
 
   // Re-resolve the "occlusal"/"incisal" surface-picker labels for the (possibly
   // just-changed) active tooth — anterior vs. posterior only affects the
   // displayed label, never the stored surface value.
   refreshCheckLabels();
-  // The "Fillings and restorative" panel's informational subcaries-summary line
-  // depends on ALL selected teeth, not just the active one, so it reads
-  // `selectedTeeth`/`toothState` directly rather than `state`.
-  updateFillingSubcariesSummary();
-  // Parallel filling-defect-summary line, same all-selected-teeth rationale as
-  // updateFillingSubcariesSummary above.
-  updateFillingDefectSummary();
+  // The "Fillings and restorative" panel's informational subcaries + defect
+  // summary lines are now owned by the declarative `FillingsCard` (composable-UI
+  // Tier 3, PR 3d) via `getActiveFillings().subcariesSummary`/`.defectSummary`;
+  // no imperative DOM sync here.
 }
 
 // ---- Event handlers ----
@@ -4160,7 +5088,6 @@ function resetTeethGated(toothNos: number[]): void {
   gateToothEditBatch(toothNos, () => {
     if(edentulous){
       edentulous = false;
-      setToggleButton($("#btnEdentulous"), edentulous);
     }
     for(const toothNo of toothNos){
       toothState.set(toothNo, defaultState());
@@ -4175,6 +5102,31 @@ function resetTeethGated(toothNos: number[]): void {
   });
 }
 
+/** Reset the WHOLE mouth to a blank slate — the exact closure the imperative
+ *  `#btnResetAll` handler used, now called directly from the declarative Statuses
+ *  card's onClick. Clears the edentulous flag + case-level metadata, resets every
+ *  tooth to `defaultState()`, re-syncs the active tooth's controls, and notifies
+ *  once at the end so the mounted case-metadata/Statuses subscribers re-read the
+ *  cleared state. */
+export function resetMouth(): void {
+  setEdentulous(false);
+  resetCaseMeta(); // case-level patient metadata is part of the blank-slate reset (like edentulous)
+  for(const toothNo of ALL_TEETH){
+    toothState.set(toothNo, defaultState());
+    applyStateToSvg(toothNo);
+    updateToothTileNumber(toothNo);
+  }
+  if(activeTooth){
+    setControlsEnabled(true);
+    syncControlsFromState(toothState.get(activeTooth));
+  }
+  // caseMeta was cleared above (resetCaseMeta) AFTER setEdentulous's early
+  // notify fired, so the mounted case-metadata panel would otherwise show
+  // stale patient data until the next unrelated change — notify once more now
+  // that all blank-slate resets are done, so subscribers re-read cleared state.
+  notifyStateChange();
+}
+
 /** Apply the PRIMARY (deciduous) dentition preset — a STRUCTURAL
  *  interactive edit (not a reset), routed through the batch gate. `targetFor`
  *  is the state each tooth ends up in; only teeth that actually change are
@@ -4185,7 +5137,7 @@ function resetTeethGated(toothNos: number[]): void {
  *  would leave `edentulous` flipped while every tooth
  *  is untouched (flag/teeth mismatch). `notifyStateChange()` moves inside too so
  *  the whole-mouth refresh fires when the batch actually applies. */
-function applyPrimaryDentition(): void {
+export function applyPrimaryDentition(): void {
   const targetFor = (toothNo: number)=>{
     const s = defaultState();
     s.toothSelection = PRIMARY_MILK.has(toothNo) ? "milktooth" : "none";
@@ -4194,7 +5146,6 @@ function applyPrimaryDentition(): void {
   const changed = ALL_TEETH.filter(tn => JSON.stringify(serializeState(toothState.get(tn) ?? defaultState())) !== JSON.stringify(serializeState(targetFor(tn))));
   gateToothEditBatch(changed, ()=>{
     edentulous = false;
-    setToggleButton($("#btnEdentulous"), edentulous);
     suppressEdentulousSync = true;
     for(const toothNo of ALL_TEETH){
       toothState.set(toothNo, targetFor(toothNo));
@@ -4210,7 +5161,7 @@ function applyPrimaryDentition(): void {
 /** Apply the MIXED dentition preset — see {@link applyPrimaryDentition}; gated
  *  STRUCTURAL edit with per-tooth no-op signaling and the `edentulous` flip
  *  inside the gated closure. */
-function applyMixedDentition(): void {
+export function applyMixedDentition(): void {
   const targetFor = (toothNo: number)=>{
     const s = defaultState();
     if(MIXED_PERMANENT.has(toothNo)){
@@ -4225,7 +5176,6 @@ function applyMixedDentition(): void {
   const changed = ALL_TEETH.filter(tn => JSON.stringify(serializeState(toothState.get(tn) ?? defaultState())) !== JSON.stringify(serializeState(targetFor(tn))));
   gateToothEditBatch(changed, ()=>{
     edentulous = false;
-    setToggleButton($("#btnEdentulous"), edentulous);
     suppressEdentulousSync = true;
     for(const toothNo of ALL_TEETH){
       toothState.set(toothNo, targetFor(toothNo));
@@ -4287,43 +5237,11 @@ function refreshCheckLabels(){
     const label = $(`#lbl-${opt.value}`);
     if(label) label.textContent = t(opt.labelKey);
   }
-  for(const opt of CARIES_OPTIONS){
-    const label = $(`#lbl-${opt.value}`);
-    if(!label) continue;
-    const surface = opt.value.replace("caries-", "");
-    // occlusal, buccal, and lingual all resolve through surfaceLabelKey —
-    // arch/anterior-aware in "full" notation mode
-    // ("incisal"/"labial"/"palatal"); mesial/distal/subcrown are
-    // position-independent and keep their own generic labelKey.
-    const key = (surface === "occlusal" || surface === "buccal" || surface === "lingual")
-      ? surfaceLabelKey(surface, activeTooth)
-      : opt.labelKey;
-    label.textContent = t(key);
-    // The boxed `.surf-letter` span is set once at build time (buildSurfaceCross);
-    // rewrite it here per-tooth so it tracks the active tooth's position + the
-    // surfaceNotation setting (subcrown has no `.surf-letter` sibling, so this is
-    // a no-op there).
-    const letterEl = label.parentElement?.querySelector(".surf-letter");
-    if(letterEl) letterEl.textContent = surfaceLetter(surface, activeTooth);
-  }
-  for(const surface of GROUPS.fillingSurfaces){
-    const label = $(`#lbl-${surface}`);
-    if(!label) continue;
-    // Mirrors the caries-picker swap above.
-    const key = (surface === "occlusal" || surface === "buccal" || surface === "lingual")
-      ? surfaceLabelKey(surface, activeTooth)
-      : (FILLING_SURFACE_LABELS[surface] || "surface.mesial");
-    label.textContent = t(key);
-    const letterEl = label.parentElement?.querySelector(".surf-letter");
-    if(letterEl) letterEl.textContent = surfaceLetter(surface, activeTooth);
-  }
-}
-
-function refreshToothSelectOptions(){
-  const toothSelect = $("#toothSelect");
-  if(!toothSelect) return;
-  const value = toothSelect.value;
-  setSelectOptions(toothSelect, getToothSelectOptions(), value);
+  // The caries surface-cross labels/letters (#lbl-caries-*) are now owned by the
+  // declarative `CariesCard` (composable-UI Tier 3, PR 3c), and the filling
+  // surface-cross labels/letters (#lbl-{surface}) by the declarative
+  // `FillingsCard` (composable-UI Tier 3, PR 3d) — both compute them
+  // arch/notation-aware from their getters, so no imperative relabel here.
 }
 
 function refreshStatusExtraOptions(){
@@ -4361,31 +5279,22 @@ function refreshToggleLabels(){
 }
 
 function refreshAllSelectOptions(){
-  refreshToothSelectOptions();
   refreshStatusExtraOptions();
-  const state = activeTooth ? toothState.get(activeTooth) : null;
-  const isMilktooth = state?.toothSelection === "milktooth";
-  const substrateEl = $("#substrateSelect");
-  if(substrateEl) setSelectOptions(substrateEl, getSubstrateOptions(), substrateEl.value);
-  const restorationEl = $("#restorationSelect");
-  if(restorationEl) setSelectOptions(restorationEl, getRestorationOptions(restorationViewFor(activeTooth), { isImplant: state?.toothSelection === "implant", toothSelection: state?.toothSelection }), restorationEl.value);
-  const fillingEl = $("#fillingSelect");
-  if(fillingEl) setSelectOptions(fillingEl, getFillingOptions(isMilktooth), fillingEl.value);
-  const mobilityEl = $("#mobilitySelect");
-  if(mobilityEl) setSelectOptions(mobilityEl, getMobilityOptions(), mobilityEl.value);
-  const periapicalEl = $("#periapicalTypeSelect");
-  if(periapicalEl) setSelectOptions(periapicalEl, getPeriapicalTypeOptions(), periapicalEl.value);
-  // Merged pulp/endo selector — rebuild both optgroups, preserving the currently
-  // selected value (mirrors the other re-localize-in-place calls in this
-  // function).
-  const pulpEndoEl = $("#pulpEndoSelect");
-  if(pulpEndoEl) buildPulpEndoSelect(pulpEndoEl, isMilktooth, pulpEndoEl.value);
-  const apicalEl = $("#apicalDxSelect");
-  if(apicalEl) setSelectOptions(apicalEl, getApicalDxOptions(), apicalEl.value);
-  const resorptionEl = $("#resorptionSelect");
-  if(resorptionEl) setSelectOptions(resorptionEl, getResorptionOptions(), resorptionEl.value);
-  const cariesDepthEl = $("#cariesDepthSelect");
-  if(cariesDepthEl) setSelectOptions(cariesDepthEl, getCariesDepthOptions(), Number(cariesDepthEl.value));
+  // The #toothSelect base picker, #substrateSelect, and combined #restorationSelect
+  // dropdown are re-localized (and their mode-dependent option sets rebuilt) by the
+  // declarative `ToothDetailsCard` (composable-UI Tier 3, PR 3f) on its React
+  // re-render via `getActiveToothDetails()` — no imperative re-localize here.
+  // #fillingSelect (+ #fillingSimpleDefectSelect) are re-localized by the
+  // declarative `FillingsCard` (composable-UI Tier 3, PR 3d) on its React
+  // re-render, like the caries/ortho selects — no imperative re-localize here.
+  // The Root/perio selects (#pulpEndoSelect merged optgroups, #apicalDxSelect,
+  // #periapicalTypeSelect, #resorptionSelect, #mobilitySelect, #periImplantSelect)
+  // are re-localized by the declarative `RootPeriodontiumCard` (composable-UI
+  // Tier 3, PR 3e) on its React re-render, like the caries/fillings/ortho
+  // selects — no imperative re-localize here.
+  // #cariesDepthSelect / #rootCariesSelect are re-localized by the declarative
+  // `CariesCard` (composable-UI Tier 3, PR 3c) on its React re-render, like the
+  // ortho/status-extra selects — no imperative re-localize here.
 }
 
 function refreshLocalizedContent(){
@@ -4415,6 +5324,11 @@ function updateSelectionUI(){
     syncControlsFromState(defaultState());
     setControlsEnabled(false);
   }
+  // The declarative control cards re-read via onStateChange, so a selection
+  // change (new active tooth) must notify — otherwise a card would keep showing
+  // the previously-active tooth's state. Selection funnels through here and the
+  // edit path (applyToSelected) notifies on its own, so this adds no double-fire.
+  notifyStateChange();
 }
 
 // ---- Touch: Zoom Popover ----
@@ -4828,6 +5742,25 @@ function showCariesDepthPopup(surface: string, anchor: HTMLElement, toothNo?: nu
   }, 0);
 }
 
+/** Public entry point for the declarative `CariesCard`'s per-surface `.surf-depth`
+ *  indicator click: opens the contextual severity popup for `surface`, anchored
+ *  to `anchor`, on the currently-active tooth — the exact call `wireControls()`
+ *  made (`showCariesDepthPopup(surface, ind, activeTooth)`). Kept as a thin
+ *  wrapper so the popup overlay itself stays imperative (module-private state:
+ *  `activeTooth` / `applyToSelected`). */
+export function openCariesDepthPopup(surface: string, anchor: HTMLElement): void {
+  showCariesDepthPopup(surface, anchor, activeTooth);
+}
+
+/** Public entry point for the declarative `FillingsCard`'s per-surface LEFT-side
+ *  `.surf-defect` indicator click: opens the contextual filling-defect popup for
+ *  `surface`, anchored to `anchor`, on the currently-active tooth — the exact
+ *  call `wireControls()` made (`showFillingDefectPopup(surface, ind,
+ *  activeTooth)`). Thin wrapper so the popup itself stays imperative. */
+export function openFillingDefectPopup(surface: string, anchor: HTMLElement): void {
+  showFillingDefectPopup(surface, anchor, activeTooth);
+}
+
 /** Small dedicated anchored popup to author the structural
  *  filling-defect (`none` | `marginal` | `fracture` | `wear`) on ONE filled
  *  surface, opened from the LEFT-side `.surf-defect` indicator. Reuses
@@ -5130,7 +6063,7 @@ function updateToothTileVisibility(){
   updateSelectionUI();
 }
 
-function setEdentulous(on: Any){
+export function setEdentulous(on: Any){
   if(on){
     // Turning on whole-mouth edentulous is a STRUCTURAL interactive edit
     // (not a reset), so route it through the batch gate — in plan mode every
@@ -5151,7 +6084,6 @@ function setEdentulous(on: Any){
     // whole-mouth refresh fires when the batch actually applies.
     gateToothEditBatch(changed, ()=>{
       edentulous = true;
-      setToggleButton($("#btnEdentulous"), edentulous);
       suppressEdentulousSync = true;
       for(const toothNo of ALL_TEETH){
         const s = defaultState();
@@ -5169,9 +6101,15 @@ function setEdentulous(on: Any){
   // Un-setting edentulous is not a per-tooth structural edit (it touches no tooth
   // state here), so it applies immediately and is never gated.
   edentulous = false;
-  setToggleButton($("#btnEdentulous"), edentulous);
   notifyStateChange();
 }
+
+/** Read the whole-mouth edentulous flag. Backs the declarative Statuses card's
+ *  `#btnEdentulous` `aria-pressed` via `useEngineState(getEdentulous)`, replacing
+ *  the former imperative `setToggleButton($("#btnEdentulous"), …)` syncs — every
+ *  path that flips `edentulous` fires `notifyStateChange()`, so the React button
+ *  re-reads this and re-renders. */
+export function getEdentulous(): boolean { return edentulous; }
 
 /** Toggle visibility of wisdom teeth (18, 28, 38, 48). */
 function setWisdomVisible(on: Any){
@@ -8375,7 +9313,6 @@ export function importStatus(data: Any){
     if(typeof data.globals.showHealthyPulp === "boolean") setHealthyPulpVisible(data.globals.showHealthyPulp);
     if(typeof data.globals.edentulous === "boolean"){
       edentulous = data.globals.edentulous;
-      setToggleButton($("#btnEdentulous"), edentulous);
     }
   }
   updateSelectionFilterButtons();
@@ -8414,7 +9351,7 @@ export function importFhirBundle(input: Any){
   importStatus(payload);
 }
 
-function applyStatusExtra(option: Any){
+export function applyStatusExtra(option: Any){
   if(!option) return;
   const meta = getStatusExtrasMeta();
   const archTeeth = (arch)=> meta?.[arch] || [];
@@ -8598,7 +9535,6 @@ export function __applyStatusExtraForTest(option: Any): void {
 
 // ---- Load and build grid ----
 let initialized = false;
-let controlsWired = false;
 let initToken = 0;
 
 // `svgText` is the inlined SVG markup from a `?raw` import (see TEMPLATES) —
@@ -8620,17 +9556,29 @@ async function buildGrid(token: number){
   if(!grid) return;
   grid.innerHTML = "";
 
+  // Read the active anatomy profile for the template maps + tpl/occl lists. For
+  // the classic profile these are the same objects/values as the module-level
+  // constants, so the built DOM is byte-identical to before this refactor.
+  const profile = activeAnatomyProfile();
+
+  // The DOM node the tile/label builders append into. For the classic
+  // `uniform16` layout it stays `grid` for the whole build, so the produced DOM
+  // is byte-identical to before this refactor. The `twoArch` layout reassigns it
+  // to the upper- then lower-arch sub-grid, so the SHARED builders below need no
+  // duplication — only the arrangement (which container) differs.
+  let appendTarget: Any = grid;
+
   // preload SVG templates in parallel
   const tplCache = new Map();
   const occlCache = new Map();
-  const tplNos = [11,13,14,16] as const;
-  const occlNos = [14,16] as const;
+  const tplNos = profile.tplNos;
+  const occlNos = profile.occlNos;
   await Promise.all([
     ...tplNos.map(async (tplNo) => {
-      tplCache.set(tplNo, await loadSvg(TEMPLATES[tplNo]));
+      tplCache.set(tplNo, await loadSvg(profile.templates[tplNo]));
     }),
     ...occlNos.map(async (tplNo) => {
-      occlCache.set(tplNo, await loadSvg(TEMPLATES_OCCL[tplNo]));
+      occlCache.set(tplNo, await loadSvg(profile.templatesOccl[tplNo]));
     }),
   ]);
   if(!initialized || token !== initToken) return;
@@ -8674,7 +9622,7 @@ async function buildGrid(token: number){
       tile.removeAttribute("data-tooth");
     }
 
-    grid.appendChild(tile);
+    appendTarget.appendChild(tile);
 
     if(!toothSvgRoot.has(toothNo)) toothSvgRoot.set(toothNo, []);
     toothSvgRoot.get(toothNo).push(svg);
@@ -8687,7 +9635,7 @@ async function buildGrid(token: number){
 
   function addRowSide(rowTeeth: Any){
     for(const toothNo of rowTeeth){
-      const map = TOOTH_TEMPLATE.get(toothNo);
+      const map = profile.toothTemplate.get(toothNo);
       const tplNo = map ? map.tpl : 16;
       addTile({ toothNo, tplNo, rot: map?.rot ?? 0, mirror: map?.mirror ?? false, view: "side", clickable: true });
     }
@@ -8703,12 +9651,26 @@ async function buildGrid(token: number){
     const tile = el("div", { class:"tooth-tile occl-view placeholder" }, [
       el("div", { class:"tooth-svg" })
     ]);
-    grid.appendChild(tile);
+    appendTarget.appendChild(tile);
   }
 
   function addRowOccl(rowTeeth: Any, placeholders: Any){
     for(const toothNo of rowTeeth){
-      const map = TOOTH_TEMPLATE.get(toothNo);
+      // A profile that splits front/occlusal artwork (measured) supplies its own
+      // `occlusalTemplate` — a lower posterior occlusal is a separate drawing,
+      // NOT an upper one rotated, so tpl+rot+mirror all come from that map.
+      // Classic has no `occlusalTemplate`, so it keeps its historical mapping
+      // (occlTemplateForTooth for tpl, the front map's rot/mirror) → identical DOM.
+      if(profile.occlusalTemplate){
+        const map = profile.occlusalTemplate.get(toothNo);
+        if(placeholders.has(toothNo) || !map){
+          addPlaceholderTile();
+          continue;
+        }
+        addTile({ toothNo, tplNo: map.tpl, rot: map.rot, mirror: map.mirror, view: "occl", clickable: true });
+        continue;
+      }
+      const map = profile.toothTemplate.get(toothNo);
       const tplNo = occlTemplateForTooth(toothNo);
       if(placeholders.has(toothNo) || !tplNo || !map){
         addPlaceholderTile();
@@ -8726,7 +9688,7 @@ async function buildGrid(token: number){
       row.appendChild(cell);
       targetMap.set(toothNo, cell);
     }
-    grid.appendChild(row);
+    appendTarget.appendChild(row);
   }
 
   const upperSide = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
@@ -8735,12 +9697,39 @@ async function buildGrid(token: number){
   const lowerOcclPlaceholders = new Set([43,42,41,31,32,33]);
 
   if(!initialized || token !== initToken) return;
-  addLabelRow(upperSide, toothLabelUpper);
-  addRowSide(upperSide);
-  addRowOccl(upperSide, upperOcclPlaceholders);
-  addRowOccl(lowerSide, lowerOcclPlaceholders);
-  addRowSide(lowerSide);
-  addLabelRow(lowerSide, toothLabelLower);
+  // Layout assembly branches on the profile. Classic = the flat, single
+  // `#toothGrid` uniform-16 grid (identical DOM). Measured = two per-arch grids
+  // (`.upper-arch`/`.lower-arch`) so each tooth gets its own anatomical width.
+  if(profile.layout === "twoArch"){
+    // Two arch sub-grids nested in `#toothGrid`. `role="presentation"` keeps the
+    // tiles as children of the listbox in the accessibility tree while the flex
+    // column + per-arch grid columns (CSS, keyed on `[data-anatomy="measured"]`)
+    // give each tooth its measured width. The SHARED builders append into
+    // whichever arch `appendTarget` points at.
+    const upperArch = el("div", { class:"tooth-arch upper-arch", role:"presentation" });
+    const lowerArch = el("div", { class:"tooth-arch lower-arch", role:"presentation" });
+    grid.appendChild(upperArch);
+    grid.appendChild(lowerArch);
+
+    appendTarget = upperArch;
+    addLabelRow(upperSide, toothLabelUpper);
+    addRowSide(upperSide);
+    addRowOccl(upperSide, upperOcclPlaceholders);
+
+    appendTarget = lowerArch;
+    addRowOccl(lowerSide, lowerOcclPlaceholders);
+    addRowSide(lowerSide);
+    addLabelRow(lowerSide, toothLabelLower);
+
+    appendTarget = grid;
+  }else{
+    addLabelRow(upperSide, toothLabelUpper);
+    addRowSide(upperSide);
+    addRowOccl(upperSide, upperOcclPlaceholders);
+    addRowOccl(lowerSide, lowerOcclPlaceholders);
+    addRowSide(lowerSide);
+    addLabelRow(lowerSide, toothLabelLower);
+  }
 
   // ARIA on grid container
   grid.setAttribute("role", "listbox");
@@ -8779,542 +9768,153 @@ function wireControls(){
   // double mount-effect (which re-wires anonymous listeners onto the same nodes).
   document.addEventListener("click", onCardToggleClick);
   document.addEventListener("click", onGlobalToggleClick);
-  // Note: buildChecks/buildSurfaceCross/buildSelect below self-clear and create
-  // fresh nodes, so re-running wireControls per init is safe; destroyOdontogram
-  // empties those containers and they are rebuilt here.
-  if(controlsWired) return;
-  controlsWired = true;
+  // wireControls() is fully re-entrant: the buildSelect/buildChecks/
+  // buildSurfaceCross/buildPerioGrid builders skip already-populated containers,
+  // every persistent-node listener goes through bindOnce (per-element idempotent),
+  // and loadInlineIcon/export-import `.onclick=` assignments are self-idempotent.
+  // So a remounted surface re-runs this to wire only its fresh nodes, while
+  // still-mounted nodes are left untouched — no module-level "wired once" flag.
   const iconButtons = ["btnOcclView","btnWisdomVisible","btnBoneVisible","btnPulpVisible"];
   iconButtons.forEach((id)=>{
     const btn = $(`#${id}`);
     if(btn) loadInlineIcon(btn).then(()=>syncIconXLine(btn));
   });
 
-  // Tooth base dropdown
-  buildSelect($("#toothSelect"), getToothSelectOptions(), (value)=>{
-    applyToSelected((s, toothNo)=>{
-      if(value === "milktooth" && MILKTOOTH_BLOCKED.has(toothNo)){
-        return;
-      }
-      const next = defaultState();
-      next.toothSelection = value;
-      if(!["tooth-base","milktooth","implant","tooth-under-gum"].includes(value)){
-        next.extractionPlan = false;
-      }
-      if(value !== "none"){
-        next.extractionWound = false;
-      }
-      if(value === "implant" || value === "none"){
-        next.caries.clear();
-        next.endo = "none";
-        next.pulpDx = "normal";
-        next.fillingMaterial = "none";
-        next.fillingSurfaces.clear();
-      }
-      toothState.set(toothNo, next);
-    });
-    if(value !== "none") setEdentulous(false);
-  });
+  // The Tooth-details card body (#toothSelect base picker, #substrateSelect,
+  // the combined #restorationSelect dropdown, the extraction/missing/broken/
+  // contact/crown-leakage/bridge/crown-replace/crown-needed checkboxes, the
+  // wear/discoloration select-vs-toggle rows, and the #crownActionsRow with its
+  // reparented #extractionPlanRow) is now the declarative `ToothDetailsCard`
+  // (composable-UI Tier 3, PR 3f): rendered from `getActiveToothDetails()` and
+  // written through `setToothSelectionForSelection`/`setSubstrateForSelection`/
+  // `setRestorationForSelection` + the per-axis toggle setters; the title
+  // `#btnResetTooth` button calls `resetTooth()` — no imperative wiring here.
 
-  // Substrate dropdown (tooth condition: natural / radix / broken / crown-prep)
-  buildSelect($("#substrateSelect"), getSubstrateOptions(), (value)=>{
-    applyToSelected((s)=>{
-      s.toothSubstrate = value;
-      if(value !== "broken"){
-        s.brokenMesial = false;
-        s.brokenIncisal = false;
-        s.brokenDistal = false;
-      }
-      // crown-needed only applies while a natural/broken/prepared tooth is unrestored
-      if(!["natural","broken","crownprep"].includes(value) || s.restorationType !== "none"){
-        s.crownNeeded = false;
-      }
-    });
-    setEdentulous(false);
-  });
+  // Root card (#rpRootBlock body: the merged pulp/endo optgroup select, the
+  // apical diagnosis / periapical lesion / root-resorption selects, and the
+  // resection + parapulpal-pin checkboxes) is now the declarative
+  // `RootPeriodontiumCard` (composable-UI Tier 3, PR 3e): rendered from
+  // `getActiveRootPerio()` and written through `setPulpEndoForSelection`/
+  // `setApicalDxForSelection`/`setPeriapicalTypeForSelection`/
+  // `setResorptionForSelection`/`setEndoResectionForSelection`/
+  // `setParapulpalPinForSelection` — no imperative wiring here.
 
-  // Combined restoration dropdown (crown / inlay / onlay / veneer / bridge ×
-  // material). Value encodes `${type}|${material}` and writes BOTH fields.
-  // At initial wiring there is no active tooth yet (options get narrowed by
-  // syncControlsFromState/refreshAllSelectOptions once one is selected), but
-  // thread ctx consistently in case activeTooth is already set (e.g. re-wire).
-  const initialToothState = activeTooth ? toothState.get(activeTooth) : null;
-  buildSelect($("#restorationSelect"), getRestorationOptions("occlusal", { isImplant: initialToothState?.toothSelection === "implant", toothSelection: initialToothState?.toothSelection }), (value)=>{
-    const v = String(value);
-    applyToSelected((s)=>{ applyRestorationSelection(s, v); });
-    setEdentulous(false);
-  });
+  // Mobility, the inflammation/parodontal mod checkboxes (#modsChecks), the
+  // periapical lesion-subtype select, the calculus toggle, and the peri-implant
+  // select are now the declarative `RootPeriodontiumCard` (composable-UI Tier 3,
+  // PR 3e), rendered from `getActiveRootPerio()` and written through
+  // `setMobilityForSelection`/`setModForSelection`/`setPeriapicalTypeForSelection`/
+  // `setCalculusForSelection`/`setPeriImplantForSelection`.
 
-  // Merged pulp/endo status. Custom-built (optgroups) rather than via
-  // buildSelect; the change handler routes to pulpEndoOnSelect, which enforces
-  // the mutual-exclusion invariant (endo <-> vital pulpDx).
-  {
-    const sel = $("#pulpEndoSelect");
-    sel.addEventListener("change", () => {
-      const value = sel.value;
-      applyToSelected((s)=>{ pulpEndoOnSelect(s, value); });
-    });
-  }
-
-  // Apical (AAE) diagnosis
-  buildSelect($("#apicalDxSelect"), getApicalDxOptions(), (value)=>{
-    applyToSelected((s)=>{
-      s.apicalDx = value;
-      // granuloma/cyst is a refinement of apical periodontitis only.
-      if(value !== "symptomatic-apical-periodontitis" && value !== "asymptomatic-apical-periodontitis"){
-        s.periapicalType = "none";
-      }
-    });
-  });
-
-  // Resection
-  $("#endoResection").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.endoResection = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Parapulpal pin
-  $("#parapulpalPin").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.parapulpalPin = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Root resorption (resorptionType enum — none / internal / external-cervical
-  // picker; both subtypes render identically).
-  buildSelect($("#resorptionSelect"), getResorptionOptions(), (value)=>{
-    applyToSelected((s)=>{ s.resorptionType = value; });
-  });
-
-  // Peri-implant status (implants only — supersedes the parodontal/inflammation
-  // mods there).
-  buildSelect($("#periImplantSelect"), getPeriImplantOptions(), (value)=>{
-    applyToSelected((s)=>{ applyPeriImplantSelection(s, value); });
-  });
-
-  // Extraction wound
-  $("#extractionWound").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.extractionWound = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Extraction plan
-  $("#extractionPlan").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.extractionPlan = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Crown replace
-  $("#crownReplace").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.crownReplace = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Crown needed
-  $("#crownNeeded").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.crownNeeded = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Crown leakage (marginal leakage on a crown/bridge restoration)
-  $("#crownLeakage").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.crownLeakage = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Missing closed
-  $("#missingClosed").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.missingClosed = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Mobility
-  buildSelect($("#mobilitySelect"), getMobilityOptions(), (value)=>{
-    applyToSelected((s)=>{
-      s.mobility = value;
-    });
-  });
-
-  // The 6-site PD/GM/BOP/SUP grid — built once here (site identities are
-  // static), values synced per-tooth by syncPerioRow()
-  // inside syncControlsFromState(). See buildPerioGrid's own doc comment.
+  // The 6-site PD/GM/BOP/SUP grid stays IMPERATIVE (Tier 3 PR 3e carve-out) —
+  // built once here (site identities are static), values synced per-tooth by
+  // syncPerioRow() inside syncControlsFromState(). See buildPerioGrid's own doc
+  // comment.
   buildPerioGrid($("#perioGrid"));
 
-  // Inflammations
-  buildChecks($("#modsChecks"), MOD_OPTIONS, (id, on)=>{
-    applyToSelected((s)=>{
-      if(on) s.mods.add(id); else s.mods.delete(id);
-    });
-  });
-  buildSelect($("#periapicalTypeSelect"), getPeriapicalTypeOptions(), (val)=>{
-    applyToSelected((s)=>{ s.periapicalType = val; });
-  });
+  // Caries card (#cariesSection body) is now the declarative `CariesCard`
+  // (composable-UI Tier 3, PR 3c): its surface-cross, subcrown row, depth select,
+  // root-caries select, and `.surf-depth` severity-popup indicators are rendered
+  // from `getActiveCaries()` and written through `setCariesSurfaceForSelection`/
+  // `setCariesActiveDepthForSelection`/`setRootCariesForSelection`/
+  // `openCariesDepthPopup` — no imperative wiring here.
 
-  // Caries surfaces in a cross layout; subcrown stays as a separate row.
-  // Toggling a surface on records its severity (from the active-depth dropdown);
-  // toggling off clears it. Subcrown carries no per-surface severity. Records
-  // into the single unified `cariesSeverity` map.
-  const cariesOnToggle = (id: Any, on: Any)=>{
-    applyToSelected((s)=>{
-      if(on){
-        s.caries.add(id);
-        if(id !== "caries-subcrown") s.cariesSeverity.set(id.replace("caries-",""), s.cariesActiveDepth);
-      }else{
-        s.caries.delete(id);
-        s.cariesSeverity.delete(id.replace("caries-",""));
-      }
-    });
-  };
-  buildSurfaceCross($("#cariesChecks"), [
-    { value: "caries-buccal", labelKey: "surface.buccal", letter: "B", pos: "buccal" },
-    { value: "caries-mesial", labelKey: "surface.mesial", letter: "M", pos: "mesial" },
-    { value: "caries-occlusal", labelKey: "surface.occlusal", letter: "O", pos: "occlusal" },
-    { value: "caries-distal", labelKey: "surface.distal", letter: "D", pos: "distal" },
-    { value: "caries-lingual", labelKey: "surface.lingualPalatal", letter: "L", pos: "lingual" },
-  ], cariesOnToggle);
-  // Add a per-surface depth indicator (3 stacked bars) inside each caries cell.
-  // Clicking it opens a popup to change that surface's depth (only when caried).
-  $$("#cariesChecks .surface-cell").forEach((cell) => {
-    const input = cell.querySelector("input") as HTMLInputElement | null;
-    if(!input) return;
-    const surface = String(input.value).replace("caries-", "");
-    const ind = el("span", { class: "surf-depth", title: t("caries.detailsHint") }, [ el("i"), el("i"), el("i") ]);
-    ind.addEventListener("click", (e: Any)=>{
-      e.preventDefault();
-      e.stopPropagation();
-      if(!input.checked || readOnly) return;
-      showCariesDepthPopup(surface, ind, activeTooth);
-    });
-    cell.appendChild(ind);
-  });
-  buildChecks($("#cariesSubcrownRow"), [
-    { value: "caries-subcrown", labelKey: "surface.subcrown" },
-  ], cariesOnToggle);
-  buildSelect($("#cariesDepthSelect"), getCariesDepthOptions(), (val)=>{
-    applyToSelected((s)=>{ s.cariesActiveDepth = Number(val); });
-  });
-  // Per-tooth root-caries picker. On change the selected value is the canonical
-  // rootCaries enum (simple mode's "present" already maps to "active-cavitated"),
-  // so it writes straight to state.
-  buildSelect($("#rootCariesSelect"), rootCariesOptions(), (value)=>{
-    applyToSelected((s)=>{ s.rootCaries = value; });
-  });
+  // Fillings card (#fillingSection body) is now the declarative `FillingsCard`
+  // (composable-UI Tier 3, PR 3d): its material select, surface cross (with the
+  // RIGHT-side recurrent-caries `.surf-depth` and LEFT-side `.surf-defect`
+  // indicators), the simple/complex swap, the simple-mode defect select, and the
+  // fissure-sealing toggle are rendered from `getActiveFillings()` and written
+  // through `setFillingMaterialForSelection`/`setFillingSurfaceForSelection`/
+  // `setFillingSimpleToggleForSelection`/`setFillingSimpleDefectForSelection`/
+  // `setFissureSealingForSelection` + `openCariesDepthPopup`/`openFillingDefectPopup`
+  // — no imperative wiring here.
 
-  // Filling material dropdown
-  buildSelect($("#fillingSelect"), getFillingOptions(false), (mat)=>{
-    applyToSelected((s)=>{
-      s.fillingMaterial = mat;
-      // Clearing the active material removes any existing per-surface fillings,
-      // otherwise they would become orphaned (surface UI hides but state lingers,
-      // still rendering/serializing/exporting). Keeps the map and set in sync.
-      if(mat === "none"){
-        s.fillingSurfaces.clear();
-        s.fillingSurfaceMaterials.clear();
-      }
-    });
-  });
+  // Ortho appliance/drift/vertical pickers + rotation toggle are now wired
+  // declaratively by `OrthodonticsCard` (composable-UI Tier 3) through
+  // `setOrtho*ForSelection`; no imperative `#orthoCard` binding here.
 
-  // Filling surfaces in a cross layout.
-  buildSurfaceCross($("#fillingSurfaceChecks"), [
-    { value: "buccal", labelKey: "surface.buccal", letter: "B", pos: "buccal" },
-    { value: "mesial", labelKey: "surface.mesial", letter: "M", pos: "mesial" },
-    { value: "occlusal", labelKey: "surface.occlusal", letter: "O", pos: "occlusal" },
-    { value: "distal", labelKey: "surface.distal", letter: "D", pos: "distal" },
-    { value: "lingual", labelKey: "surface.lingualPalatal", letter: "L", pos: "lingual" },
-  ], (surf: Any, on: Any)=>{
-    applyToSelected((s)=>{
-      if(on && s.fillingMaterial !== "none"){
-        s.fillingSurfaces.add(surf);
-        s.fillingSurfaceMaterials.set(surf, s.fillingMaterial);
-      }else{
-        s.fillingSurfaces.delete(surf);
-        s.fillingSurfaceMaterials.delete(surf);
-      }
-    });
-  });
-  // Mirror the caries-cell per-surface indicator onto each FILLING-surface cell.
-  // It signposts (and, via the contextual popup, authors)
-  // recurrent caries on a filled surface — CSS shows it only when the filling
-  // checkbox is checked, and the dark border (`.has-subcaries`) is toggled in
-  // syncFillingSubcariesIndicator when the surface actually has caries.
-  $$("#fillingSurfaceChecks .surface-cell").forEach((cell) => {
-    const input = cell.querySelector("input") as HTMLInputElement | null;
-    if(!input) return;
-    const surface = String(input.value);
-    const ind = el("span", { class: "surf-depth", title: t("caries.recurrentHint") }, [ el("i"), el("i"), el("i") ]);
-    ind.addEventListener("click", (e: Any)=>{
-      e.preventDefault();
-      e.stopPropagation();
-      if(!input.checked || readOnly) return;
-      showCariesDepthPopup(surface, ind, activeTooth);
-    });
-    cell.appendChild(ind);
-  });
-  // LEFT-side per-surface filling-defect indicator (the RIGHT-side .surf-depth
-  // authors recurrent caries; this authors the structural defect). Shown by CSS only
-  // when the filling checkbox is checked; the dark border (.has-defect) is toggled in
-  // syncFillingDefectIndicator when the surface actually carries a defect.
-  $$("#fillingSurfaceChecks .surface-cell").forEach((cell) => {
-    const input = cell.querySelector("input") as HTMLInputElement | null;
-    if(!input) return;
-    const surface = String(input.value);
-    const ind = el("span", { class: "surf-defect", title: t("fillingDefect.label") }, [ el("i") ]);
-    ind.addEventListener("click", (e: Any)=>{
-      e.preventDefault(); e.stopPropagation();
-      // no-op when the filling-defect feature is disabled.
-      if(!input.checked || readOnly || !fillingDefectEnabled) return;
-      showFillingDefectPopup(surface, ind, activeTooth);
-    });
-    cell.insertBefore(ind, cell.firstChild); // LEFT side
-  });
+  // The Statuses card body (#btnResetAll / #btnPrimaryDentition /
+  // #btnMixedDentition / #btnEdentulous + the #statusExtraSelect/#statusExtraApply
+  // row) is now the declarative `StatusesCard` (composable-UI Tier 3, PR 3b): it
+  // calls resetMouth()/applyPrimaryDentition()/applyMixedDentition()/setEdentulous()
+  // and applyStatusExtra() directly through the engine API and reads getStatusExtras()
+  // for its options — no imperative wiring here anymore.
 
-  // "simple" filling complexity — one filled/not-filled toggle applying the
-  // current material to ALL surfaces (or clearing them).
-  $("#fillingSimpleToggle")?.addEventListener("change", (e)=>{
-    const on = (e.target as HTMLInputElement).checked;
-    applyToSelected((s)=>{
-      if(on){
-        const mat = s.fillingMaterial !== "none" ? s.fillingMaterial : "composite";
-        for(const surf of ["buccal", "mesial", "occlusal", "distal", "lingual"]){ s.fillingSurfaceMaterials.set(surf, mat); s.fillingSurfaces.add(surf); }
-      }else{
-        s.fillingSurfaceMaterials.clear();
-        s.fillingSurfaces.clear();
-        s.fillingDefect.clear();
-      }
-    });
-  });
-  // simple-mode filling-defect button — applies a defect to ALL filled surfaces.
-  $("#fillingSimpleDefectSelect")?.addEventListener("change", (e: Any)=>{
-    const value = String((e.target as HTMLSelectElement).value);
-    applyToSelected((s)=>{
-      for(const surf of (s.fillingSurfaceMaterials as Map<string, string>).keys()){
-        applyFillingDefect(s.fillingDefect, surf, value);
-      }
-    });
-  });
-
-  // Fissure sealing
-  $("#fissureSealing").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.fissureSealing = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Calculus
-  $("#calculusToggle").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{ s.calculus = (e.target as HTMLInputElement).checked; });
-  });
-
-  // Contact point missing
-  $("#contactMesial").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.contactMesial = (e.target as HTMLInputElement).checked;
-    });
-  });
-  $("#contactDistal").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.contactDistal = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Wear (wearEdge/wearCervical enum pickers; mirrors the #resorptionSelect
-  // buildSelect wiring).
-  buildSelect($("#wearEdgeSelect"), getWearEdgeOptions(), (value)=>{
-    applyToSelected((s)=>{ s.wearEdge = value; });
-  });
-  buildSelect($("#wearCervicalSelect"), getWearCervicalOptions(), (value)=>{
-    applyToSelected((s)=>{ s.wearCervical = value; });
-  });
-
-  // Wear simple-mode toggles (yes/no checkboxes shown instead of the selects
-  // above when wearDetailLevel === "simple"; write the canonical simple value on
-  // check, "none" on uncheck).
-  $("#wearEdgeToggle").addEventListener("change", (e)=>{
-    const on = (e.target as HTMLInputElement).checked;
-    applyToSelected((s)=>{ s.wearEdge = on ? "attrition" : "none"; });
-  });
-  $("#wearCervicalToggle").addEventListener("change", (e)=>{
-    const on = (e.target as HTMLInputElement).checked;
-    applyToSelected((s)=>{ s.wearCervical = on ? "abrasion" : "none"; });
-  });
-
-  // Discoloration (enum picker — mirrors the wearEdge/wearCervical buildSelect
-  // wiring above).
-  buildSelect($("#discolorationSelect"), getDiscolorationOptions(), (value)=>{
-    applyToSelected((s)=>{ s.discoloration = value; });
-  });
-
-  // Discoloration simple-mode toggle (mirrors the wear toggles above;
-  // independent discolorationDetailLevel setting).
-  $("#discolorationToggle").addEventListener("change", (e)=>{
-    const on = (e.target as HTMLInputElement).checked;
-    applyToSelected((s)=>{ s.discoloration = on ? "other" : "none"; });
-  });
-
-  // Ortho (appliance/drift/vertical enum pickers + rotation boolean toggle —
-  // mirrors the discoloration buildSelect/toggle wiring above).
-  buildSelect($("#orthoApplianceSelect"), getOrthoApplianceOptions(), (value)=>{
-    applyToSelected((s)=>{ s.orthoAppliance = value; });
-  });
-  buildSelect($("#orthoDriftSelect"), getOrthoDriftOptions(), (value)=>{
-    applyToSelected((s)=>{ s.orthoDrift = value; });
-  });
-  buildSelect($("#orthoVerticalSelect"), getOrthoVerticalOptions(), (value)=>{
-    applyToSelected((s)=>{ s.orthoVertical = value; });
-  });
-  $("#orthoRotationToggle").addEventListener("change", (e)=>{
-    const on = (e.target as HTMLInputElement).checked;
-    applyToSelected((s)=>{ s.orthoRotation = on; });
-  });
-
-  // Bridge pillar
-  $("#bridgePillar").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.bridgePillar = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Broken crown parts
-  $("#brokenMesial").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.brokenMesial = (e.target as HTMLInputElement).checked;
-    });
-  });
-  $("#brokenIncisal").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.brokenIncisal = (e.target as HTMLInputElement).checked;
-    });
-  });
-  $("#brokenDistal").addEventListener("change", (e)=>{
-    applyToSelected((s)=>{
-      s.brokenDistal = (e.target as HTMLInputElement).checked;
-    });
-  });
-
-  // Reset buttons
-  $("#btnResetTooth").addEventListener("click", ()=>{
-    if(selectedTeeth.size === 0) return;
-    resetTeethGated(Array.from(selectedTeeth) as number[]);
-  });
-
-  $("#btnResetAll").addEventListener("click", ()=>{
-    setEdentulous(false);
-    resetCaseMeta(); // case-level patient metadata is part of the blank-slate reset (like edentulous)
-    for(const toothNo of ALL_TEETH){
-      toothState.set(toothNo, defaultState());
-      applyStateToSvg(toothNo);
-      updateToothTileNumber(toothNo);
-    }
-    if(activeTooth){
-      setControlsEnabled(true);
-      syncControlsFromState(toothState.get(activeTooth));
-    }
-    // caseMeta was cleared above (resetCaseMeta) AFTER setEdentulous's early
-    // notify fired, so the mounted case-metadata panel would otherwise show
-    // stale patient data until the next unrelated change — notify once more now
-    // that all blank-slate resets are done, so subscribers re-read cleared state.
-    notifyStateChange();
-  });
-
-  $("#btnPrimaryDentition").addEventListener("click", applyPrimaryDentition);
-
-  $("#btnMixedDentition").addEventListener("click", applyMixedDentition);
-
-  // Status extras
-  const statusExtras = getStatusExtras();
-  if(statusExtras.length){
-    const statusOptions = statusExtras.map((opt)=>({ value: opt.id, label: opt.label }));
-    buildSelect($("#statusExtraSelect"), statusOptions, ()=>{});
-    setSelectOptions($("#statusExtraSelect"), statusOptions, statusOptions[0]?.value);
-    $("#statusExtraApply").addEventListener("click", ()=>{
-      const id = $("#statusExtraSelect").value;
-      const option = statusExtras.find(o => o.id === id);
-      applyStatusExtra(option);
-    });
-  }
-
-  $("#btnSelectAll").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectAll"), "click", ()=>{
     selectedTeeth = new Set(ALL_TEETH);
     activeTooth = ALL_TEETH[0];
     updateToothTileVisibility();
   });
-  $("#btnSelectAllPresent").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectAllPresent"), "click", ()=>{
     const present = ALL_TEETH.filter(tn => toothState.get(tn)?.toothSelection !== "none");
     selectedTeeth = new Set(present);
     activeTooth = present[0] ?? null;
     updateToothTileVisibility();
   });
-  $("#btnSelectPermanent").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectPermanent"), "click", ()=>{
     const permanent = ALL_TEETH.filter(tn => toothState.get(tn)?.toothSelection === "tooth-base");
     selectedTeeth = new Set(permanent);
     activeTooth = permanent[0] ?? null;
     updateToothTileVisibility();
   });
-  $("#btnSelectMilk").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectMilk"), "click", ()=>{
     const milk = ALL_TEETH.filter(tn => toothState.get(tn)?.toothSelection === "milktooth");
     selectedTeeth = new Set(milk);
     activeTooth = milk[0] ?? null;
     updateToothTileVisibility();
   });
-  $("#btnSelectImplants").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectImplants"), "click", ()=>{
     const implants = ALL_TEETH.filter(tn => toothState.get(tn)?.toothSelection === "implant");
     selectedTeeth = new Set(implants);
     activeTooth = implants[0] ?? null;
     updateToothTileVisibility();
   });
-  $("#btnSelectAllMissing").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectAllMissing"), "click", ()=>{
     const missing = ALL_TEETH.filter(tn => toothState.get(tn)?.toothSelection === "none");
     selectedTeeth = new Set(missing);
     activeTooth = missing[0] ?? null;
     updateToothTileVisibility();
   });
-  $("#btnSelectUpper").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectUpper"), "click", ()=>{
     selectedTeeth = new Set(ALL_TEETH.filter(tn => tn >= 11 && tn <= 28));
     activeTooth = 11;
     updateToothTileVisibility();
   });
-  $("#btnSelectUpperFront").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectUpperFront"), "click", ()=>{
     const front = [13,12,11,21,22,23];
     selectedTeeth = new Set(front);
     activeTooth = front[0];
     updateToothTileVisibility();
   });
-  $("#btnSelectUpperMolar").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectUpperMolar"), "click", ()=>{
     const molars = [18,17,16,26,27,28];
     selectedTeeth = new Set(molars);
     activeTooth = molars[0];
     updateToothTileVisibility();
   });
-  $("#btnSelectLower").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectLower"), "click", ()=>{
     selectedTeeth = new Set(ALL_TEETH.filter(tn => tn >= 31 && tn <= 48));
     activeTooth = 31;
     updateToothTileVisibility();
   });
-  $("#btnSelectLowerFront").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectLowerFront"), "click", ()=>{
     const front = [43,42,41,31,32,33];
     selectedTeeth = new Set(front);
     activeTooth = front[0];
     updateToothTileVisibility();
   });
-  $("#btnSelectLowerMolar").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectLowerMolar"), "click", ()=>{
     const molars = [38,37,36,46,47,48];
     selectedTeeth = new Set(molars);
     activeTooth = molars[0];
     updateToothTileVisibility();
   });
-  $("#btnSelectNone").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectNone"), "click", ()=>{
     selectedTeeth = new Set();
     activeTooth = null;
     updateSelectionUI();
   });
-  $("#btnSelectNoneChart").addEventListener("click", ()=>{
+  bindOnce($("#btnSelectNoneChart"), "click", ()=>{
     selectedTeeth = new Set();
     activeTooth = null;
     updateSelectionUI();
@@ -9322,11 +9922,12 @@ function wireControls(){
 
   // Status | Plan chart-mode toggle (chart-header, separate from both the topbar
   // and the right Controls panel).
-  $("#chartModeStatus").addEventListener("click", ()=>setChartMode("status"));
-  $("#chartModePlan").addEventListener("click", ()=>setChartMode("plan"));
+  bindOnce($("#chartModeStatus"), "click", ()=>setChartMode("status"));
+  bindOnce($("#chartModePlan"), "click", ()=>setChartMode("plan"));
 
-  // The global visibility toggles (edentulous / wisdom / occlusal / bone / pulp)
-  // are handled by the delegated onGlobalToggleClick listener registered above.
+  // The global visibility toggles (wisdom / occlusal / bone / pulp) are handled
+  // by the delegated onGlobalToggleClick listener registered above. (#btnEdentulous
+  // is now the declarative StatusesCard's own onClick — composable-UI Tier 3.)
 
   // Card collapse toggles use a single delegated listener on `document` (see
   // onCardToggleClick). Here we only set the initial a11y labels to match each
@@ -9457,7 +10058,6 @@ export function destroyOdontogram(){
   if(!initialized) return;
   initialized = false;
   initToken++;
-  controlsWired = false;
   teardownBridgeOverlayResize();
   document.removeEventListener("click", onCardToggleClick);
   document.removeEventListener("click", onGlobalToggleClick);
@@ -9486,16 +10086,12 @@ export function destroyOdontogram(){
   readOnly = false;
   notesEnabled = false;
   pluginOverlays.clear();
-  const mods = $("#modsChecks") as HTMLElement | null;
-  if(mods) mods.innerHTML = "";
-  const caries = $("#cariesChecks") as HTMLElement | null;
-  if(caries) caries.innerHTML = "";
-  const cariesSub = $("#cariesSubcrownRow") as HTMLElement | null;
-  if(cariesSub) cariesSub.innerHTML = "";
-  const fillings = $("#fillingSurfaceChecks") as HTMLElement | null;
-  if(fillings) fillings.innerHTML = "";
-  const statusExtra = $("#statusExtraSelect") as HTMLSelectElement | null;
-  if(statusExtra) statusExtra.innerHTML = "";
+  // The imperatively-built control containers (#modsChecks / #cariesChecks /
+  // #cariesSubcrownRow / #fillingSurfaceChecks / #statusExtraSelect) are NOT
+  // emptied here: with the "skip if populated" builder guards, emptying them then
+  // skipping-rebuild on a DOM-persisting re-init would leave them permanently
+  // empty. Leaving them populated is correct — re-init skips the rebuild and
+  // syncControlsFromState() refreshes their values.
   // A full teardown resets the whole case — BOTH charts, not just the active one
   // — and drops back to "status" mode so a subsequent initOdontogram() starts
   // clean.
@@ -9513,6 +10109,55 @@ export function destroyOdontogram(){
   toothLabelLower.clear();
   selectedTeeth = new Set();
   activeTooth = null;
+}
+
+/**
+ * Re-run control wiring after a controls surface remounts (composable-UI Tier 2).
+ * `wireControls()` is idempotent per-element (bindOnce + populated-container
+ * guards), so this wires ONLY the freshly-mounted nodes and leaves still-mounted
+ * ones untouched; the trailing syncControlsFromState() re-derives the active
+ * tooth's per-tooth option lists/values on the (possibly new) select nodes.
+ * No-op before init (the provider's own init effect does the first wiring).
+ */
+export function rewireControls(){
+  if(!initialized) return;
+  wireControls();
+  if(activeTooth != null){
+    const s = toothState.get(activeTooth);
+    if(s) syncControlsFromState(s);
+  }
+}
+
+/**
+ * Rebuild the SVG tooth grid after the chart column remounts (composable-UI
+ * Tier 2). Preserves the current selection/active tooth across buildGrid()'s
+ * internal reset, clears+rebuilds the four grid element maps, and bumps
+ * `initToken` so any in-flight/toggle-spam build supersedes cleanly. No-op
+ * before init or if a newer build/teardown supersedes this one mid-await.
+ */
+export async function rebuildGrid(){
+  if(!initialized) return;
+  const savedSelected = new Set(selectedTeeth);
+  const savedActive = activeTooth;
+  // A remounted #toothGrid has fresh DOM; drop the stale element references so
+  // buildGrid() repopulates them (the clear precedes the await, so a superseded
+  // build never restores stale maps).
+  toothSvgRoot.clear();
+  toothTile.clear();
+  toothLabelUpper.clear();
+  toothLabelLower.clear();
+  const token = ++initToken;
+  await buildGrid(token);
+  if(!initialized || token !== initToken) return;
+  // buildGrid()'s tail resets selection/active to empty — restore what the user had.
+  selectedTeeth = savedSelected;
+  activeTooth = savedActive;
+  updateSelectionUI();
+  setupBridgeOverlayResize(); // re-observe the new grid node
+  if(activeTooth != null){
+    const s = toothState.get(activeTooth);
+    if(s) syncControlsFromState(s);
+  }
 }
 
 /**
