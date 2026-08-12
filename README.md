@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ZoliQua/Angular-Advanced-Odontogram/main/docs/angular-module-logo.png" alt="Angular Advanced Odontogram logo" width="160" />
+</p>
+
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
@@ -11,7 +15,7 @@
 
 An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angular + TypeScript** — with a full **periodontal charting module**, multi-surface caries/restorations, endodontic/prosthetic states, FDI/Universal/Palmer numbering, **HL7 FHIR R4** export/import, optional ICDAS scoring, and a 12-language UI.
 
-> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Feature parity with react-advanced-odontogram v2.4.0 (payload version 2.20) — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim; only the component shell is Angular-native.
+> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Feature parity with react-advanced-odontogram main @ `934a911` (post-v2.4.0) (payload version 2.20) — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim (five narrow, documented deviations only — see the port design spec); only the component shell is Angular-native.
 
 🔗 **Live demo:** https://angular-advanced-odontogram.vercel.app/ \
 ⚛️ **Original React project:** https://github.com/ZoliQua/React-Odontogram-Modul
@@ -21,13 +25,24 @@ An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angu
 
 ---
 
+## 📑 Contents
+
+- [📦 Installation](#-installation)
+- [🚀 Quick start](#-quick-start)
+- [🦷 Periodontal charting](#-periodontal-charting)
+- [✨ Highlights](#-highlights)
+- [📖 Documentation](#-documentation)
+- [🛠️ Development](#-development)
+- [📄 License & citation](#-license--citation)
+- [🙌 Credits](#-credits)
+
 ## 📦 Installation
 
 ```bash
 npm install angular-advanced-odontogram
 ```
 
-**Requirements:** Angular **21+**; a bundler that supports the `exports` field and ESM (the Angular CLI qualifies out of the box). The package is **ESM-only**.
+**Requirements:** Angular **21.2+** (peer dependency); a bundler that supports the `exports` field and ESM (the Angular CLI qualifies out of the box). The package is **ESM-only**.
 
 ## 🚀 Quick start
 
@@ -67,6 +82,53 @@ import {
 } from "angular-advanced-odontogram";
 ```
 
+### 🧩 Composable surfaces (advanced)
+
+`OdontogramShellComponent` is the supported all-in-one component and needs no extra setup. If you need to place the odontogram's regions in different areas of your own layout, the shell's four UI surfaces are also exported and can be composed under one `OdontogramUiService`, all sharing one instance-owned session:
+
+```ts
+import { Component, inject } from "@angular/core";
+import {
+  OdontogramUiService,
+  OdontogramTopbarComponent,
+  OdontogramChartSurfaceComponent,
+  ToothInfoSurfaceComponent,
+  ToothControlsSurfaceComponent,
+} from "angular-advanced-odontogram";
+
+@Component({
+  selector: "app-workspace",
+  imports: [
+    OdontogramTopbarComponent,
+    OdontogramChartSurfaceComponent,
+    ToothInfoSurfaceComponent,
+    ToothControlsSurfaceComponent,
+  ],
+  providers: [OdontogramUiService],   // one instance = one session, scoped to this host
+  template: `
+    <my-header-area><aao-odontogram-topbar /></my-header-area>
+    <my-main-area>
+      <aao-odontogram-chart-surface />
+      <aao-tooth-info-surface />
+    </my-main-area>
+    <my-side-panel><aao-tooth-controls-surface /></my-side-panel>
+  `,
+})
+export class WorkspaceComponent {
+  protected readonly ui = inject(OdontogramUiService);
+  // Call `ui.configure({ ...OdontogramUiConfig })` here (constructor or a field
+  // initializer), then `ui.init()` from `ngAfterViewInit()` and `ui.destroy()`
+  // from `ngOnDestroy()` — the exact sequence `OdontogramShellComponent`'s own
+  // source uses; see it there for the full, working reference (every
+  // `OdontogramUiConfig` field is a required `Signal`, so a real host supplies
+  // all of them, typically the component's own `input()`s).
+}
+```
+
+`OdontogramUiService` takes the same configuration shape as `OdontogramShellComponent`'s inputs. Current constraint: one `OdontogramUiService` instance per page (the engine is a module-level singleton). Surfaces can be mounted and unmounted on demand. `OdontogramShellComponent` itself is unchanged — it is exactly this composition in the default arrangement.
+
+For even finer composition, the individual control cards are exported as well — `StatusesCardComponent`, `ToothDetailsCardComponent`, `CariesCardComponent`, `FillingsCardComponent`, `RootPeriodontiumCardComponent`, and `OrthodonticsCardComponent` (plus the shared `SurfaceCrossComponent` the caries/fillings cards use internally) — each a self-contained declarative component that reads and writes the shared session through `inject(OdontogramUiService)` and the exported `engineState()` helper (a signal-returning read of any engine getter, kept fresh via the core's own change notifications). Mount only the cards a given layout needs, in any arrangement, under one `OdontogramUiService`. `CreditsModalComponent` (the topbar's "About and credits" popup) is exported too, for hosts that want to drive it from their own open/close state.
+
 > **SSR:** the component is client-only (reads the DOM on mount) — render it browser-side only.
 > **Assets are self-contained** — tooth/icon SVGs are inlined into the bundle; there is no runtime asset fetch to configure.
 > **One instance per page** in this release (engine state is a module-level singleton — same as the React original).
@@ -86,6 +148,9 @@ Per-site probing depth, gingival margin, bleeding on probing (+ suppuration) at 
 - 🔗 **HL7 FHIR R4** export/import; JSON export/import with migrations — round-trip compatible with [`react-advanced-odontogram`](https://github.com/ZoliQua/React-Odontogram-Modul)
 - 🖼️ PNG / JPG / SVG chart export and a configurable **PDF report** (jsPDF) — per-section layout/content settings, multilingual PDF fonts (Arabic shaping, CJK), and individual per-tooth notes in exports
 - 💾 Opt-in **localStorage persistence** API (host-wired, off by default) · 🗂️ collapsible panel cards · 🎛️ availability controls for export/import formats, Plan mode, and the periodontal chart
+- 🦴 Selectable **tooth anatomy profile** — `classic` (default) or `measured` (nine literature-measured tooth templates in a two-arch, per-tooth-width layout), switchable at runtime from Settings → Odontogram
+- 🧱 **Composable UI** — beyond the all-in-one shell, the four presentational surfaces and all seven declarative control cards are individually exported for custom host layouts (see [Composable surfaces](#-composable-surfaces-advanced) above)
+- ℹ️ Built-in **About/Credits popup** (topbar) — credits the creator, the contributors, and the original React project this port is built on
 - 🔢 FDI / Universal / Palmer numbering · 🌐 12 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, Arabic RTL) · 🎨 theming via `--odon-*` CSS variables · 🧩 plugin system · ⌨️ keyboard accessibility
 
 ## 📖 Documentation
@@ -109,3 +174,22 @@ npm run build:demo     # demo app
 ## 📄 License & citation
 
 MIT © Zoltán Dul. This library is a port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul); if you use it in research, please cite the original project — see its [`CITATION.cff`](https://github.com/ZoliQua/React-Odontogram-Modul/blob/main/CITATION.cff) and the [Zenodo record](https://doi.org/10.5281/zenodo.21156787).
+
+## 🙌 Credits
+
+Angular Advanced Odontogram is created and maintained by Zoltan Dul ([@ZoliQua](https://github.com/ZoliQua)), the creator and lead developer of this port and of the underlying clinical engine. The same in-app popup (topbar → "About and credits") lists these names.
+
+**Original project**
+
+- [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul): the original React implementation this package is a port of — the clinical engine (dental status logic, periodontal charting, FHIR export/import, i18n strings, tour, SVG templates) is shared, verbatim.
+
+**Contributors** (to the shared clinical engine, credited here too since their work ships in this port unchanged)
+
+- [@odontodev](https://github.com/odontodev): state hydration and lifecycle API, fillings settings as controlled props, idempotent setters and collapsible cards
+- [@JulianoBazzi](https://github.com/JulianoBazzi): Brazilian Portuguese translation
+- [@yassine-bhn](https://github.com/yassine-bhn): French translation and the candidate measured anatomy
+- [@saegerdirk-star](https://github.com/saegerdirk-star): measured tooth anatomy and the tooth generator, plus the composable interface proposal
+
+**Built with** [jsPDF](https://github.com/parallax/jsPDF), [DOMPurify](https://github.com/cure53/DOMPurify), [Angular](https://angular.dev), [Angular CLI](https://angular.dev/tools/cli), [TypeScript](https://www.typescriptlang.org) and [Tailwind CSS](https://tailwindcss.com).
+
+Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md). Open a pull request and you will be credited here and in the app. If this project is useful to you, please [star it on GitHub](https://github.com/ZoliQua/Angular-Advanced-Odontogram).

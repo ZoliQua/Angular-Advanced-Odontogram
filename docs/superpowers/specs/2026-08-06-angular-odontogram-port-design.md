@@ -74,6 +74,43 @@ stays untouched on every future resync (it documents provenance, not branding
 shown to end users). Everything else in core files is byte-identical to the
 React repo.
 
+**Deviation (4), extended (Phase 7 Task 4, 2026-08-12 — credits i18n).** The
+1.2.0 resync ported upstream's Credits/About popup (`CreditsModal.tsx` →
+`CreditsModalComponent`), whose intro text and new keys live in the SAME core
+file as deviation (4), `i18n/translations.ts`, so the branding-string
+deviation is extended rather than given a new number: (a) `credits.intro`'s
+existing "React Advanced Odontogram" app-name mention is swapped to "Angular
+Advanced Odontogram" in all 12 languages, the same proper-noun substitution
+already applied to `app.title`; (b) two NEW keys,
+`credits.originalProjectTitle` and `credits.originalProjectDesc`, are added
+(not upstream keys — upstream has no equivalent, since upstream IS the
+original project and never credits itself) and translated in all 12
+languages, register-matched against the neighbouring `credits.creatorTitle`/
+`credits.contributorsTitle`/`credits.contrib.*` keys.
+
+**CreditsModal identity adaptations (non-core, same task) — the owner-veto
+note.** `CreditsModalComponent` itself is a transcription-source component (like
+every other `.tsx`-sourced shell component — see the "React shell" row of
+this section's own port-action table above), not a verbatim core copy, so
+its own identity adaptations
+(`REPO_URL` — the "Star on GitHub" link — repointed from the original repo to
+this package's repo; the `LIBRARIES` list's `React`/`Vite` entries replaced
+with `Angular`/`Angular CLI`) are ordinary shell-port adaptations, not
+"core deviations" in the strict §2 sense. They are recorded here because a
+review round vetoed the FIRST version of this adaptation: identity-swapping
+`REPO_URL`/`LIBRARIES`/`credits.intro` to this package's own branding, on its
+own, left the rendered modal with NO visible attribution to the original
+React project at all. The ruling (binding on any future identity adaptation
+of this modal, or of the README Credits section it mirrors): adapting a
+component's own app-identity touchpoints must never remove the original
+project's own attribution from what end users actually see. The fix that
+satisfied the ruling — kept, and not to be reverted — added a new "Original
+Project" section to the modal (mirroring the Creator section's own heading +
+linked-entry + description shape), linking
+`https://github.com/ZoliQua/React-Odontogram-Modul`, immediately after the
+Creator section. See the Phase 7 Task 4 report §2 for the full adapted-string
+table and rationale.
+
 **How the shell and engine couple:** the shell renders a static DOM skeleton
 with fixed ids (`#toothGrid`, `#cariesChecks`, `#modsChecks`,
 `#statusExtraSelect`, `#chartModeToggle`, …); `initOdontogram()` (async) wires
@@ -118,7 +155,10 @@ landed). Payload is 2.20; FHIR/roundtrip/SVG-fingerprint goldens were
 regenerated upstream and re-copied verbatim (Phase 6 Task 1, 2026-08-11) and
 re-verified green through the full Phase 6 burn-down (Task 5) — see
 `docs/superpowers/specs/1.1.0-acceptance.md` for the evidence and §10 for
-what remains deferred beyond this release.
+what remains deferred beyond this release. **Resynced again (Phase 7,
+2026-08-12): 1.2.0 resyncs to `$ENGINE` main @ `934a911`** (post-v2.4.0;
+payload version unchanged at 2.20) — see §8 item 6 and §10 for the delivered
+scope and the current drift note.
 
 ## 3. Target workspace
 
@@ -313,6 +353,39 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
    (`docs/superpowers/specs/1.0.0-acceptance.md`) with every §7 criterion
    backed by an actual run; version cut 0.1.0 → 1.0.0 (root + library
    `package.json`, `CHANGELOG.md`). CI was not part of this phase's scope.
+6. **Composable UI + anatomy resync — DELIVERED (Phase 7, 2026-08-12).**
+   Resync to `react-advanced-odontogram` main @ `934a911` (post-v2.4.0;
+   1.1.0's v2.4.0 resync superseded — see §2/§10). Core + full test corpus
+   re-copied, all five sanctioned deviations re-applied (Task 1), plus 13
+   new `measured/` anatomy SVGs folded into `gen:assets` and the header-logo
+   source swapped to the owner-directed `docs/angular-module-logo.png`
+   (Task 1). `OdontogramUiService` (the `OdontogramProvider` port) +
+   `engineState()` + the four presentational surfaces
+   (`OdontogramTopbarComponent`, `OdontogramChartSurfaceComponent`,
+   `ToothInfoSurfaceComponent`, `ToothControlsSurfaceComponent`) shipped as
+   PUBLIC exports (Task 2); the seven declarative control cards
+   (`StatusesCardComponent`, `ToothDetailsCardComponent`, `CariesCardComponent`,
+   `FillingsCardComponent`, `RootPeriodontiumCardComponent`,
+   `OrthodonticsCardComponent`, `SurfaceCrossComponent`) ported, replacing the
+   removed imperative per-card `wireControls()` blocks with declarative
+   template bindings (Task 3). `CreditsModalComponent` (the "About and
+   credits" popup) ported, including the review-round-1 "Original Project"
+   section fix (see §2's owner-veto note); the selectable tooth-anatomy
+   setting (`classic`/`measured`) wired into `SettingsModalComponent`; the
+   extended guided tour and perio-graphic deltas verified as needing no
+   shell-side change (Task 4). Test hardening: a real, previously-silent
+   `[aaoForceValue]`/`[aaoForceChecked]` directive bug fixed
+   (`effect()` → `afterRenderEffect()`, so pick-then-cancel restores land
+   after `@for`-generated `<option>` children commit); the full public-API
+   sweep exporting every Task 2-4 symbol; 12 phase-7 `vitest.config.ts`
+   exclusion annotations closing out the resync's own test-inventory audit
+   (Task 5). README structure port (table of contents, Credits section with
+   creator/original-project/contributors split, the Composable-surfaces
+   usage section, the anatomy-profile highlight), a full claim-by-claim
+   accuracy review of both language READMEs, the three community health
+   files (`SECURITY.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`), and this
+   spec update (Task 6). Released as 1.2.0 (version cut is Task 7's own
+   scope, not this task's).
 
 ## 9. Risks & mitigations
 
@@ -342,9 +415,22 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
   decision 2026-08-07: 1.0.0 pinned v2.2.0; owner decision 2026-08-11:
   target moved to v2.4.0 since the source repo advanced past v2.2.1 before
   this resync landed). See `docs/superpowers/specs/1.1.0-acceptance.md`.
-- A further resync beyond v2.4.0 will be due in a future release — `$ENGINE`
-  kept advancing past the `f9b45fc` pin during Phase 6's execution window
-  (see §2's known-drift note).
+- **1.2.0 — DELIVERED (Phase 7, 2026-08-12):** resync to
+  `react-advanced-odontogram` main @ engine commit `934a911` (post-v2.4.0 —
+  fillings controlled props, Composable UI's `OdontogramProvider`/surfaces/
+  control-card exports, anatomy profiles (`classic`/`measured`), the extended
+  guided tour, the Credits/About popup + GitHub toolbar link, and the README
+  restructure + community health files upstream itself added between the
+  `f9b45fc` and `934a911` pins). Closes the "further resync beyond v2.4.0"
+  note this bullet previously carried. See §8 item 6 for the full delivered
+  scope and the Phase 7 task reports
+  (`.superpowers/sdd/2026-08-12-phase7-composable-resync/`) for evidence.
+- **Drift note (superseding §2's Phase-6-era note):** `$ENGINE` kept moving
+  after the `934a911` pin too — one further commit (`3bfc98c`, ICD-10
+  diagnosis coding) was observed on `$ENGINE` main during Phase 7's own
+  execution window, read-only, and deliberately NOT ported (out of this
+  resync's pinned scope). A further resync beyond `934a911` will be due in a
+  future release.
 - Persistence demo wiring: the new opt-in `enablePersistence` API is not
   wired into the `demo` app shell (upstream doesn't wire it into its shell
   either — host-opt-in by design); a demo toggle could come later if wanted.
