@@ -87,7 +87,7 @@ import {
 Az `OdontogramShellComponent` a támogatott, egybeépített komponens, és nincs szüksége extra beállításra. Ha az odontogram régióit a saját elrendezésed különböző területein szeretnéd elhelyezni, a shell négy UI-felülete is exportálva van, és egyetlen `OdontogramUiService` alá szervezve összeállítható — mindegyik ugyanazt a példányhoz kötött munkamenetet osztja meg:
 
 ```ts
-import { Component, inject } from "@angular/core";
+import { AfterViewInit, Component, OnDestroy, inject } from "@angular/core";
 import {
   OdontogramUiService,
   OdontogramTopbarComponent,
@@ -114,19 +114,25 @@ import {
     <my-side-panel><aao-tooth-controls-surface /></my-side-panel>
   `,
 })
-export class WorkspaceComponent {
+export class WorkspaceComponent implements AfterViewInit, OnDestroy {
   protected readonly ui = inject(OdontogramUiService);
-  // Itt hívd meg a `ui.configure({ ...OdontogramUiConfig })`-ot (konstruktorban
-  // vagy mezőinicializálóban), majd `ngAfterViewInit()`-ből `ui.init()`-et és
-  // `ngOnDestroy()`-ból `ui.destroy()`-t — pontosan azt a sorrendet, amit maga
-  // az `OdontogramShellComponent` forráskódja használ; a teljes, működő
-  // referenciáért nézd meg ott (az `OdontogramUiConfig` minden mezője kötelező
-  // `Signal`, így egy valódi host mindegyiket megadja, jellemzően a saját
-  // `input()`-jaiként).
+
+  constructor() {
+    // Az `OdontogramUiConfig` minden mezője opcionális — a paraméter nélküli
+    // `configure()` egy önálló munkamenetet ad, ugyanazokkal az
+    // alapértelmezésekkel, amelyekre maga az `OdontogramShellComponent` is
+    // visszaesik ("en" nyelv, "FDI" számozás, világos mód, ...). Csak azokat a
+    // Signal/callback mezőket add meg, amelyeket felül akarsz írni, pl.
+    // `{ darkMode: this.darkMode, onDarkModeChange: ... }`.
+    this.ui.configure();
+  }
+
+  ngAfterViewInit(): void { this.ui.init(); }
+  ngOnDestroy(): void { this.ui.destroy(); }
 }
 ```
 
-Az `OdontogramUiService` ugyanazt a konfigurációs alakot várja, mint az `OdontogramShellComponent` inputjai. Jelenlegi megkötés: oldalanként egy `OdontogramUiService`-példány (a motor modul-szintű singleton). A felületek igény szerint mountolhatók és unmountolhatók. Maga az `OdontogramShellComponent` változatlan — pontosan ez az összeállítás az alapértelmezett elrendezésben.
+Az `OdontogramUiService` ugyanazt a konfigurációs alakot várja, mint az `OdontogramShellComponent` inputjai, minden mező opcionális, ugyanazzal az eredeti (upstream) alapértelmezéssel. Jelenlegi megkötés: oldalanként egy `OdontogramUiService`-példány (a motor modul-szintű singleton). A felületek igény szerint mountolhatók és unmountolhatók. Maga az `OdontogramShellComponent` változatlan — pontosan ez az összeállítás az alapértelmezett elrendezésben, továbbra is minden mezőt kifejezetten a saját inputjaiból huzalozva.
 
 A még finomabb összeállításhoz az egyes vezérlőkártyák is exportálva vannak — `StatusesCardComponent`, `ToothDetailsCardComponent`, `CariesCardComponent`, `FillingsCardComponent`, `RootPeriodontiumCardComponent` és `OrthodonticsCardComponent` (plusz a caries- és fillings-kártyák által belsőleg használt, megosztott `SurfaceCrossComponent`) — mindegyik önálló, deklaratív komponens, amely az `inject(OdontogramUiService)` és az exportált `engineState()` segédfüggvény (egy tetszőleges motor-getter signalt visszaadó, a mag saját változás-értesítésein friss állapotban tartott olvasása) révén olvassa és írja a közös munkamenetet. Csak azokat a kártyákat mountold, amelyekre egy adott elrendezésnek szüksége van, tetszőleges elrendezésben, egyetlen `OdontogramUiService` alatt. A `CreditsModalComponent` (a topbar "Névjegy és köszönet" felugró ablaka) is exportálva van azoknak a hosteknak, akik a saját nyitás/zárás állapotukból szeretnék vezérelni.
 

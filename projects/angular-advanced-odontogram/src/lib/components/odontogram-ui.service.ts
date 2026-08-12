@@ -138,43 +138,53 @@ const RTL_LANGUAGES: ReadonlySet<Language> = new Set(["ar"]);
  * `Signal` is read reactively inside this service's own `effect()`s; every
  * `on*Change` callback is what the shell's own `output()` emitters call
  * into (see `OdontogramShellComponent`).
+ *
+ * Every field is OPTIONAL — mirrors `OdontogramProviderProps` in the pin
+ * (OdontogramContext.tsx 115-266), where every prop is optional with a
+ * default (`Omit<OdontogramProviderProps, "children">`, App.tsx 220-233).
+ * `OdontogramShellComponent` still passes every field explicitly (its own
+ * `input()`/`output()` bundle, unchanged — see its constructor); a
+ * host composing `OdontogramUiService` directly (T6b, T6 review finding) can
+ * call `configure()` with `{}`, a partial object, or omit the call's
+ * argument entirely and get the exact upstream default for every field —
+ * see `configure()` below for each field's fallback expression.
  */
 export interface OdontogramUiConfig {
-  language: Signal<Language | undefined>;
-  onLanguageChange: (lang: Language) => void;
-  numberingSystem: Signal<NumberingSystem | undefined>;
-  onNumberingChange: (system: NumberingSystem) => void;
-  darkMode: Signal<boolean | undefined>;
-  onDarkModeChange: (dark: boolean) => void;
-  themeConfig: Signal<OdontogramThemeConfig | undefined>;
-  themeRoot: Signal<HTMLElement | null>;
-  plugins: Signal<OdontogramPlugin[] | undefined>;
-  readOnly: Signal<boolean | undefined>;
-  enableNotes: Signal<boolean | undefined>;
-  enableIcdas: Signal<boolean | undefined>;
-  pulpDetailLevel: Signal<PulpDetailLevel | undefined>;
-  secondaryCariesMode: Signal<SecondaryCariesMode | undefined>;
-  rootCariesMode: Signal<RootCariesMode | undefined>;
-  radiographicDepthMode: Signal<RadiographicDepthMode | undefined>;
-  cariesDepthEnabled: Signal<boolean | undefined>;
-  wearDetailLevel: Signal<ToothDetailLevel | undefined>;
-  discolorationDetailLevel: Signal<ToothDetailLevel | undefined>;
-  surfaceNotation: Signal<SurfaceNotation | undefined>;
-  showStatusCard: Signal<boolean | undefined>;
-  showOrthoCard: Signal<boolean | undefined>;
+  language?: Signal<Language | undefined>;
+  onLanguageChange?: (lang: Language) => void;
+  numberingSystem?: Signal<NumberingSystem | undefined>;
+  onNumberingChange?: (system: NumberingSystem) => void;
+  darkMode?: Signal<boolean | undefined>;
+  onDarkModeChange?: (dark: boolean) => void;
+  themeConfig?: Signal<OdontogramThemeConfig | undefined>;
+  themeRoot?: Signal<HTMLElement | null>;
+  plugins?: Signal<OdontogramPlugin[] | undefined>;
+  readOnly?: Signal<boolean | undefined>;
+  enableNotes?: Signal<boolean | undefined>;
+  enableIcdas?: Signal<boolean | undefined>;
+  pulpDetailLevel?: Signal<PulpDetailLevel | undefined>;
+  secondaryCariesMode?: Signal<SecondaryCariesMode | undefined>;
+  rootCariesMode?: Signal<RootCariesMode | undefined>;
+  radiographicDepthMode?: Signal<RadiographicDepthMode | undefined>;
+  cariesDepthEnabled?: Signal<boolean | undefined>;
+  wearDetailLevel?: Signal<ToothDetailLevel | undefined>;
+  discolorationDetailLevel?: Signal<ToothDetailLevel | undefined>;
+  surfaceNotation?: Signal<SurfaceNotation | undefined>;
+  showStatusCard?: Signal<boolean | undefined>;
+  showOrthoCard?: Signal<boolean | undefined>;
   // v2.4.0/1.2.0 resync — fillings controlled props (OdontogramContext.tsx
   // 366-373/568-604): DEFINED-GATED sync (an omitted prop never writes the
   // engine — the fillings flags genuinely live in module state, see each
   // effect below) and NOT fired for prop-driven restores (only the
   // Settings-modal handlers in `settingsState` call the `on*Change` callbacks).
-  fillingComplexity: Signal<FillingComplexity | undefined>;
-  onFillingComplexityChange: (value: FillingComplexity) => void;
-  fillingDefectEnabled: Signal<boolean | undefined>;
-  onFillingDefectEnabledChange: (enabled: boolean) => void;
-  fillingMaterialAvailability: Signal<Record<string, boolean> | undefined>;
-  onFillingMaterialAvailabilityChange: (material: string, enabled: boolean) => void;
-  fissureSealingEnabled: Signal<boolean | undefined>;
-  onFissureSealingEnabledChange: (enabled: boolean) => void;
+  fillingComplexity?: Signal<FillingComplexity | undefined>;
+  onFillingComplexityChange?: (value: FillingComplexity) => void;
+  fillingDefectEnabled?: Signal<boolean | undefined>;
+  onFillingDefectEnabledChange?: (enabled: boolean) => void;
+  fillingMaterialAvailability?: Signal<Record<string, boolean> | undefined>;
+  onFillingMaterialAvailabilityChange?: (material: string, enabled: boolean) => void;
+  fissureSealingEnabled?: Signal<boolean | undefined>;
+  onFissureSealingEnabledChange?: (enabled: boolean) => void;
 }
 
 @Injectable()
@@ -189,18 +199,18 @@ export class OdontogramUiService {
   // for React's `internalLang` state the way it already did in the
   // pre-resync shell.
   // ---------------------------------------------------------------------
-  readonly lang = computed<Language>(() => this.cfg!.language() ?? this.i18n.lang());
+  readonly lang = computed<Language>(() => this.cfg!.language?.() ?? this.i18n.lang());
   readonly isRtl = computed(() => RTL_LANGUAGES.has(this.lang()));
 
   private readonly internalNumbering = signal<NumberingSystem>("FDI");
   readonly currentNumbering = computed(
-    () => this.cfg!.numberingSystem() ?? this.internalNumbering(),
+    () => this.cfg!.numberingSystem?.() ?? this.internalNumbering(),
   );
 
   private readonly internalDark = signal<boolean>(
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false,
   );
-  readonly isDark = computed(() => this.cfg!.darkMode() ?? this.internalDark());
+  readonly isDark = computed(() => this.cfg!.darkMode?.() ?? this.internalDark());
 
   // ---------------------------------------------------------------------
   // Settings-tab mirrors (OdontogramContext.tsx 380-420) — local state kept
@@ -298,8 +308,8 @@ export class OdontogramUiService {
    *  only pushes into the core i18n bus when uncontrolled (no `language`
    *  config value bound). */
   setLang(next: Language): void {
-    this.cfg!.onLanguageChange(next);
-    if (this.cfg!.language() === undefined) {
+    this.cfg!.onLanguageChange?.(next);
+    if (this.cfg!.language?.() === undefined) {
       this.i18n.setLanguage(next);
     }
   }
@@ -308,12 +318,12 @@ export class OdontogramUiService {
    *  numbering — always emits `onNumberingChange`; only writes
    *  `internalNumbering` when uncontrolled. */
   setNumbering(next: NumberingSystem): void {
-    if (this.cfg!.numberingSystem() !== undefined) {
-      this.cfg!.onNumberingChange(next);
+    if (this.cfg!.numberingSystem?.() !== undefined) {
+      this.cfg!.onNumberingChange?.(next);
       return;
     }
     this.internalNumbering.set(next);
-    this.cfg!.onNumberingChange(next);
+    this.cfg!.onNumberingChange?.(next);
   }
 
   /** OdontogramContext.tsx 476-484, verbatim: standalone flips
@@ -321,11 +331,11 @@ export class OdontogramUiService {
    *  `onDarkModeChange` always fires. */
   toggleDark(): void {
     const next = !this.isDark();
-    if (this.cfg!.darkMode() !== undefined) {
-      this.cfg!.onDarkModeChange(next);
+    if (this.cfg!.darkMode?.() !== undefined) {
+      this.cfg!.onDarkModeChange?.(next);
     } else {
       this.internalDark.set(next);
-      this.cfg!.onDarkModeChange(next);
+      this.cfg!.onDarkModeChange?.(next);
     }
   }
 
@@ -425,22 +435,22 @@ export class OdontogramUiService {
   private readonly onFillingDefectEnabled = (v: boolean): void => {
     this.fillingDefectOn.set(v);
     setFillingDefectEnabled(v);
-    this.cfg!.onFillingDefectEnabledChange(v);
+    this.cfg!.onFillingDefectEnabledChange?.(v);
   };
   private readonly onFillingComplexity = (v: FillingComplexity): void => {
     this.fillingComplexityState.set(v);
     setFillingComplexity(v);
-    this.cfg!.onFillingComplexityChange(v);
+    this.cfg!.onFillingComplexityChange?.(v);
   };
   private readonly onFillingMaterial = (material: string, v: boolean): void => {
     this.fillingMaterialsState.update((prev) => ({ ...prev, [material]: v }));
     setFillingMaterialAvailability(material, v);
-    this.cfg!.onFillingMaterialAvailabilityChange(material, v);
+    this.cfg!.onFillingMaterialAvailabilityChange?.(material, v);
   };
   private readonly onFissureSealingEnabled = (v: boolean): void => {
     this.fissureSealingOn.set(v);
     setFissureSealingEnabled(v);
-    this.cfg!.onFissureSealingEnabledChange(v);
+    this.cfg!.onFissureSealingEnabledChange?.(v);
   };
   private readonly onPdfSettings = (patch: Partial<PdfSettings>): void => {
     setPdfSettings(patch);
@@ -539,16 +549,17 @@ export class OdontogramUiService {
    * and this file's header comment for why that has to wait for
    * `ngAfterViewInit()`.
    */
-  configure(cfg: OdontogramUiConfig): void {
+  configure(cfg: OdontogramUiConfig = {}): void {
     this.cfg = cfg;
-    this.internalNumbering.set(cfg.numberingSystem() ?? "FDI");
-    if (cfg.darkMode() !== undefined) this.internalDark.set(cfg.darkMode()!);
-    this.fillingDefectOn.set(cfg.fillingDefectEnabled() ?? getFillingDefectEnabled());
-    this.fillingComplexityState.set(cfg.fillingComplexity() ?? getFillingComplexity());
-    this.fissureSealingOn.set(cfg.fissureSealingEnabled() ?? getFissureSealingEnabled());
-    this.fillingMaterialsState.set(cfg.fillingMaterialAvailability() ?? getFillingMaterialAvailability());
-    this.showStatusCard.set(cfg.showStatusCard() ?? true);
-    this.showOrthoCard.set(cfg.showOrthoCard() ?? true);
+    this.internalNumbering.set(cfg.numberingSystem?.() ?? "FDI");
+    const initialDark = cfg.darkMode?.();
+    if (initialDark !== undefined) this.internalDark.set(initialDark);
+    this.fillingDefectOn.set(cfg.fillingDefectEnabled?.() ?? getFillingDefectEnabled());
+    this.fillingComplexityState.set(cfg.fillingComplexity?.() ?? getFillingComplexity());
+    this.fissureSealingOn.set(cfg.fissureSealingEnabled?.() ?? getFissureSealingEnabled());
+    this.fillingMaterialsState.set(cfg.fillingMaterialAvailability?.() ?? getFillingMaterialAvailability());
+    this.showStatusCard.set(cfg.showStatusCard?.() ?? true);
+    this.showOrthoCard.set(cfg.showOrthoCard?.() ?? true);
 
     // Language: push the effective language into the core i18n bus whenever
     // it changes (useI18n.ts-era 73-75). A same-value guard makes this
@@ -561,65 +572,65 @@ export class OdontogramUiService {
     });
 
     effect(() => setNumberingSystem(this.currentNumbering()));
-    effect(() => applyThemeConfig(cfg.themeRoot(), cfg.themeConfig()));
-    effect(() => registerPlugins(cfg.plugins() ?? []));
-    effect(() => setReadOnly(cfg.readOnly() ?? false));
+    effect(() => applyThemeConfig(cfg.themeRoot?.() ?? null, cfg.themeConfig?.()));
+    effect(() => registerPlugins(cfg.plugins?.() ?? []));
+    effect(() => setReadOnly(cfg.readOnly?.() ?? false));
     effect(() => {
-      const v = cfg.enableNotes() ?? false;
+      const v = cfg.enableNotes?.() ?? false;
       setNotesEnabled(v);
       this.notesOn.set(v);
     });
     effect(() => {
-      const v = cfg.enableIcdas() ?? false;
+      const v = cfg.enableIcdas?.() ?? false;
       setIcdasEnabled(v);
       this.icdasOn.set(v);
     });
     effect(() => {
-      const v = cfg.pulpDetailLevel() ?? "aae";
+      const v = cfg.pulpDetailLevel?.() ?? "aae";
       setPulpDetailLevel(v);
       this.pulpLevel.set(v);
     });
     effect(() => {
-      const v = cfg.secondaryCariesMode() ?? "standard";
+      const v = cfg.secondaryCariesMode?.() ?? "standard";
       setSecondaryCariesMode(v);
       this.secondaryMode.set(v);
     });
     effect(() => {
-      const v = cfg.rootCariesMode() ?? "simple";
+      const v = cfg.rootCariesMode?.() ?? "simple";
       setRootCariesMode(v);
       this.rootMode.set(v);
     });
     effect(() => {
-      const v = cfg.radiographicDepthMode() ?? "off";
+      const v = cfg.radiographicDepthMode?.() ?? "off";
       setRadiographicDepthMode(v);
       this.radiographicMode.set(v);
     });
     effect(() => {
-      const v = cfg.cariesDepthEnabled() ?? true;
+      const v = cfg.cariesDepthEnabled?.() ?? true;
       setCariesDepthEnabled(v);
       this.cariesDepthOn.set(v);
     });
     effect(() => {
-      const v = cfg.wearDetailLevel() ?? "complex";
+      const v = cfg.wearDetailLevel?.() ?? "complex";
       setWearDetailLevel(v);
       this.wearLevel.set(v);
     });
     effect(() => {
-      const v = cfg.discolorationDetailLevel() ?? "complex";
+      const v = cfg.discolorationDetailLevel?.() ?? "complex";
       setDiscolorationDetailLevel(v);
       this.discoLevel.set(v);
     });
     effect(() => {
-      const v = cfg.surfaceNotation() ?? "full";
+      const v = cfg.surfaceNotation?.() ?? "full";
       setSurfaceNotation(v);
       this.notation.set(v);
     });
-    effect(() => this.showStatusCard.set(cfg.showStatusCard() ?? true));
-    effect(() => this.showOrthoCard.set(cfg.showOrthoCard() ?? true));
+    effect(() => this.showStatusCard.set(cfg.showStatusCard?.() ?? true));
+    effect(() => this.showOrthoCard.set(cfg.showOrthoCard?.() ?? true));
 
     // Dark mode: only manage the `.dark` class when standalone.
     effect(() => {
-      if (cfg.darkMode() === undefined) {
+      if (cfg.darkMode?.() === undefined) {
         document.documentElement.classList.toggle("dark", this.internalDark());
       }
     });
@@ -630,21 +641,21 @@ export class OdontogramUiService {
     // before mounting, and `configure()`'s seeding above already read that
     // value). NOT fired for prop-driven restores — no `on*Change` call here.
     effect(() => {
-      const v = cfg.fillingComplexity();
+      const v = cfg.fillingComplexity?.();
       if (v !== undefined) {
         setFillingComplexity(v);
         this.fillingComplexityState.set(v);
       }
     });
     effect(() => {
-      const v = cfg.fillingDefectEnabled();
+      const v = cfg.fillingDefectEnabled?.();
       if (v !== undefined) {
         setFillingDefectEnabled(v);
         this.fillingDefectOn.set(v);
       }
     });
     effect(() => {
-      const v = cfg.fissureSealingEnabled();
+      const v = cfg.fissureSealingEnabled?.();
       if (v !== undefined) {
         setFissureSealingEnabled(v);
         this.fissureSealingOn.set(v);
@@ -655,7 +666,7 @@ export class OdontogramUiService {
     // CONTENT changes (sorted keys, so key order never matters). `null` =
     // prop absent.
     const fillingMaterialsKey = computed(() => {
-      const rec = cfg.fillingMaterialAvailability();
+      const rec = cfg.fillingMaterialAvailability?.();
       if (rec === undefined) return null;
       const entries = Object.keys(rec).sort().map((m) => [m, !!rec[m]] as const);
       return JSON.stringify(entries);

@@ -87,7 +87,7 @@ import {
 `OdontogramShellComponent` is the supported all-in-one component and needs no extra setup. If you need to place the odontogram's regions in different areas of your own layout, the shell's four UI surfaces are also exported and can be composed under one `OdontogramUiService`, all sharing one instance-owned session:
 
 ```ts
-import { Component, inject } from "@angular/core";
+import { AfterViewInit, Component, OnDestroy, inject } from "@angular/core";
 import {
   OdontogramUiService,
   OdontogramTopbarComponent,
@@ -114,18 +114,24 @@ import {
     <my-side-panel><aao-tooth-controls-surface /></my-side-panel>
   `,
 })
-export class WorkspaceComponent {
+export class WorkspaceComponent implements AfterViewInit, OnDestroy {
   protected readonly ui = inject(OdontogramUiService);
-  // Call `ui.configure({ ...OdontogramUiConfig })` here (constructor or a field
-  // initializer), then `ui.init()` from `ngAfterViewInit()` and `ui.destroy()`
-  // from `ngOnDestroy()` — the exact sequence `OdontogramShellComponent`'s own
-  // source uses; see it there for the full, working reference (every
-  // `OdontogramUiConfig` field is a required `Signal`, so a real host supplies
-  // all of them, typically the component's own `input()`s).
+
+  constructor() {
+    // Every `OdontogramUiConfig` field is optional — `configure()` with no
+    // arguments gives a standalone session with the same defaults
+    // `OdontogramShellComponent` itself falls back to (language "en", "FDI"
+    // numbering, light mode, ...). Pass only the Signals/callbacks you want
+    // to override, e.g. `{ darkMode: this.darkMode, onDarkModeChange: ... }`.
+    this.ui.configure();
+  }
+
+  ngAfterViewInit(): void { this.ui.init(); }
+  ngOnDestroy(): void { this.ui.destroy(); }
 }
 ```
 
-`OdontogramUiService` takes the same configuration shape as `OdontogramShellComponent`'s inputs. Current constraint: one `OdontogramUiService` instance per page (the engine is a module-level singleton). Surfaces can be mounted and unmounted on demand. `OdontogramShellComponent` itself is unchanged — it is exactly this composition in the default arrangement.
+`OdontogramUiService` takes the same configuration shape as `OdontogramShellComponent`'s inputs, every field optional with the same upstream default. Current constraint: one `OdontogramUiService` instance per page (the engine is a module-level singleton). Surfaces can be mounted and unmounted on demand. `OdontogramShellComponent` itself is unchanged — it is exactly this composition in the default arrangement, still wiring every field explicitly from its own inputs.
 
 For even finer composition, the individual control cards are exported as well — `StatusesCardComponent`, `ToothDetailsCardComponent`, `CariesCardComponent`, `FillingsCardComponent`, `RootPeriodontiumCardComponent`, and `OrthodonticsCardComponent` (plus the shared `SurfaceCrossComponent` the caries/fillings cards use internally) — each a self-contained declarative component that reads and writes the shared session through `inject(OdontogramUiService)` and the exported `engineState()` helper (a signal-returning read of any engine getter, kept fresh via the core's own change notifications). Mount only the cards a given layout needs, in any arrangement, under one `OdontogramUiService`. `CreditsModalComponent` (the topbar's "About and credits" popup) is exported too, for hosts that want to drive it from their own open/close state.
 
