@@ -705,12 +705,16 @@ describe("OdontogramShellComponent Task 2: v2.4.0 App shell deltas", () => {
     setNotesEnabled(false);
   });
 
-  // `settingsState` is `protected` (same seam `SettingsModalComponent`'s
-  // `[settings]` input reads) — cast to reach it directly from the spec,
-  // matching this file's existing `(x as any)` precedent for internal-only
-  // test seams (see ported/ds1-confirm.spec.ts).
+  // `settingsState` moved onto `OdontogramUiService` (Task 2 composable-UI
+  // resync) — the shell only exposes it indirectly via its own `protected
+  // readonly ui` field (same seam `SettingsModalComponent`'s `[settings]`
+  // input reads). Cast to reach it directly from the spec, matching this
+  // file's existing `(x as any)` precedent for internal-only test seams
+  // (see ported/ds1-confirm.spec.ts).
   function settings(f: ReturnType<typeof TestBed.createComponent>): SettingsState {
-    return (f.componentInstance as unknown as { settingsState: () => SettingsState }).settingsState();
+    return (
+      f.componentInstance as unknown as { ui: { settingsState: () => SettingsState } }
+    ).ui.settingsState();
   }
 
   it('brand logo renders as an <img class="brand-logo"> (App.tsx 40-43/519)', async () => {
