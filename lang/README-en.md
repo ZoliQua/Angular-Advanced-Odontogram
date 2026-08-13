@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-1.2.1-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 This project is an interactive, browser-based odontogram editor for **Angular + TypeScript** that supports fast dental charting with a clean UI. It renders layered SVG tooth templates to represent restorations, caries, endodontic status, mobility, and other clinical details, while providing multi-select, selection filters, and predefined status presets.
 
-**This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Feature parity with react-advanced-odontogram main @ commit `934a911` (post-v2.4.0; payload version unchanged at 2.20) — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine (`projects/angular-advanced-odontogram/src/lib/core/`) is shared, verbatim — dental status logic, periodontal charting, FHIR export/import, i18n strings, the guided tour and the SVG templates are byte-identical to the React original, re-copied from a pinned upstream commit on every resync; only the component shell (`projects/angular-advanced-odontogram/src/lib/components/`) is Angular-native. A small, explicitly documented set of deviations exists (branding/identity strings only — see the port design spec in this repository).
+**This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Feature parity with react-advanced-odontogram main @ commit `934a911` (post-v2.4.0; payload version unchanged at 2.20) — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine (`projects/angular-advanced-odontogram/src/lib/core/`) is shared, verbatim — dental status logic, periodontal charting, FHIR export/import, i18n strings, the guided tour and the SVG templates are byte-identical to the React original, re-copied from a pinned upstream commit on every resync; only the component shell (`projects/angular-advanced-odontogram/src/lib/components/`) is Angular-native. A small, explicitly documented set of deviations exists (branding/identity strings only — see the port design spec in this repository). Versioned in lockstep with the React module.
 
 ---
 ![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_odontogram.png)

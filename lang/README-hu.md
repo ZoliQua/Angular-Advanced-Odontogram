@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-1.2.1-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 Ez a projekt egy interaktív, böngészőben futó odontogram szerkesztő **Angular + TypeScript** alapon, amely a fogazati státuszrögzítést áttekinthető kezelőfelülettel támogatja. A rendszer rétegzett SVG fogsablonok segítségével jeleníti meg a pótlásokat, szuvasodásokat, endodonciai állapotokat, mobilitást és egyéb klinikai jellemzőket, miközben többfogos kiválasztást, kiválasztási szűrőket és előre definiált státusz mintákat is biztosít.
 
-**Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) hivatalos Angular portja** (npm: `react-advanced-odontogram`). Funkcionális paritás a react-advanced-odontogram main ágának `934a911` commitjával (a v2.4.0 utáni állapot; a payload verziója változatlanul 2.20) — a JSON és FHIR R4 exportok a két könyvtár között oda-vissza kompatibilisek. A klinikai motor (`projects/angular-advanced-odontogram/src/lib/core/`) szó szerint megosztott — a fogazati státusz logika, a parodontális rögzítés, a FHIR export/import, az i18n szövegek, az irányított bemutató túra és az SVG sablonok byte-azonosak a React eredetivel, és minden egyes resync alkalmával egy rögzített upstream commitból kerülnek újramásolásra; kizárólag a komponens váz (`projects/angular-advanced-odontogram/src/lib/components/`) natív Angular. Egy kis, explicit módon dokumentált eltérés-halmaz létezik (kizárólag márka-/identitás-szövegek — lásd a port tervezési specifikációját ebben a repóban).
+**Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) hivatalos Angular portja** (npm: `react-advanced-odontogram`). Funkcionális paritás a react-advanced-odontogram main ágának `934a911` commitjával (a v2.4.0 utáni állapot; a payload verziója változatlanul 2.20) — a JSON és FHIR R4 exportok a két könyvtár között oda-vissza kompatibilisek. A klinikai motor (`projects/angular-advanced-odontogram/src/lib/core/`) szó szerint megosztott — a fogazati státusz logika, a parodontális rögzítés, a FHIR export/import, az i18n szövegek, az irányított bemutató túra és az SVG sablonok byte-azonosak a React eredetivel, és minden egyes resync alkalmával egy rögzített upstream commitból kerülnek újramásolásra; kizárólag a komponens váz (`projects/angular-advanced-odontogram/src/lib/components/`) natív Angular. Egy kis, explicit módon dokumentált eltérés-halmaz létezik (kizárólag márka-/identitás-szövegek — lásd a port tervezési specifikációját ebben a repóban). A verziószámozás lépést tart a React modul verziószámozásával.
 
 ---
 ![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_hu_odontogram.png)

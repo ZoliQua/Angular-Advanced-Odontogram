@@ -19,7 +19,7 @@
 // JSON from outside that root is unsupported by the library build. Bump this
 // string alongside projects/angular-advanced-odontogram/package.json's
 // "version" field.
-const LIB_VERSION = "1.2.1";
+const LIB_VERSION = "2.4.0";
 
 declare global {
   // eslint-disable-next-line no-var

@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-1.2.1-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 Tento projekt je interaktívny editor odontogramu v prehliadači pre **Angular + TypeScript**, ktorý umožňuje rýchle zaznamenávanie zubného statusu s prehľadným rozhraním. Vykresľuje vrstvené SVG šablóny zubov na reprezentáciu náhrad, kazu, endodontického stavu, mobility a ďalších klinických detailov, pričom poskytuje viacnásobný výber, filtre výberu a preddefinované stavové predvoľby.
 
-**Toto je oficiálny Angular port projektu [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Funkčná parita s `react-advanced-odontogram` main @ commit `934a911` (po v2.4.0; verzia payloadu nezmenená na 2.20) — exporty JSON a FHIR R4 sú medzi oboma knižnicami obojsmerne kompatibilné (round-trip). Klinický engine (`projects/angular-advanced-odontogram/src/lib/core/`) je zdieľaný doslovne — logika zubného statusu, parodontálne zaznamenávanie, export/import FHIR, i18n reťazce, sprievodná prehliadka a SVG šablóny sú bajtovo identické s pôvodným React projektom, pri každej synchronizácii znovu skopírované z pripnutého upstream commitu; iba shell komponentov (`projects/angular-advanced-odontogram/src/lib/components/`) je natívne Angular riešenie. Existuje malá, explicitne zdokumentovaná sada odchýlok (iba reťazce brandingu/identity — pozri špecifikáciu návrhu portu v tomto repozitári).
+**Toto je oficiálny Angular port projektu [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Funkčná parita s `react-advanced-odontogram` main @ commit `934a911` (po v2.4.0; verzia payloadu nezmenená na 2.20) — exporty JSON a FHIR R4 sú medzi oboma knižnicami obojsmerne kompatibilné (round-trip). Klinický engine (`projects/angular-advanced-odontogram/src/lib/core/`) je zdieľaný doslovne — logika zubného statusu, parodontálne zaznamenávanie, export/import FHIR, i18n reťazce, sprievodná prehliadka a SVG šablóny sú bajtovo identické s pôvodným React projektom, pri každej synchronizácii znovu skopírované z pripnutého upstream commitu; iba shell komponentov (`projects/angular-advanced-odontogram/src/lib/components/`) je natívne Angular riešenie. Existuje malá, explicitne zdokumentovaná sada odchýlok (iba reťazce brandingu/identity — pozri špecifikáciu návrhu portu v tomto repozitári). Verzovanie prebieha v lockstepe s React modulom.
 
 ---
 ![Náhľad editora odontogramu](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_odontogram.png)

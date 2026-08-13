@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-1.2.1-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 هذا المشروع محرر تخطيط أسنان (أودونتوغرام) تفاعلي يعمل داخل المتصفح لإطار **Angular + TypeScript**، ويدعم تسجيل حالة الأسنان بسرعة من خلال واجهة مستخدم نظيفة وواضحة. يعرض المشروع قوالب أسنان بصيغة SVG متعددة الطبقات لتمثيل الترميمات، والنخر، وحالة العلاج اللبي، ودرجة حركة السن، وتفاصيل سريرية أخرى، مع توفير إمكانية التحديد المتعدد، ومرشحات التحديد، وأنماط حالة جاهزة مسبقًا.
 
-**هذا هو المنفذ الرسمي بلغة Angular لمشروع [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (حزمة npm: `react-advanced-odontogram`). يحقق المشروع تكافؤًا وظيفيًا مع الفرع الرئيسي لمشروع react-advanced-odontogram عند المُراجعة (commit) `934a911` (بعد الإصدار v2.4.0؛ يبقى إصدار الحمولة عند 2.20 دون تغيير) — ويتبادل تصديرا JSON وFHIR R4 المسار (round-trip) بين المكتبتين. المحرك السريري (`projects/angular-advanced-odontogram/src/lib/core/`) مشترك، وحرفي (verbatim) — منطق حالة الأسنان، ومخطط دواعم السن، وتصدير/استيراد FHIR، ونصوص الترجمة (i18n)، والجولة التعريفية الموجَّهة، وقوالب SVG جميعها مطابقة بايتًا بايت للمشروع الأصلي بلغة React، وتُنسخ مجددًا من مُراجعة (commit) مرجعية ثابتة في المنبع (upstream) عند كل إعادة مزامنة؛ ويقتصر الجزء الخاص بـAngular (`projects/angular-advanced-odontogram/src/lib/components/`) على غلاف المكوّنات فقط. توجد مجموعة صغيرة وموثَّقة صراحةً من الاختلافات (نصوص العلامة التجارية/الهوية فقط — انظر مواصفات تصميم المنفذ في هذا المستودع).
+**هذا هو المنفذ الرسمي بلغة Angular لمشروع [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (حزمة npm: `react-advanced-odontogram`). يحقق المشروع تكافؤًا وظيفيًا مع الفرع الرئيسي لمشروع react-advanced-odontogram عند المُراجعة (commit) `934a911` (بعد الإصدار v2.4.0؛ يبقى إصدار الحمولة عند 2.20 دون تغيير) — ويتبادل تصديرا JSON وFHIR R4 المسار (round-trip) بين المكتبتين. المحرك السريري (`projects/angular-advanced-odontogram/src/lib/core/`) مشترك، وحرفي (verbatim) — منطق حالة الأسنان، ومخطط دواعم السن، وتصدير/استيراد FHIR، ونصوص الترجمة (i18n)، والجولة التعريفية الموجَّهة، وقوالب SVG جميعها مطابقة بايتًا بايت للمشروع الأصلي بلغة React، وتُنسخ مجددًا من مُراجعة (commit) مرجعية ثابتة في المنبع (upstream) عند كل إعادة مزامنة؛ ويقتصر الجزء الخاص بـAngular (`projects/angular-advanced-odontogram/src/lib/components/`) على غلاف المكوّنات فقط. توجد مجموعة صغيرة وموثَّقة صراحةً من الاختلافات (نصوص العلامة التجارية/الهوية فقط — انظر مواصفات تصميم المنفذ في هذا المستودع). يتزامن ترقيم الإصدارات (lockstep) مع وحدة React.
 
 ---
 ![معاينة محرر الأودونتوغرام](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_odontogram.png)

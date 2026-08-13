@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-1.2.1-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 本项目是一款面向 **Angular + TypeScript** 的交互式、基于浏览器的牙位图（口腔检查图）编辑器，界面简洁，支持快速的牙科病历记录。它通过分层渲染 SVG 牙齿模板来表现修复体、龋齿、牙髓治疗状态、松动度及其他临床细节，同时提供多选、选择过滤器和预设状态模板。
 
-**这是 [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)（npm 包名：`react-advanced-odontogram`）的官方 Angular 移植版本。** 与 react-advanced-odontogram 主分支提交 `934a911`（v2.4.0 之后；数据版本仍为 2.20）保持功能对等——JSON 与 FHIR R4 导出可在两个库之间无损互通。临床引擎（`projects/angular-advanced-odontogram/src/lib/core/`）为逐字节共享——牙位状态逻辑、牙周记录、FHIR 导出/导入、i18n 文本、引导式导览以及 SVG 模板均与 React 原版逐字节一致，并在每次同步时从锁定的上游提交重新复制；只有组件外壳（`projects/angular-advanced-odontogram/src/lib/components/`）是 Angular 原生实现。存在一小部分明确记录在案的差异（仅限品牌/标识文本——详见本仓库中的移植设计说明文档）。
+**这是 [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)（npm 包名：`react-advanced-odontogram`）的官方 Angular 移植版本。** 与 react-advanced-odontogram 主分支提交 `934a911`（v2.4.0 之后；数据版本仍为 2.20）保持功能对等——JSON 与 FHIR R4 导出可在两个库之间无损互通。临床引擎（`projects/angular-advanced-odontogram/src/lib/core/`）为逐字节共享——牙位状态逻辑、牙周记录、FHIR 导出/导入、i18n 文本、引导式导览以及 SVG 模板均与 React 原版逐字节一致，并在每次同步时从锁定的上游提交重新复制；只有组件外壳（`projects/angular-advanced-odontogram/src/lib/components/`）是 Angular 原生实现。存在一小部分明确记录在案的差异（仅限品牌/标识文本——详见本仓库中的移植设计说明文档）。版本号与 React 模块保持同步（lockstep）。
 
 ---
 ![牙位图编辑器预览](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_odontogram.png)

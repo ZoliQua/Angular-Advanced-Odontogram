@@ -6,6 +6,29 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-08-13
+
+**Versioning:** starting with this release, the package version tracks
+[react-advanced-odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)'s
+own semver instead of incrementing independently — 2.4.0 matches the
+upstream engine's release line (this port's core is pinned to upstream
+commit `934a911`, post-2.4.0 `main`, payload version 2.20). This is a
+deliberate, one-time jump from `1.2.1`: versions `1.3.x` through `2.3.x`
+will never exist for this package. See the 13 README files' parity
+sentences for the "Versioned in lockstep with the React module" note (its
+native equivalent per language), and
+`docs/superpowers/specs/2.4.0-acceptance.md` for the acceptance evidence.
+
+### Changed
+- **`credits.welcome` reworded, ×12 languages** (`core/i18n/translations.ts`):
+  the closing sentence of the credits modal no longer promises "...and you
+  will be credited here" — the modal has carried no Contributors listing
+  since 1.2.1 (see that release's Changed entry), so the old wording was
+  stale. New EN text: "Contributions are welcome — open a pull request on
+  GitHub."; the other 11 languages carry native, register-matched
+  equivalents. Further extension of deviation #4 (branding/credits),
+  documented in the port design spec §2.
+
 ## [1.2.1] - 2026-08-13
 
 Docs and credits cut, no engine/behavior changes: the credits modal is
@@ -339,7 +362,8 @@ acceptance evidence.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.1...v2.4.0
 [1.2.1]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.0.0...v1.1.0
