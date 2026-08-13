@@ -121,6 +121,17 @@ core `i18n/translations.ts` (core-verbatim discipline — this is a
 component-only rendering change, not a core edit) even though the Angular
 `CreditsModalComponent` no longer references them.
 
+**Deviation (4), extended again (Phase 9 Task 1, 2026-08-19 owner
+directive: credits.welcome reworded ×12 (contributors clause removed)).**
+The `credits.welcome` string in all 12 language tables of
+`i18n/translations.ts` closed with a clause promising the contributor
+("…you will be credited here" / its per-language equivalent) that stopped
+being true once the Contributors section was removed from the modal (see
+the Phase 8 Task 1 note immediately above). Reworded in all 12 languages to
+drop the now-false promise while keeping the "open a pull request on
+GitHub" invitation; EN: "Contributions are welcome — open a pull request on
+GitHub." No other `credits.*` key was touched.
+
 **How the shell and engine couple:** the shell renders a static DOM skeleton
 with fixed ids (`#toothGrid`, `#cariesChecks`, `#modsChecks`,
 `#statusExtraSelect`, `#chartModeToggle`, …); `initOdontogram()` (async) wires

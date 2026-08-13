@@ -964,7 +964,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Francia fordítás és a felmért anatómia jelöltje.",
     "credits.contrib.saegerdirk": "Felmért foganatómia és a foggenerátor, valamint a komponálható felület javaslata.",
     "credits.librariesTitle": "Felhasznált eszközök",
-    "credits.welcome": "A hozzájárulásokat szívesen fogadjuk. Nyiss egy pull requestet a GitHubon, és feltüntetünk itt.",
+    "credits.welcome": "A hozzájárulásokat szívesen fogadjuk — nyiss egy pull requestet a GitHubon.",
     "credits.star": "Csillagozd a GitHubon",
     "credits.github": "Nézd meg a GitHubon",
     "credits.close": "Bezárás"
@@ -1903,7 +1903,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "French translation and the candidate measured anatomy.",
     "credits.contrib.saegerdirk": "Measured tooth anatomy and the tooth generator, and the composable interface proposal.",
     "credits.librariesTitle": "Built with",
-    "credits.welcome": "Contributions are welcome. Open a pull request on GitHub and you will be credited here.",
+    "credits.welcome": "Contributions are welcome — open a pull request on GitHub.",
     "credits.star": "Star on GitHub",
     "credits.github": "View on GitHub",
     "credits.close": "Close"
@@ -2842,7 +2842,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Französische Übersetzung und die vorgeschlagene vermessene Anatomie.",
     "credits.contrib.saegerdirk": "Vermessene Zahnanatomie und der Zahngenerator sowie der Vorschlag für die komponierbare Schnittstelle.",
     "credits.librariesTitle": "Erstellt mit",
-    "credits.welcome": "Beiträge sind willkommen. Öffnen Sie einen pull request auf GitHub und Sie werden hier genannt.",
+    "credits.welcome": "Beiträge sind willkommen — öffnen Sie einen pull request auf GitHub.",
     "credits.star": "Auf GitHub mit einem Stern markieren",
     "credits.github": "Auf GitHub ansehen",
     "credits.close": "Schließen"
@@ -3781,7 +3781,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Traducción al francés y la anatomía medida propuesta.",
     "credits.contrib.saegerdirk": "Anatomía dental medida y el generador de dientes, además de la propuesta de interfaz componible.",
     "credits.librariesTitle": "Creado con",
-    "credits.welcome": "Las contribuciones son bienvenidas. Abra un pull request en GitHub y se le acreditará aquí.",
+    "credits.welcome": "Las contribuciones son bienvenidas — abra un pull request en GitHub.",
     "credits.star": "Marcar con estrella en GitHub",
     "credits.github": "Ver en GitHub",
     "credits.close": "Cerrar"
@@ -4720,7 +4720,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Traduzione in francese e l'anatomia misurata proposta.",
     "credits.contrib.saegerdirk": "Anatomia dentale misurata e il generatore di denti, oltre alla proposta di interfaccia componibile.",
     "credits.librariesTitle": "Realizzato con",
-    "credits.welcome": "I contributi sono benvenuti. Apri una pull request su GitHub e sarai accreditato qui.",
+    "credits.welcome": "I contributi sono benvenuti — apri una pull request su GitHub.",
     "credits.star": "Aggiungi una stella su GitHub",
     "credits.github": "Vedi su GitHub",
     "credits.close": "Chiudi"
@@ -5659,7 +5659,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Francúzsky preklad a navrhovaná meraná anatómia.",
     "credits.contrib.saegerdirk": "Meraná anatómia zubov a generátor zubov, ako aj návrh skladateľného rozhrania.",
     "credits.librariesTitle": "Vytvorené pomocou",
-    "credits.welcome": "Príspevky sú vítané. Otvorte pull request na GitHub a budete tu uvedení.",
+    "credits.welcome": "Príspevky sú vítané — otvorte pull request na GitHub.",
     "credits.star": "Označiť hviezdou na GitHub",
     "credits.github": "Zobraziť na GitHub",
     "credits.close": "Zavrieť"
@@ -6598,7 +6598,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Tłumaczenie na francuski i proponowana zmierzona anatomia.",
     "credits.contrib.saegerdirk": "Zmierzona anatomia zębów i generator zębów, a także propozycja komponowalnego interfejsu.",
     "credits.librariesTitle": "Zbudowano przy użyciu",
-    "credits.welcome": "Wkład jest mile widziany. Otwórz pull request na GitHub, a zostaniesz tu wymieniony.",
+    "credits.welcome": "Wkład jest mile widziany — otwórz pull request na GitHub.",
     "credits.star": "Oznacz gwiazdką na GitHub",
     "credits.github": "Zobacz na GitHub",
     "credits.close": "Zamknij"
@@ -7537,7 +7537,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Перевод на французский и предложенная измеренная анатомия.",
     "credits.contrib.saegerdirk": "Измеренная анатомия зубов и генератор зубов, а также предложение компонуемого интерфейса.",
     "credits.librariesTitle": "Создано с помощью",
-    "credits.welcome": "Мы приветствуем ваш вклад. Откройте pull request на GitHub, и вы будете упомянуты здесь.",
+    "credits.welcome": "Мы приветствуем ваш вклад — откройте pull request на GitHub.",
     "credits.star": "Отметить звездой на GitHub",
     "credits.github": "Посмотреть на GitHub",
     "credits.close": "Закрыть"
@@ -8476,7 +8476,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Tradução para o francês e a anatomia medida proposta.",
     "credits.contrib.saegerdirk": "Anatomia dental medida e o gerador de dentes, além da proposta de interface componível.",
     "credits.librariesTitle": "Feito com",
-    "credits.welcome": "As contribuições são muito bem recebidas. Abra um pull request no GitHub e você será creditado aqui.",
+    "credits.welcome": "As contribuições são muito bem recebidas — abra um pull request no GitHub.",
     "credits.star": "Marcar com estrela no GitHub",
     "credits.github": "Ver no GitHub",
     "credits.close": "Fechar"
@@ -9414,7 +9414,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "法语翻译以及候选的测量解剖结构。",
     "credits.contrib.saegerdirk": "测量的牙齿解剖结构和牙齿生成器，以及可组合接口的提案。",
     "credits.librariesTitle": "使用以下技术构建",
-    "credits.welcome": "欢迎参与贡献。在 GitHub 上提交 pull request，您的名字将会显示在这里。",
+    "credits.welcome": "欢迎参与贡献 — 在 GitHub 上提交 pull request。",
     "credits.star": "在 GitHub 上加星",
     "credits.github": "在 GitHub 上查看",
     "credits.close": "关闭"
@@ -10351,7 +10351,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "الترجمة إلى الفرنسية والتشريح المقاس المقترح.",
     "credits.contrib.saegerdirk": "التشريح المقاس للأسنان ومولد الأسنان، إضافة إلى اقتراح الواجهة القابلة للتركيب.",
     "credits.librariesTitle": "بُني باستخدام",
-    "credits.welcome": "المساهمات مرحب بها. افتح pull request على GitHub وسيُذكر اسمك هنا.",
+    "credits.welcome": "المساهمات مرحب بها — افتح pull request على GitHub.",
     "credits.star": "ضع نجمة على GitHub",
     "credits.github": "اعرض على GitHub",
     "credits.close": "إغلاق"
@@ -11288,7 +11288,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "credits.contrib.yassine": "Traduction en français et l'anatomie mesurée proposée.",
     "credits.contrib.saegerdirk": "Anatomie dentaire mesurée et le générateur de dents, ainsi que la proposition d'interface composable.",
     "credits.librariesTitle": "Conçu avec",
-    "credits.welcome": "Les contributions sont les bienvenues. Ouvrez une pull request sur GitHub et vous serez crédité ici.",
+    "credits.welcome": "Les contributions sont les bienvenues — ouvrez une pull request sur GitHub.",
     "credits.star": "Mettre une étoile sur GitHub",
     "credits.github": "Voir sur GitHub",
     "credits.close": "Fermer"
