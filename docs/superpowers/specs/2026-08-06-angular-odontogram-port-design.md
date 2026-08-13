@@ -111,6 +111,16 @@ linked-entry + description shape), linking
 Creator section. See the Phase 7 Task 4 report §2 for the full adapted-string
 table and rationale.
 
+**Deviation (4), extended again (Phase 8 Task 1, 2026-08-19 owner directive,
+post-1.2.0 test approval).** CreditsModal renders no Contributors section
+(upstream lists the React project's contributors — a heading plus
+per-contributor GitHub-handle links and descriptions); Creator, Original
+Project, Built with (Libraries) and the "Star on GitHub" CTA are unaffected.
+The `credits.contributorsTitle`/`credits.contrib.*` i18n keys are retained in
+core `i18n/translations.ts` (core-verbatim discipline — this is a
+component-only rendering change, not a core edit) even though the Angular
+`CreditsModalComponent` no longer references them.
+
 **How the shell and engine couple:** the shell renders a static DOM skeleton
 with fixed ids (`#toothGrid`, `#cariesChecks`, `#modsChecks`,
 `#statusExtraSelect`, `#chartModeToggle`, …); `initOdontogram()` (async) wires

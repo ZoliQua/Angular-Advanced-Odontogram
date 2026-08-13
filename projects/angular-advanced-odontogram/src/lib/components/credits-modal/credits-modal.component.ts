@@ -27,9 +27,8 @@
 //    Advanced Odontogram" — the same proper-noun substitution already
 //    applied to `app.title` (spec §2 deviation #4), just re-applied to this
 //    second key the pin's own resync didn't touch.
-//  - CREATOR (`@ZoliQua` + `credits.contrib.zoliqua`) and every CONTRIBUTORS
-//    entry are UNCHANGED — the creator/contributor credits stay intact
-//    verbatim, per the brief.
+//  - CREATOR (`@ZoliQua` + `credits.contrib.zoliqua`) is UNCHANGED — the
+//    creator credit stays intact verbatim, per the brief.
 //  - NEW: an "Original Project" section (`ORIGINAL_PROJECT_URL`,
 //    `credits.originalProjectTitle`/`.originalProjectDesc`, translated in all
 //    12 languages) was ADDED, mirroring the Creator section's own
@@ -39,6 +38,16 @@
 //    app-identity touchpoints; they must not (and, with this section, no
 //    longer do) remove the original project's own attribution from the
 //    rendered modal.
+//
+// 2026-08-19 (owner directive, post-1.2.0 test approval): the Contributors
+// section (upstream's project-contributor list — heading, per-contributor
+// GitHub-handle links + descriptions) is REMOVED from this component
+// entirely, along with the component-side `CONTRIBUTORS` data array.
+// Creator, Original Project, Built with (Libraries) and the "Star on GitHub"
+// CTA are unaffected. The `credits.contributorsTitle`/`credits.contrib.*`
+// i18n keys are NOT removed from core `i18n/translations.ts` — they simply
+// go unused by this component now (core-verbatim discipline; see spec §2's
+// deviation-#4 extension note).
 import {
   ChangeDetectionStrategy,
   Component,
@@ -63,18 +72,8 @@ const REPO_URL = "https://github.com/ZoliQua/Angular-Advanced-Odontogram";
  *  own identity; see this file's header comment. */
 const ORIGINAL_PROJECT_URL = "https://github.com/ZoliQua/React-Odontogram-Modul";
 
-/** The creator / lead developer, called out separately from the
- *  contributors (TSX `CREATOR`, unchanged). */
+/** The creator / lead developer (TSX `CREATOR`, unchanged). */
 const CREATOR = { handle: "ZoliQua", descKey: "credits.contrib.zoliqua" } as const;
-
-/** Human contributors and what each one added (TSX `CONTRIBUTORS`,
- *  unchanged — kept as data so a new contributor is a one-line addition). */
-const CONTRIBUTORS: ReadonlyArray<{ handle: string; descKey: string }> = [
-  { handle: "odontodev", descKey: "credits.contrib.odontodev" },
-  { handle: "JulianoBazzi", descKey: "credits.contrib.julianobazzi" },
-  { handle: "yassine-bhn", descKey: "credits.contrib.yassine" },
-  { handle: "saegerdirk-star", descKey: "credits.contrib.saegerdirk" },
-];
 
 /** External projects this package is built with (TSX `LIBRARIES`, names are
  *  proper nouns and NOT translated — adapted to this package's actual
@@ -161,23 +160,6 @@ const LIBRARIES: ReadonlyArray<{ name: string; url: string }> = [
             </section>
 
             <section class="odon-credits-section">
-              <h3 class="odon-credits-heading">{{ i18n.t('credits.contributorsTitle') }}</h3>
-              <ul class="odon-credits-list">
-                @for (c of contributors; track c.handle) {
-                  <li>
-                    <a
-                      class="odon-credits-link"
-                      [href]="'https://github.com/' + c.handle"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >&#64;{{ c.handle }}</a>
-                    <span class="odon-credits-desc">{{ i18n.t(c.descKey) }}</span>
-                  </li>
-                }
-              </ul>
-            </section>
-
-            <section class="odon-credits-section">
               <h3 class="odon-credits-heading">{{ i18n.t('credits.librariesTitle') }}</h3>
               <ul class="odon-credits-libs">
                 @for (l of libraries; track l.name) {
@@ -207,7 +189,6 @@ export class CreditsModalComponent {
   protected readonly i18n = inject(I18nService);
   protected readonly titleId = nextDialogTitleId("creditsTitle");
   protected readonly creator = CREATOR;
-  protected readonly contributors = CONTRIBUTORS;
   protected readonly libraries = LIBRARIES;
   protected readonly repoUrl = REPO_URL;
   protected readonly originalProjectUrl = ORIGINAL_PROJECT_URL;

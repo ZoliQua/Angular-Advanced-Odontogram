@@ -2,7 +2,11 @@
 // (open/close, Escape, backdrop dismiss, focus trap/restore) — same shape as
 // dual-state-confirm.component.spec.ts, plus assertions for this task's
 // adapted strings/links (see credits-modal.component.ts's header comment for
-// the full adaptation rationale).
+// the full adaptation rationale). 2026-08-19: the Contributors section was
+// removed from the component per owner directive; the "creator + all 4
+// contributors + libraries" assertion below was split into a creator/
+// libraries assertion plus a new absence assertion (no Contributors heading,
+// none of the previously-listed contributor GitHub handles render).
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, provideZonelessChangeDetection, signal } from "@angular/core";
@@ -59,7 +63,7 @@ describe("CreditsModalComponent", () => {
     expect(dialog.getAttribute("aria-labelledby")).toBe(title.id);
   });
 
-  it("renders the creator, all 4 contributors, and the libraries list", async () => {
+  it("renders the creator and the libraries list", async () => {
     const f = TestBed.createComponent(HostComponent);
     await f.whenStable();
     f.componentInstance.open.set(true);
@@ -70,14 +74,26 @@ describe("CreditsModalComponent", () => {
     const creatorLink = links.find((a) => a.getAttribute("href") === "https://github.com/ZoliQua");
     expect(creatorLink).toBeTruthy();
 
-    for (const handle of ["odontodev", "JulianoBazzi", "yassine-bhn", "saegerdirk-star"]) {
-      expect(links.some((a) => a.getAttribute("href") === `https://github.com/${handle}`)).toBe(true);
-    }
-
     const libNames = (Array.from(dialog.querySelectorAll(".odon-credits-libs a")) as HTMLAnchorElement[]).map(
       (a) => a.textContent?.trim(),
     );
     expect(libNames).toEqual(["jsPDF", "DOMPurify", "Angular", "Angular CLI", "TypeScript", "Tailwind CSS"]);
+  });
+
+  it("renders no Contributors section (owner directive, 2026-08-19)", async () => {
+    const f = TestBed.createComponent(HostComponent);
+    await f.whenStable();
+    f.componentInstance.open.set(true);
+    await f.whenStable();
+    const dialog = f.nativeElement.querySelector("#creditsModal") as HTMLElement;
+
+    const headings = Array.from(dialog.querySelectorAll(".odon-credits-heading")).map((el) => el.textContent);
+    expect(headings.some((h) => h?.toLowerCase().includes("contributor"))).toBe(false);
+
+    const links = Array.from(dialog.querySelectorAll("a.odon-credits-link")) as HTMLAnchorElement[];
+    for (const handle of ["odontodev", "JulianoBazzi", "yassine-bhn", "saegerdirk-star"]) {
+      expect(links.some((a) => a.getAttribute("href") === `https://github.com/${handle}`)).toBe(false);
+    }
   });
 
   it("the bottom 'star' CTA points at this package's own repo (adapted app-identity link)", async () => {
