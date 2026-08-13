@@ -1,9 +1,8 @@
 # Contributing
 
 Thank you for thinking about contributing to Angular Advanced Odontogram. Bug
-reports, fixes, translations and new features are all welcome, and every
-contributor is credited in the app's Credits popup and in the README's Credits
-section.
+reports, fixes, translations and new features are all welcome, and
+contributions are acknowledged in the project's commit history.
 
 ## Getting set up
 
@@ -73,10 +72,10 @@ the pull request rather than guessing.
 
 All user facing text lives in
 `projects/angular-advanced-odontogram/src/lib/core/i18n/translations.ts`. The
-UI ships in twelve languages, all as keys in that one file. This port keeps
-only two full-length READMEs (this repository's English `README.md` and its
-Hungarian mirror, `lang/README-hu.md`) rather than twelve — please keep them
-in sync when documenting a behaviour or public-API change.
+UI ships in twelve languages, all as keys in that one file. This port carries
+a full-length documentation file per language under `lang/`
+(`lang/README-en.md` is the canonical reference the other eleven mirror) —
+please keep them in sync when documenting a behaviour or public-API change.
 
 ## Style
 
@@ -89,11 +88,13 @@ in sync when documenting a behaviour or public-API change.
 ## Documentation
 
 Updating the docs is part of the change, not an afterthought. Update
-`README.md` and `lang/README-hu.md` together when behaviour or the public API
-changes.
+`README.md` and `lang/README-en.md` (the canonical full documentation)
+together when behaviour or the public API changes; the other eleven `lang/`
+translations should follow on the next documentation pass.
 
 ## Credit
 
-When your pull request is merged you are added to the Credits popup in the
-app and to the Credits section of the README. If we miss you, please say so
-and we will put it right.
+The app's Credits popup and the README's Credits section list the creator,
+the original project this is ported from, and the libraries it's built
+with. Contributions themselves are acknowledged in the project's commit
+history.

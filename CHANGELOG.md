@@ -6,6 +6,41 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-13
+
+Docs and credits cut, no engine/behavior changes: the credits modal is
+trimmed per owner directive, and the root README is restructured into a
+compact landing page backed by full per-language documentation for all 12
+supported languages. See `docs/superpowers/specs/1.2.1-acceptance.md` for
+the acceptance evidence.
+
+### Changed
+- **Credits modal trimmed**: the Contributors listing (upstream's
+  project-contributor names) is removed from `CreditsModalComponent`.
+  Creator, Original Project, Built with and the Star-on-GitHub CTA stay
+  unchanged — this is a further extension of deviation #4 (branding/
+  credits), documented in the port design spec §2. The credits i18n keys
+  stay in `core/i18n/translations.ts`; only the component stops rendering
+  the section.
+
+### Docs
+- **Root `README.md` compacted to a landing page** (~83 lines: badges,
+  12-language link row, overview, install, quick start, highlights, credits,
+  license) linking `lang/README-en.md` as the full documentation.
+- **Full per-language documentation for all 12 languages** in `lang/`
+  (`en`, `hu`, `de`, `es`, `fr`, `it`, `pl`, `pt-br`, `sk`, `ru`, `ar`,
+  `zh`), each modeled on upstream's lang-file structure and adapted to the
+  Angular package (composable API, `OdontogramShellComponent`, DI seams,
+  dual-runner testing, this repo's URLs) — replacing the previous
+  two-language (EN + HU) set. Every file carries the 12-language link row,
+  the 1.2.1 version badge, and no React-project contributor names.
+- **Community-file touch-ups**: `CONTRIBUTING.md` updated to match current
+  reality — the credits passages now describe the trimmed modal/README
+  (creator, original project, built-with; contributions acknowledged in
+  commit history) instead of promising per-contributor crediting, and the
+  "two full READMEs" note is replaced with the full 12-language `lang/` set
+  (`lang/README-en.md` as the canonical reference).
+
 ## [1.2.0] - 2026-08-12
 
 Resync to `react-advanced-odontogram` main @ commit `934a911` (post-v2.4.0;
@@ -304,7 +339,8 @@ acceptance evidence.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases/tag/v1.0.0
