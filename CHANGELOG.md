@@ -6,6 +6,26 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-08-14
+
+### Added
+- **npm package metadata** (`projects/angular-advanced-odontogram/package.json`):
+  `keywords`, `homepage`, `repository`, `bugs` and `author` fields, bringing
+  the published npm page to parity with
+  [react-advanced-odontogram](https://www.npmjs.com/package/react-advanced-odontogram)'s.
+  These fields are carried into `dist/angular-advanced-odontogram/package.json`
+  as-is by ng-packagr's entry-point package-manifest step — no separate
+  propagation mechanism is needed.
+- **Rich packaged README** (`projects/angular-advanced-odontogram/README.md`,
+  the file ng-packagr copies into the published tarball): badges, an
+  installation/quick-start guide, a highlights list, a composable-API and
+  public-API teaser, an FHIR/JSON round-trip note, and SSR/singleton
+  guidance — with links in the text to both the original
+  [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)
+  repository and the original
+  [react-advanced-odontogram](https://www.npmjs.com/package/react-advanced-odontogram)
+  npm package.
+
 ## [2.4.0] - 2026-08-13
 
 **Versioning:** starting with this release, the package version tracks
@@ -362,7 +382,8 @@ acceptance evidence.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.1...HEAD
+[2.4.1]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.1...v2.4.0
 [1.2.1]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.1.0...v1.2.0
