@@ -3,6 +3,30 @@
   "version": "2.4.0",
   "license": "MIT",
   "description": "Interactive, SVG-based dental odontogram (dental chart) editor for Angular — multi-surface caries/filling charting, endodontic/prosthetic/periodontal states, FDI/Universal/Palmer numbering, HL7 FHIR R4 export/import, and ICDAS scoring.",
+  "keywords": [
+    "odontogram",
+    "dental-chart",
+    "dental-charting",
+    "dentistry",
+    "dental-records",
+    "angular",
+    "angular-library",
+    "ng",
+    "typescript",
+    "svg",
+    "fhir",
+    "icdas",
+    "periodontal"
+  ],
+  "homepage": "https://angular-advanced-odontogram.vercel.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZoliQua/Angular-Advanced-Odontogram.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ZoliQua/Angular-Advanced-Odontogram/issues"
+  },
+  "author": "Zoltán Dul",
   "peerDependencies": {
     "@angular/common": "^21.2.0",
     "@angular/core": "^21.2.0"
