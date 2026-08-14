@@ -1,0 +1,36 @@
+name: Publish to npm
+
+# Publishes the library when a version tag (e.g. v2.4.0) is pushed, or on a
+# manual run (workflow_dispatch). Requires an NPM_TOKEN secret (automation
+# token with publish rights) in the repository settings. The library is built
+# fresh (styles first, then ng-packagr) and published from the dist output,
+# never from the workspace root.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # enables npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+      - run: npm ci
+      - name: Verify tests before publishing
+        run: npm test
+      - name: Build library
+        run: npm run build:styles && npx ng build angular-advanced-odontogram
+      - name: Publish
+        run: npm publish --provenance --access public
+        working-directory: dist/angular-advanced-odontogram
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
