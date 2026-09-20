@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.4.1-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.6.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,10 +48,10 @@
 
 本项目是一款面向 **Angular + TypeScript** 的交互式、基于浏览器的牙位图（口腔检查图）编辑器，界面简洁，支持快速的牙科病历记录。它通过分层渲染 SVG 牙齿模板来表现修复体、龋齿、牙髓治疗状态、松动度及其他临床细节，同时提供多选、选择过滤器和预设状态模板。
 
-**这是 [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)（npm 包名：`react-advanced-odontogram`）的官方 Angular 移植版本。** 与 react-advanced-odontogram 主分支提交 `934a911`（v2.4.0 之后；数据版本仍为 2.20）保持功能对等——JSON 与 FHIR R4 导出可在两个库之间无损互通。临床引擎（`projects/angular-advanced-odontogram/src/lib/core/`）为逐字节共享——牙位状态逻辑、牙周记录、FHIR 导出/导入、i18n 文本、引导式导览以及 SVG 模板均与 React 原版逐字节一致，并在每次同步时从锁定的上游提交重新复制；只有组件外壳（`projects/angular-advanced-odontogram/src/lib/components/`）是 Angular 原生实现。存在一小部分明确记录在案的差异（仅限品牌/标识文本——详见本仓库中的移植设计说明文档）。版本号与 React 模块保持同步（lockstep）。
+**这是 [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)（npm 包：[`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)）的官方 Angular 移植版本。** 与 react-advanced-odontogram **v2.6.0**（引擎提交 `215c43a`）保持功能对等，数据版本为 **2.22**——JSON 与 FHIR R4 导出可在两个库之间无损互通。临床引擎（`projects/angular-advanced-odontogram/src/lib/core/`）为逐字节共享——牙位状态逻辑、牙周记录、诊断编码、FHIR 导出/导入、i18n 文本、引导式导览以及 SVG 模板均与 React 原版逐字节一致，并在每次同步时从锁定的上游提交重新复制；只有组件外壳（`projects/angular-advanced-odontogram/src/lib/components/`）是 Angular 原生实现。存在一小部分明确记录在案的差异（仅限品牌/标识文本——详见本仓库中的移植设计说明文档）。版本号与 React 模块保持同步（lockstep）。
 
 ---
-![牙位图编辑器预览](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_odontogram.png)
+![牙位图编辑器预览](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
 *截图来自原始 React 项目——Angular 移植版本渲染出完全相同的界面。*
 
 🔗 **在线演示：** https://angular-advanced-odontogram.vercel.app/
@@ -150,7 +150,7 @@ import {
   setImportFormat,
   // control
   setReadOnly, getReadOnly,
-  clearSelection,
+  clearSelection, getSelectedTeeth,
   registerPlugins, setPluginState, getPluginState,
   startIntroTour,               // launch the onboarding tour
   // …and many more setX/getX settings functions
@@ -222,8 +222,9 @@ export class WorkspaceComponent implements AfterViewInit, OnDestroy {
 | `RootPeriodontiumCardComponent` | `aao-root-periodontium-card` | 牙髓/根管状态、根尖诊断、牙根吸收、松动度、种植体周状态 |
 | `OrthodonticsCardComponent` | `aao-orthodontics-card` | 矫治器、移位、垂直移动、扭转 |
 | `SurfaceCrossComponent` | `aao-surface-cross` | 龋齿/充填卡片内部共用的 B/M/O/D/L 十字选择控件 |
+| `DiagnosesCardComponent` | `aao-diagnoses-card` | 按牙位的 ICD-10/BNO-10/ICD-10-CM/SNOMED 诊断编码——查看某颗牙齿的推算诊断并对其进行整理（抑制某个推算诊断，或添加一个图表未体现的诊断） |
 
-每张卡片都是一个自包含的声明式组件，通过 `inject(OdontogramUiService)` 与导出的 `engineState()` 辅助函数读取和写入共享会话（`engineState()` 会对任意引擎 getter 的读取结果进行信号化封装，并通过核心自身的变更通知总线保持最新）。只需在单个 `OdontogramUiService` 下按任意排布挂载某个布局所需的卡片即可。`CreditsModalComponent`（`aao-credits-modal`，顶部工具栏的“关于与致谢”弹窗）也已导出，供希望自行驱动其开关状态的宿主应用使用。
+每张卡片都是一个自包含的声明式组件，通过 `inject(OdontogramUiService)` 与导出的 `engineState()` 辅助函数读取和写入共享会话（`engineState()` 会对任意引擎 getter 的读取结果进行信号化封装，并通过核心自身的变更通知总线保持最新）。只需在单个 `OdontogramUiService` 下按任意排布挂载某个布局所需的卡片即可。`CreditsModalComponent`（`aao-credits-modal`，顶部工具栏的“关于与致谢”弹窗）与 `CaseDiagnosesModalComponent`（`aao-case-diagnoses-modal`，全口病例/区域性诊断弹窗）均已导出，供希望自行驱动其开关状态的宿主应用使用。
 
 ```ts
 import { engineState, OdontogramUiService, getOdontogramSummary } from "angular-advanced-odontogram";
@@ -248,6 +249,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - **样式表是独立的**——你**必须**注册一次 `angular-advanced-odontogram/styles.css`；它不会被自动注入。样式为全局 CSS，作用域限定在 `.odontogram-root` 下，并由 `--odon-*` CSS 变量驱动。
 - **SSR / 仅限客户端**——该组件在挂载时会读取 DOM，因此必须在浏览器中运行；请仅在浏览器端渲染它。
 - **资源是自包含的**——牙齿和图标的 SVG 在构建时被内联到包中（生成的 TypeScript 模块，`npm run gen:assets`）；**无需配置任何运行时资源请求**，也无需向你的应用 public 文件夹额外复制任何文件。
+- **按需加载**——初始包中只包含英语和 `classic` 牙齿解剖美术资源；另外 11 种界面语言的语言表以及 `measured` 解剖轮廓的美术资源均为独立的懒加载分片，仅在宿主首次切换到它们时才会被获取（分别对应 `setI18nLanguage`/语言菜单，以及 `setToothAnatomy("measured")`/设置 → 牙位图 → 牙齿解剖）。此次重新同步的拆分将演示应用的主分片从 3.12 MB 降至 1.23 MB，初始总体积从 3.21 MB 降至 1.32 MB——宿主端无需任何额外配置。
 - **本版本中每个页面仅限一个实例**——引擎状态是模块级单例（与 React 原版相同），因此在同一页面渲染两个 `<aao-odontogram-shell>` 实例会导致它们共享同一份图表状态。
 
 ---
@@ -271,9 +273,9 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🔢 12 个选择过滤器（全部、现有、恒牙、乳牙、种植体、缺失、上/下颌、前牙/磨牙）
 - 📊 预设状态模板（重置、乳牙列、混合牙列、无牙颌）
 - 📦 22 种预定义修复体模板（桥、可摘义齿、带种植体的杆卡义齿）
-- 💾 JSON 格式的状态导出/导入（版本 2.20；导入仍接受旧版 1.4 及 2.0 至 2.19 版本，并自动迁移，包含插件自定义状态及每颗牙齿的备注）
+- 💾 JSON 格式的状态导出/导入（版本 2.22；导入仍接受旧版 1.4 及 2.0 至 2.21 版本，并自动迁移，包含插件自定义状态及每颗牙齿的备注）
 - 💽 可选的 localStorage 状态持久化（`enablePersistence`/`disablePersistence`/`clearPersistedState`/`isPersistenceEnabled`）——默认关闭；自动保存状态图表（可选同时保存计划图表），附带 4 MB 容量上限，存储/解析错误会通过 `onError` 回调（或 `console.warn`）上报，而不会抛出异常
-- 🔗 HL7 FHIR R4 导出（每颗牙齿一个 Observation 组成的 collection Bundle，**恒牙及乳牙**均采用 ISO 3950 牙位编码（乳牙 51-85，导入时可无损还原），使用本地代码系统）；已记录严重度的龋齿分量还会附带评分体系编码——原发（未充填）牙面采用 ICDAS，继发（已充填）牙面采用 CARS
+- 🔗 HL7 FHIR R4 导出（每颗牙齿一个 Observation 组成的 collection Bundle，**恒牙及乳牙**均采用 ISO 3950 牙位编码（乳牙 51-85，导入时可无损还原），使用本地代码系统，另附一个可选启用的 SNOMED CT 叠加层（设置 → 常规 → SNOMED CT））；已记录严重度的龋齿分量还会附带评分体系编码——原发（未充填）牙面采用 ICDAS，继发（已充填）牙面采用 CARS
 - ✚ 十字/加号式牙面选择界面（B/M/O/D/L）用于龋齿和充填记录——`SurfaceCrossComponent`，已导出以支持可组合布局
 - 🧱 每个牙面独立的修复材料（混合充填，例如颊侧银汞合金 + 远中复合树脂）
 - 🖼️ 图表的 PNG/JPG/SVG 图像导出（可下载；PNG/JPG 由矢量 SVG 栅格化而成）
@@ -292,6 +294,14 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🪨 牙石，以及分为内吸收或外颈吸收的牙根吸收（`resorptionType`）
 - 📏 按牙面记录的龋齿深度（浅龋/中龋/深龋），或通过 `enableIcdas` 启用可选的 ICDAS II 评分（0–6）
 - 🩹 牙冠边缘微渗漏开关，仅在牙冠或桥修复体上显示
+- 🧬 基于标准的诊断编码（WHO ICD-10，始终启用）：每一项已记录的临床发现都会推算出一个 ICD-10 编码诊断——龋齿（K02）、根面/牙骨质龋及静止性龋（K02.2/.3）、牙髓炎与牙髓坏死（K04.0/.1）、根尖周炎、根尖周脓肿及根尖囊肿（K04.4–.9）、磨耗/磨损/酸蚀/楔状缺损（K03.0–.8）、牙石（K03.6）、牙根吸收（K03.3）、牙齿变色（K00.3/K00.8/K03.7）、牙齿缺失（K08.1）、残留牙根（K08.3）以及牙齿折裂（S02.5）——并作为 FHIR Condition 导出
+- 🩺 按牙位的**诊断卡片**（`DiagnosesCardComponent`、`aao-diagnoses-card`）：查看某颗牙齿的推算 ICD-10 诊断并对其进行整理——抑制一个错误推算的诊断，或添加一个图表未体现的诊断。有效诊断集合（推算 − 抑制 + 添加）驱动 FHIR 导出；每一行都以其编码开头（`K04.0 Pulpitis`），并按编码排序；**排除**开关可在不改动图表的前提下将某一诊断从 FHIR 导出中移除，**删除**（×）则会同时移除该诊断*及*其背后的临床发现
+- 🗂️ **病例/区域性诊断**（`CaseDiagnosesModalComponent`、`aao-case-diagnoses-modal`）：不与单颗牙齿绑定的全口诊断——错𬌗与颞下颌关节（TMJ，K07）、口腔囊肿（K09）、涎腺疾病（K11）、口炎与口腔黏膜（K12/K13），以及牙弓层面的发育异常（K00）——每一项均可选择性地标注侧别（左/右/双侧），从牙位图/牙周状态切换开关旁的**诊断**按钮打开
+- 🌍 国家编码包（设置 → 常规 → 诊断编码包）：在 WHO ICD-10 基础上叠加一套国家代码系统——BNO-10（匈牙利，采用官方 NEAK BNO-10 名称；保留 WHO 编码）或美国 ICD-10-CM（重新映射编码，例如 K07 牙颌面区间 → M26）
+- 🔬 SNOMED CT 叠加层（设置 → 常规 → SNOMED CT，可选启用，默认关闭）：在 WHO 及任何国家编码包的编码之外再叠加一套 SNOMED CT 编码，并为那些没有 WHO ICD-10 编码的种植体周发现提供编码。ICD-10-CM 与 SNOMED 概念 ID 仅供参考/尽力而为——在用于临床前，请对照官方 ICD-10-CM 索引表/SNOMED CT 浏览器进行核实
+- 🔁 FHIR Condition 往返：诊断以 FHIR `Condition` 资源形式导出（按牙位关联，另加带侧别 bodySite 的患者级病例诊断），与 Observation 并列；导入时会重建这些诊断——病例诊断直接重建，按牙位的添加/抑制覆盖项则通过比对导入的 Condition 与重新推算的图表来重建
+- ✅ 通过 HL7 校验器验证的干净 FHIR 导出：每个 Bundle 条目都携带确定性的 `id` 与绝对路径的 `fullUrl`（不使用 `urn:uuid` 占位符），且 Bundle 内嵌了引擎自身的 **CodeSystem**，以便其本地编码在校验时可被解析；同一 CodeSystem 及生成的 ValueSet 也发布在本仓库的 `projects/angular-advanced-odontogram/src/lib/fhir/` 下（在 FHIR 导出选项中传入 `includeCodeSystem: false` 即可将其从 Bundle 中省略）
+- 🔄 牙周数据现在也可以通过 FHIR 导入往返，而不仅限于 JSON 数据：导入器会将 LOINC 74029-0 牙周面板重新读回每颗牙齿——探诊深度、龈缘位置（由 CAL 重建，因此假性牙周袋数值得以保留）、探诊出血、根分叉、O'Leary 菌斑、PI/GI 及种植体 mPI/mBI 指数，以及角化龈宽度——此外还包括病例级的吸烟状态与 HbA1c 证据 Observation；溢脓是唯一的例外，仍仅保存于 JSON 中
 - 🧰 统一的顶部工具栏图标行，配合带标签页的设置弹窗（7 个标签页——常规 / 牙位图 / 牙周图表 / 牙齿详情 / 龋齿 / 充填 / 导出——详见下文[设置](#-设置)）
 - 🦷🩺 设置 →“牙周图表”标签页：一个可用性开关，加上针对牙周图表各行的 16 个按指标显示/隐藏开关，每项均附说明，另附一个“译文名称 vs. 规范名称”显示选项
 - 📋 牙齿信息面板：整个图表的实时文字摘要（牙齿计数、现有/缺失列表、龋齿（含继发龋）、充填、根管治疗、修复体、种植体、牙周状态）——默认显示，可在设置中开关
@@ -300,7 +310,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - ⏳ 图像导出过程中的进度浮层
 - 🎓 交互式新手导览（对 shell 各项控件的引导式讲解）
 - 🔢 三种牙位编号系统（FDI、通用编号法、Palmer）
-- 🌐 国际化——12 种界面语言（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR），支持语言切换；阿拉伯语界面从右到左渲染，同时牙位图/牙周图表固定保持从左到右
+- 🌐 国际化——12 种界面语言（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR），支持语言切换；阿拉伯语界面从右到左渲染，同时牙位图/牙周图表固定保持从左到右；主包中只包含当前使用的语言——其余每种语言都是一个独立分片，仅在首次被选中时才会加载
 - 🌗 支持深色模式，附带切换按钮（独立控制或由父应用控制）
 - 🎨 通过 CSS 自定义属性（`--odon-*`）实现的自定义主题配置（`themeConfig` 输入）
 - 📱 移动端触控体验：点按缩放弹出层、长按上下文菜单、双指缩放、符合 WCAG 标准的 44px 触控目标、牙弓切换导航
@@ -317,7 +327,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🅿️ 拟定样式：在计划模式下，计划相对当前现状**新增**的发现会以醒目的虚线、着色“拟定”轮廓渲染
 - 🚦 计划模式限定：计划图表仅显示牙医实际可以**执行**的操作——仅适用于现状的发现项（龋齿、牙齿磨耗、变色，以及整个牙周区块）均被隐藏；修复体、可摘修复、正畸、需要牙冠/更换牙冠及拔牙计划仍可纳入计划
 
-![全口牙周图表](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_perio.png)
+![全口牙周图表](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_perio.png)
 *截图来自原始 React 项目——Angular 移植版本渲染出完全相同的界面。*
 
 - 🩺 牙周记录：每颗牙齿六个标准位点的**探诊深度**、**龈缘位置**、**探诊出血**（+溢脓），并推算出**临床附着水平（CAL = 探诊深度 + 龈缘位置）**、牙龈退缩量，以及全口**探诊出血百分比（%BOP）**。**图形化全口牙周图**——每侧牙弓分别绘制为两张独立的颊侧/腭（舌）侧 SVG 图，配有红色的**CEJ 线**、带毫米刻度编号的参考网格，以及龈缘/牙周袋深度曲线，并由一条中央牙周指标带分隔，该指标带承载共用的按牙位指标——**Miller 分级**与**菌斑/PI/GI/mPI/mBI**以每颗牙齿一个解剖学菱形方块呈现；支持**键盘自动前进**式录入；图表会动态缩放以填满可用宽度。以 `Odontogram | Periodontal Status`（牙位图 | 牙周状态）视图切换开关呈现，并仍可通过导出的 `PerioChartComponent` 单独调用。按位点的 **FHIR** 导出通过 LOINC 牙周面板代码（`74029-0`；探诊深度 `32910-2`、牙龈退缩 `32911-0`、CAL `32912-8`）
@@ -326,7 +336,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 
 ### 📦 模块组成
 - 🦷 牙位图网格与牙齿方块界面（`OdontogramChartSurfaceComponent`）
-- 🎛️ 控件与状态面板（`ToothControlsSurfaceComponent` + 7 张声明式卡片）
+- 🎛️ 控件与状态面板（`ToothControlsSurfaceComponent` + 8 张声明式卡片）
 - 🎨 SVG 分层渲染引擎及模板（框架无关的核心，`core/odontogram.ts`）
 - 🔢 牙位编号与标签映射（FDI/通用编号法/Palmer，`core/utils/numbering.ts`）
 - 🌐 本地化——12 种界面语言（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR），包括阿拉伯语（RTL)（`core/i18n/`、`I18nService`）
@@ -340,7 +350,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🔒 只读模式
 - ✨ 选中动画
 - 📝 每颗牙齿的备注系统
-- 🧱 **可组合界面**——`OdontogramUiService`、`engineState()` 辅助函数、4 个展示型界面区域，以及 7 张声明式控制卡片，全部可独立导出（详见上文[可组合的界面区域](#-作为-npm-包使用)）
+- 🧱 **可组合界面**——`OdontogramUiService`、`engineState()` 辅助函数、4 个展示型界面区域，以及 8 张声明式控制卡片，全部可独立导出（详见上文[可组合的界面区域](#-作为-npm-包使用)）
 - 🧪 自动化测试套件（Vitest 语料库 + `ng test`，详见[测试](#-测试)）
 
 ### 🛠️ 界面控件
@@ -485,8 +495,8 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 
 通过顶部工具栏的齿轮图标打开（`SettingsModalComponent`）；这是一个具有焦点陷阱、ARIA `dialog` 角色的 7 标签页弹窗（Esc 键或点击背景可关闭，方向键可切换标签页）。该弹窗是宿主提供的 `SettingsState` 的纯视图——自身不持有任何设置状态。除非另有说明，所有设置均仅为会话级界面状态——都不会修改按牙位数据或导出数据。
 
-- **常规：** 编号系统（FDI/通用编号法/Palmer）、语言、深色/浅色主题、按格式设置导出可用性（PNG/JPG/SVG/PDF——关闭时隐藏对应的导出菜单项，且关闭 PDF 时会禁用导出标签页）、按来源设置导入可用性（状态 JSON/FHIR）
-- **牙位图：** 屏幕布局——牙齿间距、牙号大小、选中颜色与边框样式；牙齿信息面板可见性；计划模式可用性；牙齿解剖轮廓（`classic` 默认 / `measured`——`measured` 以双牙弓、逐牙宽度布局渲染九个依据文献测量的牙齿模板，可在运行时切换）；状态卡片与正畸卡片可见性
+- **常规：** 编号系统（FDI/通用编号法/Palmer）、语言、深色/浅色主题、按格式设置导出可用性（PNG/JPG/SVG/PDF——关闭时隐藏对应的导出菜单项，且关闭 PDF 时会禁用导出标签页）、按来源设置导入可用性（状态 JSON/FHIR）、诊断编码包（无 / BNO-10 / ICD-10-CM）以及一个可选启用的 SNOMED CT 叠加层开关
+- **牙位图：** 屏幕布局——牙齿间距、牙号大小、选中颜色与边框样式；牙齿信息面板可见性；计划模式可用性；牙齿解剖轮廓（`classic` 默认 / `measured`——`measured` 以双牙弓、逐牙宽度布局渲染九个依据文献测量的牙齿模板，可在运行时切换；其美术资源是一个独立的懒加载分片，只有在切换到它时才会加载，因此默认的 classic 不会产生任何额外开销）；状态卡片与正畸卡片可见性
 - **牙周图表：** 一个可用性开关，控制该标签页其余部分以及 shell 中的牙周入口；牙周视图模式（`toggle`/`popup`）；跨 5 个分组的 16 个按指标显示/隐藏开关（牙周袋：PD/GM/CAL/BOP · 口腔卫生：菌斑/PI/GI · 膜龈：CEJ 可见性/根面凹陷/KG/GT · 支持组织：根分叉/松动度/Miller 分级 · 种植体周：mPI/mBI）；一个译文名称 vs. 规范名称的显示模式（规范名称 = 在所有界面语言下均固定使用的英文/拉丁文学术名称；提示信息始终保持本地化）
 - **牙齿详情：** 牙髓详情级别（简单/AAE/实用拉丁文，默认 AAE）、磨耗详情级别与变色详情级别（简单/复杂，默认均为复杂）、牙面记法（简单/完整，默认完整）、每颗牙齿备注开关
 - **龋齿：** ICDAS II 评分开关、龋齿深度开关、根面龋粒度（简单/严重度）、继发龋/CARS 粒度（简单/标准/完整）、影像学深度粒度（关闭/三级/详细）
@@ -633,7 +643,7 @@ npm run docs           # Generate TypeDoc docs in docs/api/
 ```
 共享的临床引擎 API 在原始项目中也有相应文档：
 
-📚 **https://zoliqua.github.io/React-Odontogram-Modul/**
+📚 **https://zoliqua.github.io/React-Advanced-Odontogram/**
 
 ### 📡 公共 API
 
@@ -646,6 +656,7 @@ npm run docs           # Generate TypeDoc docs in docs/api/
 | `initOdontogram()` / `destroyOdontogram()` | 初始化/清理引擎（由 `OdontogramShellComponent`/`OdontogramUiService` 通过 `ODONTOGRAM_ENGINE_LIFECYCLE` 令牌在内部调用） |
 | `setNumberingSystem(system)` | 在 FDI、UNIVERSAL、PALMER 之间切换 |
 | `clearSelection()` | 取消选择所有牙齿 |
+| `getSelectedTeeth()` | 当前选中的牙齿（FDI 牙位号），按选择顺序排列 |
 | `registerPlugins(plugins)` | 注册自定义 SVG 插件 |
 | `setPluginState(toothNo, pluginId, value)` / `getPluginState(toothNo, pluginId)` | 设置/获取某颗牙齿的插件自定义状态 |
 | `getToothStateSummary(toothNo)` | 获取全部当前激活状态的本地化摘要 |
@@ -668,6 +679,13 @@ npm run docs           # Generate TypeDoc docs in docs/api/
 | `setDiagnosisOverride(v)` / `setStageOverride(v)` / `setGradeOverride(v)` / `setExtentOverride(v)` | 覆盖推算得出的牙周分类轴，传入 `null` 表示恢复为推算值 |
 | `getCaseMeta()` / `resetCaseMeta()` | 获取/重置病例级元数据对象（年龄、吸烟/糖尿病状况、患者身份信息、检查日期……） |
 | `setPatientName(v)` / `setPatientDob(v)` / `setExamDate(v)` | 设置病例身份字段（仅用于 PDF 报告标题——绝不属于 FHIR 导出的一部分） |
+| `getToothDiagnoses(toothNo)` | 获取某颗牙齿由临床轴规则推算出的 ICD-10 编码诊断 |
+| `getActiveDiagnoses()` | 获取当前选中牙齿的有效诊断行（推算 − 抑制 + 添加），以及可添加诊断的目录——即 `DiagnosesCardComponent` 的视图模型 |
+| `addDiagnosisToSelection(key)` / `removeDiagnosisFromSelection(key)` | 通过写入当前牙齿选择背后的图表临床发现，来添加/移除一项诊断 |
+| `setDxOverrideForSelection(key, mode)` | 对当前选择强制施加诊断覆盖——`"add"`、`"suppress"`，或传入 `null` 以清除 |
+| `getDiagnosisCodingPack()` / `setDiagnosisCodingPack(id)` | 获取/设置叠加在 WHO ICD-10 之上的国家编码包——`"none"`、`"bno10"`（匈牙利 NEAK 名称）或 `"icd10cm"`（美国） |
+| `getSnomedEnabled()` / `setSnomedEnabled(v)` | 获取/设置可选启用的 SNOMED CT 编码叠加层 |
+| `getCaseConditions()` / `setCaseCondition(key, laterality)` | 获取/设置全口病例/区域性诊断（错𬌗与颞下颌关节、口腔囊肿、涎腺疾病、口炎与口腔黏膜、牙弓层面发育异常），每项均带有侧别——`null` 表示清除，或为 `"left"`/`"right"`/`"bilateral"` |
 | `exportFhir(options?)` | 将图表导出为 HL7 FHIR R4 collection Bundle（JSON 下载）；可选 `{ subject }` 引用 |
 | `importFhirBundle(input)` | 导入由本模块生成的 FHIR R4 Bundle（对象或 JSON 字符串） |
 | `exportImage(format)` | 将图表下载为图像——`"png"` 或 `"jpg"` |
@@ -720,7 +738,7 @@ enablePersistence({
 说明：持久化的数据可能以明文形式在 `localStorage` 中包含患者身份信息（患者姓名、检查日期）。如果您在牙位图中记录了此类数据，请确保设备级别的保护，或在适当时使用 `clearPersistedState()` 将其清除。
 
 ### 💾 状态导出/导入格式
-导出会生成一个 JSON 文件（版本 `2.20`；导入同时也接受旧版 `1.4` 及 `2.0` 至 `2.19`，并自动迁移），其中包含：
+导出会生成一个 JSON 文件（版本 `2.22`；导入同时也接受旧版 `1.4` 及 `2.0` 至 `2.21`，并自动迁移），其中包含：
 
 **全局字段：**
 - `wisdomVisible` - 智齿是否可见
@@ -753,6 +771,7 @@ enablePersistence({
 - `periapicalType` - 根尖病损亚型（none/granuloma/cyst）；导入时仍接受旧版 `abscess` 值
 - `resorptionType` - 牙根吸收类型（none/internal/external-cervical）
 - `periImplant` - 仅限种植体的种植体周状态（none/mucositis/peri-implantitis-mild/-moderate/-severe），采用 2018 年世界研讨会分期标准
+- `dxOverrides` - 按牙位的诊断编码覆盖项（版本 2.21）：一个以 ICD-10 诊断键为键、值为 `add` | `suppress` 的对象，即使没有匹配的图表临床发现也强制开启某个编码诊断，或即使存在匹配发现也将其关闭；决定了作为 FHIR `Condition` 导出的有效编码诊断集合
 - `endoResection` - 根尖切除标志
 - `fissureSealing` - 窝沟封闭标志
 - `calculus` - 牙石标志
@@ -779,10 +798,14 @@ enablePersistence({
 **顶层 `plan` 字段（版本 2.11+）：**
 - `plan` - 可选对象，结构与 `teeth`（上述按牙位字段）相同，保存**计划**（拟定治疗后）图表。仅当计划图表已被初始化**且**其内容与现状图表不同时才会出现。导入时，若 `plan` 字段缺失，则会清除/取消初始化计划图表；若 `plan` 字段存在，则在恢复现状图表的同时一并恢复计划图表。也可通过 `getPlanChart()`/`setPlanChart()` 独立于导入/导出进行读写。
 
-**顶层 `case` 字段（版本 2.17+，在 2.18、2.19 和 2.20 中扩展）：**
-- `case` - 可选对象，保存病例级（非按牙位）元数据，由现状图表和计划图表共享。空值省略。各字段（在默认值时均被省略）：`age`（年龄）；`smokingStatus`（吸烟状况，+ `cigarettesPerDay`）；`diabetesStatus`（糖尿病状况，+ `hba1c`）；`toothLossPerio`（牙周炎致失牙数）；`maxRblPercent`（最大影像学骨吸收百分比）；2017 年分类的四个按轴临床医生覆盖值 `diagnosisOverride` / `stageOverride` / `gradeOverride` / `extentOverride`；`patientName` / `examDate`；以及 `patientDob`。通过上文的 `getCaseMeta()` 及 `set*` 系列设置函数读写。患者姓名、出生日期与检查日期仅为图表身份标识元数据——**不**属于 FHIR 导出的一部分。
+**顶层 `case` 字段（版本 2.17+，在 2.18、2.19、2.20 和 2.22 中扩展）：**
+- `case` - 可选对象，保存病例级（非按牙位）元数据，由现状图表和计划图表共享。空值省略。各字段（在默认值时均被省略）：`age`（年龄）；`smokingStatus`（吸烟状况，+ `cigarettesPerDay`）；`diabetesStatus`（糖尿病状况，+ `hba1c`）；`toothLossPerio`（牙周炎致失牙数）；`maxRblPercent`（最大影像学骨吸收百分比）；2017 年分类的四个按轴临床医生覆盖值 `diagnosisOverride` / `stageOverride` / `gradeOverride` / `extentOverride`；`patientName` / `examDate`；`patientDob`；以及（版本 2.22）`caseConditions`——病例/区域性诊断（错𬌗与颞下颌关节 K07、口腔囊肿 K09、涎腺疾病 K11、口炎与口腔黏膜 K12/K13、牙弓层面发育异常 K00），每项均映射到一个侧别（未指定/左/右/双侧）。通过上文的 `getCaseMeta()`/`getCaseConditions()` 及 `set*`/`setCaseCondition()` 系列设置函数读写。患者姓名、出生日期与检查日期仅为图表身份标识元数据——**不**属于 FHIR 导出的一部分。
 
 ### 🖨️ 导出
+`exportFhir()` 导出结果可通过 HL7 校验器验证：每个 Bundle 条目都携带确定性的 `id` 与绝对路径的 `fullUrl`（不使用 `urn:uuid` 占位符），且 Bundle 内嵌了引擎自身的 CodeSystem，以便其本地编码在校验时可被解析（该 CodeSystem 也发布在 `projects/angular-advanced-odontogram/src/lib/fhir/` 下；传入 `includeCodeSystem: false` 即可将其省略）。
+
+牙周数据现在也可以通过 FHIR 导入往返，而不仅限于 JSON 数据：`importFhirBundle()` 会将 LOINC `74029-0` 牙周面板重新读回每颗牙齿的牙周记录——探诊深度、龈缘位置（由 CAL 重建，因此假性牙周袋数值得以保留）、探诊出血、根分叉、O'Leary 菌斑、PI/GI 及种植体 mPI/mBI 指数，以及角化龈宽度——此外还包括病例级的吸烟状态与 HbA1c 证据 Observation。溢脓是唯一的例外：它仍仅保存于 JSON 中，因为它不属于 FHIR 导出的一部分。
+
 除了牙位图自身的状态 JSON / FHIR / PNG / JPG / SVG 导出外，**牙周图表**还拥有自己的一套导出路径：
 - **牙周图 SVG/PNG/JPG：** `exportPerioSvg()` / `exportPerioImage("png"|"jpg")` 将完整的牙周图表渲染为一份独立的矢量 SVG，不依赖已挂载的 `PerioChartComponent` DOM。只要 `hasAnyPerioData()` 为 false，就会被禁用。
 - **PDF 报告：** 导出菜单中的“PDF report…”项会打开 `ExportOptionsModalComponent`——一个设置弹窗（患者姓名 + 出生日期 + 检查日期字段，直接绑定到病例元数据，检查日期默认为当天；区块复选框：患者数据、牙位图、牙位图说明、个别备注——未有任何牙齿记录备注时禁用——牙周状态、牙周描述），然后通过 `EXPORT_PDF_FN` 注入令牌调用 `exportPdf(opts)`。身份信息字段留空时会回退为占位符（`"John Doe"` / `"1980-01-01"`，可通过 `PdfSettings.defaultName`/`defaultDob` 配置），确保导出始终成功。该 PDF 采用 jsPDF 原生方式组装——矢量文字通过 `.text()`，栅格化的牙齿/牙周图表图像通过 `.addImage()`——不依赖 `svg2pdf.js`。当没有任何牙齿记录备注时，“个别备注”区块会自动跳过；只要 `hasAnyPerioData()` 为 false，两个牙周区块也会自动跳过，二者均与弹窗中的复选框状态无关。
@@ -802,10 +825,13 @@ enablePersistence({
 - `projects/angular-advanced-odontogram/src/lib/core/perioExport.ts` / `perioGraphic.ts` / `perioIndexNames.ts` - 全口牙周图表的 SVG 渲染
 - `projects/angular-advanced-odontogram/src/lib/core/perioPdf.ts` - PDF 报告的纯 jsPDF 组装器（`assemblePdf`）
 - `projects/angular-advanced-odontogram/src/lib/core/status_extras.ts` - 22 种预定义修复体模板
-- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - 翻译文件（12 种语言）以及框架无关的 i18n 总线
+- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - 翻译文件，`i18n/locales/` 下每种语言均为一个懒加载模块（英语为静态内置，其余 11 种通过 `i18n/loader.ts` 在首次使用时加载）以及框架无关的 i18n 总线
+- `projects/angular-advanced-odontogram/src/lib/core/dx/` - 基于标准的诊断编码：推算规则（`derive.ts`）、ICD-10 诊断目录（`codes.ts`/`caseCodes.ts`）、国家编码包——BNO-10/ICD-10-CM（`packs.ts`）——以及 ICD-10-CM/SNOMED CT 精细化层（`refine.ts`）
+- `projects/angular-advanced-odontogram/src/lib/core/anatomy/` - 牙齿解剖轮廓（`classic`/`measured`）；`measured` 依据文献测量的模板（`measured.ts`）以独立的懒加载分片形式加载
 - `projects/angular-advanced-odontogram/src/lib/core/utils/numbering.ts` - FDI、通用编号法、Palmer 编号转换
 - `projects/angular-advanced-odontogram/src/lib/core/registry/` - 声明式临床轴注册表：FHIR 字段映射、SVG 清除集/布尔标志激活、修复体类型×材料矩阵、界面选项列表
-- `projects/angular-advanced-odontogram/src/lib/core/fhir/` - HL7 FHIR R4 导出/导入：`toFhir.ts`/`fromFhir.ts`、代码系统、字段映射、基础类型
+- `projects/angular-advanced-odontogram/src/lib/core/fhir/` - HL7 FHIR R4 导出/导入：`toFhir.ts`/`fromFhir.ts`、`toFhirDx.ts`/`importConditions.ts`（诊断 Condition）、`importPerio.ts`（牙周 Observation）、代码系统、字段映射、基础类型
+- `projects/angular-advanced-odontogram/src/lib/fhir/` - 已发布的 `CodeSystem-odontogram.json`，以及生成的 `ValueSet-odontogram-*.json` 集合（按临床轴取值分组各一个、一个针对发现类型、一个包含全部编码）
 - `projects/angular-advanced-odontogram/src/lib/core/bridgeOverlay.ts` - 多牙位桥跨越连接体叠加层
 - `projects/angular-advanced-odontogram/src/lib/core/fonts/` - 内置的 PDF Unicode 字体（阿拉伯文整形、中日韩文字）+ 字体加载器
 - `projects/angular-advanced-odontogram/src/lib/core/assets/` - SVG 牙齿/图标源文件（`teeth-svgs/`、`teeth-svgs/measured/`、`icon-svgs/`）
@@ -815,10 +841,11 @@ enablePersistence({
 - `projects/angular-advanced-odontogram/src/lib/components/odontogram-ui.service.ts` - `OdontogramUiService`，可组合界面的状态/副作用层
 - `projects/angular-advanced-odontogram/src/lib/components/engine-state.ts` - `engineState()` 信号辅助函数
 - `projects/angular-advanced-odontogram/src/lib/components/odontogram-engine-lifecycle.ts` - `ODONTOGRAM_ENGINE_LIFECYCLE` 依赖注入令牌
-- `projects/angular-advanced-odontogram/src/lib/components/surfaces/` - 四个展示型界面区域（顶部工具栏、图表、牙齿信息、牙齿控件），以及 `surfaces/cards/` 下的七张声明式控制卡片
+- `projects/angular-advanced-odontogram/src/lib/components/surfaces/` - 四个展示型界面区域（顶部工具栏、图表、牙齿信息、牙齿控件），以及 `surfaces/cards/` 下的八张声明式控制卡片（含 `DiagnosesCardComponent`）
 - `projects/angular-advanced-odontogram/src/lib/components/settings-modal/` - `SettingsModalComponent`（7 标签页设置弹窗）
 - `projects/angular-advanced-odontogram/src/lib/components/export-options-modal/` - `ExportOptionsModalComponent` 及 `EXPORT_PDF_FN` 依赖注入令牌
 - `projects/angular-advanced-odontogram/src/lib/components/credits-modal/` - `CreditsModalComponent`
+- `projects/angular-advanced-odontogram/src/lib/components/case-diagnoses-modal/` - `CaseDiagnosesModalComponent`，全口病例/区域性诊断弹窗
 - `projects/angular-advanced-odontogram/src/lib/components/perio-chart/` / `perio-sidebar/` - 独立/内嵌牙周图表及其情境侧栏
 - `projects/angular-advanced-odontogram/src/lib/components/dual-state-confirm/` - 共享的确认弹窗（影响现状↔计划的编辑操作）
 - `projects/angular-advanced-odontogram/src/lib/components/shared/dialog-focus.ts` - 共享的弹窗焦点陷阱/恢复辅助函数
@@ -859,7 +886,7 @@ enablePersistence({
 
 **所有版本（概念 DOI）：** https://doi.org/10.5281/zenodo.21156787
 
-机器可读的引用元数据位于原始项目的 [`CITATION.cff`](https://github.com/ZoliQua/React-Odontogram-Modul/blob/main/CITATION.cff)。
+机器可读的引用元数据位于原始项目的 [`CITATION.cff`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/CITATION.cff)。
 
 ## 🙌 致谢
 
@@ -867,7 +894,7 @@ Angular Advanced Odontogram 由 Zoltan Dul（[@ZoliQua](https://github.com/ZoliQ
 
 **原始项目**
 
-- [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)：本包所移植的原始 React 实现——临床引擎（牙位状态逻辑、牙周记录、FHIR 导出/导入、i18n 文本、导览、SVG 模板）为逐字节共享。
+- [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)（npm 包：[`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)）：本包所移植的原始 React 实现——临床引擎（牙位状态逻辑、牙周记录、诊断编码、FHIR 导出/导入、i18n 文本、导览、SVG 模板）为逐字节共享。
 
 **基于** [jsPDF](https://github.com/parallax/jsPDF)、[DOMPurify](https://github.com/cure53/DOMPurify)、[Angular](https://angular.dev)、[Angular CLI](https://angular.dev/tools/cli)、[TypeScript](https://www.typescriptlang.org) 和 [Tailwind CSS](https://tailwindcss.com) 构建。
 

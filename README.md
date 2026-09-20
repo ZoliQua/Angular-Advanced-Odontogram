@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.4.1-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.6.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -15,12 +15,12 @@
 
 An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angular + TypeScript** — with a full **periodontal charting module**, multi-surface caries/restorations, endodontic/prosthetic states, FDI/Universal/Palmer numbering, **HL7 FHIR R4** export/import, optional ICDAS scoring, and a 12-language UI.
 
-> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (npm: `react-advanced-odontogram`). Feature parity with react-advanced-odontogram main @ `934a911` (post-v2.4.0) (payload version 2.20) — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim; only the component shell is Angular-native. Versioned in lockstep with the React module.
+> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Feature parity with react-advanced-odontogram **v2.6.0** (engine `215c43a`), payload **2.22** — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim; only the component shell is Angular-native. Versioned in lockstep with the React module.
 
 🔗 **Live demo:** https://angular-advanced-odontogram.vercel.app/ \
-⚛️ **Original React project:** https://github.com/ZoliQua/React-Odontogram-Modul
+⚛️ **Original React project:** https://github.com/ZoliQua/React-Advanced-Odontogram
 
-![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_odontogram.png)
+![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
 *Screenshot from the original React project — the Angular port renders the identical UI.*
 
 ## 📦 Installation
@@ -58,11 +58,12 @@ export class ChartComponent {}
 
 - 🦷 Permanent / primary / implant / missing teeth; substrate, restorations (crown/inlay/onlay/veneer/bridge × materials), removable & implant prosthetics
 - 🔍 Multi-surface caries & fillings (ICDAS / CARS severity, root & radiographic caries), endo & AAE pulp diagnosis, apical diagnosis, peri-implant status, wear, discoloration, orthodontics
-- 🩺 Full periodontal module — per-site probing, CAL/recession/%BOP, a graphical full-mouth perio chart, 2017 staging/grading
-- 🔗 **HL7 FHIR R4** export/import; JSON export/import with migrations — round-trip compatible with [`react-advanced-odontogram`](https://github.com/ZoliQua/React-Odontogram-Modul)
+- 🩺 Full periodontal module — per-site probing, CAL/recession/%BOP, a graphical full-mouth perio chart, 2017 staging/grading, FHIR export **and import**
+- 🔗 **HL7 FHIR R4** export/import; JSON export/import with migrations — round-trip compatible with [`react-advanced-odontogram`](https://github.com/ZoliQua/React-Advanced-Odontogram)
+- 🧬 **Standards-based diagnosis coding** — WHO ICD-10 always on, per-tooth diagnoses (Diagnoses card) and case/regional diagnoses (Diagnoses pop-up), selectable national packs (BNO-10, US ICD-10-CM), an opt-in SNOMED CT overlay, and full FHIR `Condition` export/import round-trip
 - 🖼️ PNG / JPG / SVG chart export and a configurable **PDF report** (jsPDF) — multilingual PDF fonts (Arabic shaping, CJK), per-tooth notes
-- 🧱 **Composable UI** — beyond the all-in-one shell, `OdontogramUiService`, the four presentational surfaces and all seven declarative control cards are individually exported for custom host layouts
-- 🦴 Selectable **tooth anatomy profile** — `classic` (default) or `measured` (nine literature-measured tooth templates), switchable at runtime
+- 🧱 **Composable UI** — beyond the all-in-one shell, `OdontogramUiService`, the four presentational surfaces and all eight declarative control cards are individually exported for custom host layouts
+- 🦴 Selectable **tooth anatomy profile** — `classic` (default) or `measured` (nine literature-measured tooth templates), switchable at runtime; both the 11 non-English UI languages and the `measured` artwork load on demand, not in the main bundle
 - 💾 Opt-in **localStorage persistence** API (host-wired, off by default)
 - 🔢 FDI / Universal / Palmer numbering · 🌐 12 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, Arabic RTL) · 🎨 theming via `--odon-*` CSS variables · 🧩 plugin system · ⌨️ keyboard accessibility
 
@@ -70,13 +71,13 @@ export class ChartComponent {}
 
 ## 📄 License & citation
 
-MIT © Zoltán Dul. This library is a port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul); if you use it in research, please cite the original project — see its [`CITATION.cff`](https://github.com/ZoliQua/React-Odontogram-Modul/blob/main/CITATION.cff) and the [Zenodo record](https://doi.org/10.5281/zenodo.21156787).
+MIT © Zoltán Dul. This library is a port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram); if you use it in research, please cite the original project — see its [`CITATION.cff`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/CITATION.cff) and the [Zenodo record](https://doi.org/10.5281/zenodo.21156787).
 
 ## 🙌 Credits
 
 Angular Advanced Odontogram is created and maintained by Zoltan Dul ([@ZoliQua](https://github.com/ZoliQua)), the creator and lead developer of this port and of the underlying clinical engine.
 
-**Original project:** [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul) — the original React implementation this package is a port of; the clinical engine (dental status logic, periodontal charting, FHIR export/import, i18n strings, tour, SVG templates) is shared, verbatim.
+**Original project:** [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)) — the original React implementation this package is a port of; the clinical engine (dental status logic, periodontal charting, diagnosis coding, FHIR export/import, i18n strings, tour, SVG templates) is shared, verbatim.
 
 **Built with** [jsPDF](https://github.com/parallax/jsPDF), [DOMPurify](https://github.com/cure53/DOMPurify), [Angular](https://angular.dev), [Angular CLI](https://angular.dev/tools/cli), [TypeScript](https://www.typescriptlang.org) and [Tailwind CSS](https://tailwindcss.com).
 

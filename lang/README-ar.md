@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.4.1-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.6.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,10 +48,10 @@
 
 هذا المشروع محرر تخطيط أسنان (أودونتوغرام) تفاعلي يعمل داخل المتصفح لإطار **Angular + TypeScript**، ويدعم تسجيل حالة الأسنان بسرعة من خلال واجهة مستخدم نظيفة وواضحة. يعرض المشروع قوالب أسنان بصيغة SVG متعددة الطبقات لتمثيل الترميمات، والنخر، وحالة العلاج اللبي، ودرجة حركة السن، وتفاصيل سريرية أخرى، مع توفير إمكانية التحديد المتعدد، ومرشحات التحديد، وأنماط حالة جاهزة مسبقًا.
 
-**هذا هو المنفذ الرسمي بلغة Angular لمشروع [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)** (حزمة npm: `react-advanced-odontogram`). يحقق المشروع تكافؤًا وظيفيًا مع الفرع الرئيسي لمشروع react-advanced-odontogram عند المُراجعة (commit) `934a911` (بعد الإصدار v2.4.0؛ يبقى إصدار الحمولة عند 2.20 دون تغيير) — ويتبادل تصديرا JSON وFHIR R4 المسار (round-trip) بين المكتبتين. المحرك السريري (`projects/angular-advanced-odontogram/src/lib/core/`) مشترك، وحرفي (verbatim) — منطق حالة الأسنان، ومخطط دواعم السن، وتصدير/استيراد FHIR، ونصوص الترجمة (i18n)، والجولة التعريفية الموجَّهة، وقوالب SVG جميعها مطابقة بايتًا بايت للمشروع الأصلي بلغة React، وتُنسخ مجددًا من مُراجعة (commit) مرجعية ثابتة في المنبع (upstream) عند كل إعادة مزامنة؛ ويقتصر الجزء الخاص بـAngular (`projects/angular-advanced-odontogram/src/lib/components/`) على غلاف المكوّنات فقط. توجد مجموعة صغيرة وموثَّقة صراحةً من الاختلافات (نصوص العلامة التجارية/الهوية فقط — انظر مواصفات تصميم المنفذ في هذا المستودع). يتزامن ترقيم الإصدارات (lockstep) مع وحدة React.
+**هذا هو المنفذ الرسمي بلغة Angular لمشروع [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (حزمة npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). يحقق المشروع تكافؤًا وظيفيًا مع الإصدار **v2.6.0** من react-advanced-odontogram (مُراجعة (commit) المحرك `215c43a`)، وإصدار الحمولة **2.22** — ويتبادل تصديرا JSON وFHIR R4 المسار (round-trip) بين المكتبتين. المحرك السريري (`projects/angular-advanced-odontogram/src/lib/core/`) مشترك، وحرفي (verbatim) — منطق حالة الأسنان، ومخطط دواعم السن، وترميز التشخيصات، وتصدير/استيراد FHIR، ونصوص الترجمة (i18n)، والجولة التعريفية الموجَّهة، وقوالب SVG جميعها مطابقة بايتًا بايت للمشروع الأصلي بلغة React، وتُنسخ مجددًا من مُراجعة (commit) مرجعية ثابتة في المنبع (upstream) عند كل إعادة مزامنة؛ ويقتصر الجزء الخاص بـAngular (`projects/angular-advanced-odontogram/src/lib/components/`) على غلاف المكوّنات فقط. توجد مجموعة صغيرة وموثَّقة صراحةً من الاختلافات (نصوص العلامة التجارية/الهوية فقط — انظر مواصفات تصميم المنفذ في هذا المستودع). يتزامن ترقيم الإصدارات (lockstep) مع وحدة React.
 
 ---
-![معاينة محرر الأودونتوغرام](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_odontogram.png)
+![معاينة محرر الأودونتوغرام](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
 *لقطة شاشة من المشروع الأصلي بلغة React — يعرض منفذ Angular الواجهة ذاتها.*
 
 🔗 **عرض تجريبي مباشر:** https://angular-advanced-odontogram.vercel.app/
@@ -150,7 +150,7 @@ import {
   setImportFormat,
   // control
   setReadOnly, getReadOnly,
-  clearSelection,
+  clearSelection, getSelectedTeeth,
   registerPlugins, setPluginState, getPluginState,
   startIntroTour,               // launch the onboarding tour
   // …and many more setX/getX settings functions
@@ -222,8 +222,9 @@ export class WorkspaceComponent implements AfterViewInit, OnDestroy {
 | `RootPeriodontiumCardComponent` | `aao-root-periodontium-card` | حالة اللب/العلاج اللبي، التشخيص القمي، امتصاص الجذر، الحركة، حالة ما حول الزرعة |
 | `OrthodonticsCardComponent` | `aao-orthodontics-card` | الجهاز، الانزياح، الحركة العمودية، الدوران |
 | `SurfaceCrossComponent` | `aao-surface-cross` | أداة تحديد الصليب B/M/O/D/L المشتركة التي تستخدمها بطاقتا النخر/الحشوات داخليًا |
+| `DiagnosesCardComponent` | `aao-diagnoses-card` | ترميز تشخيصي لكل سن وفق ICD-10/BNO-10/ICD-10-CM/SNOMED — عرض التشخيصات المشتقة لسن معين وتنقيحها (إخفاء تشخيص مشتق، أو إضافة تشخيص لا يمثّله المخطط) |
 
-كل بطاقة مكوّن تصريحي مستقل بذاته يقرأ ويكتب الجلسة المشتركة عبر `inject(OdontogramUiService)` والأداة المصدَّرة `engineState()` (قراءة تُرجِع إشارة (Signal) لأي دالة قراءة (getter) من المحرك، وتبقى محدَّثة عبر ناقل الإشعار بالتغيير الخاص بالنواة). ركّب فقط البطاقات التي يحتاجها تخطيط معيّن، بأي ترتيب، ضمن `OdontogramUiService` واحد. يُصدَّر `CreditsModalComponent` أيضًا (`aao-credits-modal`، النافذة المنبثقة "حول التطبيق والشكر" في الشريط العلوي)، للمضيفين الذين يريدون التحكم بحالة فتحها/إغلاقها بأنفسهم.
+كل بطاقة مكوّن تصريحي مستقل بذاته يقرأ ويكتب الجلسة المشتركة عبر `inject(OdontogramUiService)` والأداة المصدَّرة `engineState()` (قراءة تُرجِع إشارة (Signal) لأي دالة قراءة (getter) من المحرك، وتبقى محدَّثة عبر ناقل الإشعار بالتغيير الخاص بالنواة). ركّب فقط البطاقات التي يحتاجها تخطيط معيّن، بأي ترتيب، ضمن `OdontogramUiService` واحد. يُصدَّر `CreditsModalComponent` أيضًا (`aao-credits-modal`، النافذة المنبثقة "حول التطبيق والشكر" في الشريط العلوي) و`CaseDiagnosesModalComponent` أيضًا (`aao-case-diagnoses-modal`، النافذة المنبثقة لتشخيصات الحالة/الإقليمية لكامل الفم)، للمضيفين الذين يريدون التحكم بحالة فتح أيٍّ منهما/إغلاقه بأنفسهم.
 
 ```ts
 import { engineState, OdontogramUiService, getOdontogramSummary } from "angular-advanced-odontogram";
@@ -248,6 +249,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - **ملف التنسيق منفصل** — **يجب** عليك تسجيل `angular-advanced-odontogram/styles.css` مرة واحدة؛ فهو لا يُحقَن تلقائيًا. التنسيق عبارة عن CSS عام محصور ضمن `.odontogram-root` ومُتحكَّم به عبر متغيرات CSS من نوع `--odon-*`.
 - **العرض من جهة الخادم / جهة العميل فقط** — يقرأ المكوّن DOM عند التركيب، لذا يجب أن يعمل داخل المتصفح؛ اعرضه من جهة العميل فقط.
 - **الأصول مكتفية ذاتيًا** — تُدرَج رسومات الأسنان والأيقونات بصيغة SVG ضمن الحزمة وقت البناء (وحدات TypeScript مُولَّدة، `npm run gen:assets`)؛ **لا يوجد** أي طلب أصول وقت التشغيل يلزم إعداده، ولا شيء إضافي يلزم نسخه إلى المجلد العام لتطبيقك.
+- **التحميل عند الحاجة** — لا تُشحَن في الحزمة الأولية سوى اللغة الإنجليزية ورسومات ملف تشريح السن `classic`؛ أما جداول الـ11 لغة واجهة الأخرى ورسومات ملف تشريح `measured` فهي أجزاء (chunks) كسولة منفصلة، تُجلب أول مرة يبدّل فيها المضيف إليها (`setI18nLanguage`/قائمة اللغة، و`setToothAnatomy("measured")`/الإعدادات ← مخطط الأسنان ← تشريح السن، على التوالي). خفَّض هذا التقسيم في إعادة المزامنة هذه الجزء الرئيسي للعرض التجريبي من 3.12 ميغابايت إلى 1.23 ميغابايت، والإجمالي الأولي من 3.21 ميغابايت إلى 1.32 ميغابايت — ولا حاجة لضبط أي شيء من جهة المضيف.
 - **نسخة واحدة لكل صفحة** في هذا الإصدار — حالة المحرك كائن وحيد (singleton) على مستوى الوحدة (كما في الأصل بلغة React)، لذا فإن عرض نسختين من `<aao-odontogram-shell>` في الصفحة نفسها سيجعلهما تتشاركان حالة مخطط واحد.
 
 ---
@@ -271,9 +273,9 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🔢 12 مرشح تحديد (الكل، الموجود، الدائم، اللبني، الزرعات، المفقود، العلوي/السفلي، الأمامي/الأضراس)
 - 📊 أنماط حالة جاهزة مسبقًا (إعادة الضبط، التسنين اللبني، التسنين المختلط، انعدام الأسنان)
 - 📦 22 قالب ترميم جاهزًا مسبقًا (جسور، أطقم متحركة، أطقم بار مع زرعات)
-- 💾 تصدير/استيراد الحالة بصيغة JSON (الإصدار 2.20؛ لا تزال الاستيرادات تقبل الإصدارات القديمة 1.4 ومن 2.0 حتى 2.19 وتُرحَّل تلقائيًا، مع حالات مخصصة للإضافات وملاحظات لكل سن)
+- 💾 تصدير/استيراد الحالة بصيغة JSON (الإصدار 2.22؛ لا تزال الاستيرادات تقبل الإصدارات القديمة 1.4 ومن 2.0 حتى 2.21 وتُرحَّل تلقائيًا، مع حالات مخصصة للإضافات وملاحظات لكل سن)
 - 💽 حفظ اختياري للحالة في localStorage (‏`enablePersistence`/‏`disablePersistence`/‏`clearPersistedState`/‏`isPersistenceEnabled`) — معطّل افتراضيًا؛ يحفظ تلقائيًا مخطط الحالة (واختياريًا مخطط الخطة أيضًا) مع حد أقصى للحجم قدره 4 ميغابايت، وتمرير أخطاء التخزين/التحليل إلى دالة استدعاء `onError` (أو `console.warn`) بدلًا من رمي استثناء
-- 🔗 تصدير HL7 FHIR R4 (حزمة تجميعية (Bundle) من ملاحظات (Observations) لكل سن، مع ترميز أسنان وفق ISO 3950 للتسنين الدائم **و**اللبني (51-85، مع استيراد يعيد التخطيط دون فقدان بيانات)، ونظام ترميز محلي)؛ كما يحمل مكوّن النخر الذي له شدة مسجَّلة ترميزًا إضافيًا لنظام التقييم — ICDAS على سطح أساسي (غير محشو)، وCARS على سطح ناكس (محشو)
+- 🔗 تصدير HL7 FHIR R4 (حزمة تجميعية (Bundle) من ملاحظات (Observations) لكل سن، مع ترميز أسنان وفق ISO 3950 للتسنين الدائم **و**اللبني (51-85، مع استيراد يعيد التخطيط دون فقدان بيانات)، ونظام ترميز محلي، بالإضافة إلى تراكب SNOMED CT اختياري (الإعدادات ← عام ← SNOMED CT))؛ كما يحمل مكوّن النخر الذي له شدة مسجَّلة ترميزًا إضافيًا لنظام التقييم — ICDAS على سطح أساسي (غير محشو)، وCARS على سطح ناكس (محشو)
 - ✚ واجهة تحديد أسطح على شكل صليب/علامة زائد (B/M/O/D/L) للنخر والحشوات — `SurfaceCrossComponent`، مُصدَّرة للتخطيطات القابلة للتركيب
 - 🧱 مواد ترميم لكل سطح على حدة (حشوات مختلطة، مثل أملغم دهليزي + كومبوزيت بعيد عن الوسط)
 - 🖼️ تصدير صورة PNG/JPG/SVG للمخطط (قابل للتنزيل؛ يُنشأ PNG/JPG بالتحويل النقطي من SVG متجهي)
@@ -292,6 +294,14 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🪨 الجير، وامتصاص الجذر المصنَّف كداخلي أو عنقي خارجي (`resorptionType`)
 - 📏 عمق النخر لكل سطح (سطحي / عاجي / عميق)، أو تقييم اختياري وفق ICDAS II (من 0 إلى 6) عبر `enableIcdas`
 - 🩹 مفتاح تبديل لتسرب حافة التاج، يظهر فقط عند وجود ترميم تاج أو جسر
+- 🧬 ترميز تشخيصي قائم على معيار موحّد (WHO ICD-10، مفعَّل دائمًا): تشتق كل نتيجة مسجَّلة في المخطط تشخيصًا مرمَّزًا وفق ICD-10 — النخر (K02)، نخر الجذر/الملاط والنخر المتوقف (K02.2/.3)، التهاب اللب ونخر اللب (K04.0/.1)، التهاب دواعم السن القمي، الخراج حول الذروة والكيس الجذري (K04.4–.9)، البري بأنواعه (K03.0–.8)، الجير (K03.6)، الامتصاص (K03.3)، التصبّغ (K00.3/K00.8/K03.7)، فقدان السن (K08.1)، الجذر المتبقي (K08.3)، وكسر السن (S02.5) — وتُصدَّر كموارد FHIR من نوع `Condition`
+- 🩺 بطاقة **التشخيصات** لكل سن (`DiagnosesCardComponent`، `aao-diagnoses-card`): تعرض تشخيصات ICD-10 المشتقة لسن معين وتتيح تنقيحها — إخفاء تشخيص مشتق خطأً أو إضافة تشخيص لا يمثّله المخطط. المجموعة الفعلية (المشتقة − المخفاة + المضافة) هي التي تقود تصدير FHIR؛ يعرض كل صف رمزه أولًا (`K04.0 Pulpitis`) وتُرتَّب الصفوف حسب الرمز؛ مفتاح **استبعاد** يُسقط تشخيصًا من تصدير FHIR دون المساس بالمخطط، وزر **حذف** (×) يزيل التشخيص *ونتيجته* الأساسية في المخطط معًا
+- 🗂️ **تشخيصات الحالة / الإقليمية** (`CaseDiagnosesModalComponent`، `aao-case-diagnoses-modal`): تشخيصات لكامل الفم غير مرتبطة بسن واحد — سوء الإطباق ومفصل الفك الصدغي (K07)، الأكياس الفموية (K09)، أمراض الغدد اللعابية (K11)، التهاب الفم والمخاطية الفموية (K12/K13)، والتشوهات النمائية على مستوى القوس (K00) — يمكن تحديد جانب لكل منها اختياريًا (يسار/يمين/ثنائي الجانب)، وتُفتح من زر **التشخيصات** بجانب مفتاح التبديل `Odontogram | Periodontal Status`
+- 🌍 حزم ترميز وطنية (الإعدادات ← عام ← حزمة ترميز التشخيص): تراكب نظام ترميز وطني فوق أساس WHO ICD-10 — BNO-10 (المجري، بعناوين NEAK الرسمية؛ مع الإبقاء على رمز WHO) أو ICD-10-CM الأمريكي (رموز مُعاد ربطها، مثل نطاق K07 الفكي الوجهي ← M26)
+- 🔬 تراكب SNOMED CT (الإعدادات ← عام ← SNOMED CT، اختياري، معطَّل افتراضيًا): يضيف ترميز SNOMED CT إلى جانب ترميز WHO وأي حزمة ترميز وطنية، ويرمِّز نتائج ما حول الزرعة التي لا تحمل رمز WHO ICD-10. مُعرِّفات ICD-10-CM وSNOMED مرجعية/بأفضل جهد ممكن — تحقّق منها مقابل قائمة ICD-10-CM الجدولية الرسمية / متصفح SNOMED CT قبل الاستخدام السريري
+- 🔁 مسار FHIR `Condition` ذهابًا وإيابًا: تُصدَّر التشخيصات كموارد FHIR من نوع `Condition` (مرتبطة بسن، بالإضافة إلى حالات على مستوى المريض بـ`bodySite` يحدد الجانب) إلى جانب الملاحظات (Observations)، ويعيد الاستيراد بناءها — حالات الحالة مباشرةً، وتجاوزات الإضافة/الإخفاء لكل سن عبر مقارنة موارد `Condition` المستوردة بالمخطط المُعاد اشتقاقه
+- ✅ تصدير FHIR نظيف أمام مدقِّق HL7: يحمل كل عنصر في الحزمة (Bundle) معرِّف `id` ثابتًا و`fullUrl` مطلقًا (بلا عناصر نائبة من نوع `urn:uuid`)، وتُضمِّن الحزمة `CodeSystem` الخاص بالمحرك نفسه لكي تُحلّ رموزه المحلية أثناء التحقق؛ ويُنشَر نفس `CodeSystem` مع مجموعة `ValueSet` مُولَّدة في هذا المستودع تحت `projects/angular-advanced-odontogram/src/lib/fhir/` (مرِّر `includeCodeSystem: false` في خيارات تصدير FHIR لحذفه من الحزمة)
+- 🔄 تُنقَل بيانات دواعم السن أيضًا ذهابًا وإيابًا عبر استيراد FHIR، وليس فقط عبر حمولة JSON: يعيد المستورِد قراءة لوحات دواعم السن في LOINC (`74029-0`) إلى كل سن — عمق الجيب، والحافة اللثوية (المُعاد بناؤها من CAL، بحيث تبقى قيم الجيب الكاذب سليمة)، والنزف عند السبر (BOP)، وتفرع الجذور، وبلاك أوليري، ومؤشرَي PI/GI ومؤشرَي الزرعة mPI/mBI، وعرض اللثة المتقرنة — بالإضافة إلى ملاحظات (Observations) حالة التدخين ودليل HbA1c على مستوى الحالة؛ ويبقى التقيّح الاستثناء الوحيد، إذ يظل مقتصرًا على JSON فقط
 - 🧰 شريط أيقونات علوي موحَّد مع نافذة إعدادات بعلامات تبويب (7 علامات — عام / مخطط الأسنان / مخطط دواعم السن / تفاصيل السن / النخر / الحشوات / التصدير — انظر [⚙️ الإعدادات](#-الإعدادات) أدناه)
 - 🦷🩺 الإعدادات ← علامة التبويب "مخطط دواعم السن": مفتاح إتاحة بالإضافة إلى 16 مفتاح إظهار/إخفاء لكل مؤشر من صفوف مخطط دواعم السن، لكل منها وصف، بالإضافة إلى خيار عرض أسماء المؤشرات مترجمة مقابل قياسية
 - 📋 لوحة معلومات السن: ملخص نصي حي لكامل المخطط (عدد الأسنان، قوائم الموجود/المفقود، النخر بما فيه الثانوي، الحشوات، علاجات قناة الجذر، التركيبات، الزرعات، حالة دواعم السن) — تظهر افتراضيًا، وقابلة للتبديل من الإعدادات
@@ -300,7 +310,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - ⏳ طبقة تغطية للتقدم أثناء تصدير الصورة
 - 🎓 جولة تعريفية تفاعلية (جولة إرشادية موجَّهة عبر عناصر تحكم الغلاف)
 - 🔢 ثلاثة أنظمة ترقيم (FDI، العالمي، بالمر)
-- 🌐 الترجمة (i18n) — 12 لغة واجهة (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) مع مبدّل لغة؛ تعرض العربية الواجهة من اليمين إلى اليسار مع تثبيت مخططَي الأسنان ودواعم السن من اليسار إلى اليمين
+- 🌐 الترجمة (i18n) — 12 لغة واجهة (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) مع مبدّل لغة؛ تعرض العربية الواجهة من اليمين إلى اليسار مع تثبيت مخططَي الأسنان ودواعم السن من اليسار إلى اليمين؛ ولا تُشحَن في الحزمة الرئيسية سوى اللغة النشطة — فكل لغة أخرى جزء (chunk) منفصل يُجلب أول مرة تُختار فيها
 - 🌗 دعم الوضع الداكن بزر تبديل (مستقل أو متحكَّم به من التطبيق الأصل)
 - 🎨 إعدادات سمة مخصصة (مدخل `themeConfig`) عبر خصائص CSS المخصصة (`--odon-*`)
 - 📱 تجربة لمس محسّنة للجوال: نافذة تكبير عند اللمس، قائمة سياق بالضغط المطوّل، تكبير بالقرص (pinch-to-zoom)، أهداف لمس بحجم WCAG 44px، تنقل بتبديل القوس
@@ -317,7 +327,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🅿️ تنسيق مقترَح: في وضع الخطة، تُعرض النتائج التي **تضيفها** الخطة مقارنة بالحالة الراهنة بحدود خارجية متقطعة وملوَّنة مميزة تدل على أنها "مقترحة"
 - 🚦 تقييد وضع الخطة: يعرض مخطط الخطة فقط ما يمكن لطبيب الأسنان أن *يفعله* — تُخفى النتائج الخاصة بالحالة فقط (النخر، بري السن، التصبّغ، وكامل قسم دواعم السن)؛ بينما يبقى الترميم، والتركيبة، والتقويم، والحاجة إلى تاج/استبداله، وخطة الخلع قابلاً للتخطيط
 
-![مخطط دواعم السن لكامل الفم](https://raw.githubusercontent.com/ZoliQua/React-Odontogram-Modul/main/lang/screenshot_en_perio.png)
+![مخطط دواعم السن لكامل الفم](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_perio.png)
 *لقطة شاشة من المشروع الأصلي بلغة React — يعرض منفذ Angular الواجهة ذاتها.*
 
 - 🩺 تسجيل دواعم السن: **عمق الجيب**، و**الحافة اللثوية**، و**النزف عند السبر** (+ التقيّح) لكل موضع، في المواضع الستة القياسية لكل سن، مع **مستوى الالتصاق السريري المشتق (CAL = عمق الجيب + الحافة اللثوية)**، والانحسار، ونسبة **%BOP** لكامل الفم. **مخطط دواعم سن رسومي لكامل الفم** — يُرسم كل قوس كرسمَي SVG منفصلين، دهليزي وحنكي/لساني، بخط **CEJ** أحمر، وشبكة توجيه مرقّمة بالمليمتر، ومنحنى للحافة اللثوية/عمق الجيب، مقسَّمة بواسطة شريط مركزي لمؤشرات دواعم السن يحمل **تصنيف ميلر** و**البلاك/PI/GI/mPI/mBI** كبلاطات معينية تشريحية لكل سن؛ إدخال بتقدم تلقائي عبر لوحة المفاتيح؛ ويتمدد المخطط ديناميكيًا ليملأ العرض المتاح. يُعرض كمفتاح تبديل عرض `Odontogram | Periodontal Status`، ولا يزال قابلاً للاستدعاء بشكل منفصل عبر مكوّن `PerioChartComponent` المُصدَّر. تصدير **FHIR** لكل موضع عبر لوحة دواعم السن في LOINC (`74029-0`؛ PD `32910-2`، الانحسار `32911-0`، CAL `32912-8`)
@@ -326,7 +336,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 
 ### 📦 الوحدات
 - 🦷 شبكة الأودونتوغرام وواجهة بلاطات الأسنان (`OdontogramChartSurfaceComponent`)
-- 🎛️ عناصر التحكم ولوحة الحالة (`ToothControlsSurfaceComponent` + البطاقات التصريحية السبع)
+- 🎛️ عناصر التحكم ولوحة الحالة (`ToothControlsSurfaceComponent` + البطاقات التصريحية الثماني)
 - 🎨 محرك طبقات SVG والقوالب (نواة خالية من الاعتماد على أي إطار عمل، `core/odontogram.ts`)
 - 🔢 ترقيم الأسنان وربط التسميات (FDI/العالمي/بالمر، `core/utils/numbering.ts`)
 - 🌐 الترجمة والتوطين — 12 لغة واجهة (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR)، بما في ذلك العربية (RTL) (`core/i18n/`، `I18nService`)
@@ -340,7 +350,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🔒 وضع القراءة فقط
 - ✨ رسوم متحركة للتحديد
 - 📝 نظام ملاحظات لكل سن
-- 🧱 **واجهة قابلة للتركيب** — `OdontogramUiService`، والأداة المساعدة `engineState()`، و4 أسطح عرض، و7 بطاقات تحكم تصريحية، جميعها مُصدَّرة باستقلالية (انظر [أسطح قابلة للتركيب](#-الاستخدام-كحزمة-npm) أعلاه)
+- 🧱 **واجهة قابلة للتركيب** — `OdontogramUiService`، والأداة المساعدة `engineState()`، و4 أسطح عرض، و8 بطاقات تحكم تصريحية، جميعها مُصدَّرة باستقلالية (انظر [أسطح قابلة للتركيب](#-الاستخدام-كحزمة-npm) أعلاه)
 - 🧪 مجموعة اختبارات آلية (مجموعة Vitest + `ng test`، انظر [🧪 الاختبار](#-الاختبار))
 
 ### 🛠️ عناصر التحكم في الواجهة
@@ -485,8 +495,8 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 
 تُفتح من أيقونة الترس في الشريط العلوي (`SettingsModalComponent`)؛ وهي نافذة حوار ARIA من نوع `dialog` محاصرة للتركيز بتخطيط ذي 7 علامات تبويب (Esc أو النقر خارج الخلفية للإغلاق، وأسهم لوحة المفاتيح للتنقل بين علامات التبويب). النافذة عرض بحت (pure view) فوق كائن `SettingsState` يوفّره المضيف — ولا تملك أي حالة إعدادات خاصة بها. جميع الإعدادات هي حالة واجهة مستخدم على مستوى الجلسة فقط، ما لم يُذكر خلاف ذلك — ولا يعدّل أيٌّ منها بيانات كل سن أو حمولة التصدير.
 
-- **عام:** نظام الترقيم (FDI/العالمي/بالمر)، اللغة، السمة الداكنة/الفاتحة، إتاحة التصدير لكل صيغة (PNG/JPG/SVG/PDF — يخفي عنصر قائمة التصدير المطابق عند إيقافه، ويعطّل علامة تبويب التصدير عند إيقاف PDF)، إتاحة الاستيراد لكل مصدر (JSON للحالة/FHIR)
-- **مخطط الأسنان:** التخطيط على الشاشة — تباعد الأسنان، حجم رقم السن، لون التحديد ونمط الحدود؛ إظهار لوحة معلومات السن؛ إتاحة وضع الخطة؛ ملف تشريح السن (`classic` الافتراضي / `measured` — تسعة قوالب أسنان مقاسة وفق الأدبيات في تخطيط بقوسين وعرض لكل سن، قابل للتبديل أثناء التشغيل)؛ إظهار بطاقتَي الحالات والتقويم
+- **عام:** نظام الترقيم (FDI/العالمي/بالمر)، اللغة، السمة الداكنة/الفاتحة، إتاحة التصدير لكل صيغة (PNG/JPG/SVG/PDF — يخفي عنصر قائمة التصدير المطابق عند إيقافه، ويعطّل علامة تبويب التصدير عند إيقاف PDF)، إتاحة الاستيراد لكل مصدر (JSON للحالة/FHIR)، وحزمة ترميز التشخيص (none / BNO-10 / ICD-10-CM) ومفتاح تراكب SNOMED CT الاختياري
+- **مخطط الأسنان:** التخطيط على الشاشة — تباعد الأسنان، حجم رقم السن، لون التحديد ونمط الحدود؛ إظهار لوحة معلومات السن؛ إتاحة وضع الخطة؛ ملف تشريح السن (`classic` الافتراضي / `measured` — تسعة قوالب أسنان مقاسة وفق الأدبيات في تخطيط بقوسين وعرض لكل سن، قابل للتبديل أثناء التشغيل؛ ورسوماته جزء (chunk) كسول منفصل، يُجلب فقط عند التبديل إليه، بحيث لا يكلّف الافتراضي `classic` أي شيء إضافي)؛ إظهار بطاقتَي الحالات والتقويم
 - **مخطط دواعم السن:** مفتاح إتاحة يتحكم في بقية علامة التبويب وفي نقاط الدخول إلى دواعم السن في الغلاف؛ نمط عرض دواعم السن (`toggle`/`popup`)؛ 16 مفتاح إظهار/إخفاء لكل مؤشر عبر 5 مجموعات (الجيب: PD/GM/CAL/BOP · النظافة: البلاك/PI/GI · المخاطية اللثوية: إظهار CEJ/تقعر الجذر/KG/GT · الدعم: تفرع الجذور/الحركة/تصنيف ميلر · ما حول الزرعة: mPI/mBI)؛ وضع عرض أسماء المؤشرات مترجمة مقابل قياسية (القياسي = اسم علمي إنجليزي/لاتيني ثابت في كل لغات الواجهة؛ وتبقى التلميحات مترجمة دائمًا)
 - **تفاصيل السن:** مستوى تفصيل اللب (بسيط/AAE/لاتيني عملي، الافتراضي AAE)، مستوى تفصيل البري ومستوى تفصيل التصبّغ (بسيط/معقد، كل منهما افتراضيًا معقد)، ترميز السطح (بسيط/كامل، الافتراضي كامل)، مفتاح الملاحظات لكل سن
 - **النخر:** مفتاح تقييم ICDAS II، مفتاح عمق النخر، درجة تفصيل نخر الجذر (بسيط/شدة)، درجة تفصيل النخر الثانوي/CARS (بسيط/قياسي/كامل)، درجة تفصيل العمق الشعاعي (إيقاف/ثلاث درجات/مفصّل)
@@ -633,7 +643,7 @@ npm run docs           # Generate TypeDoc docs in docs/api/
 ```
 واجهة برمجة المحرك السريري المشترك موثَّقة أيضًا في المشروع الأصلي:
 
-📚 **https://zoliqua.github.io/React-Odontogram-Modul/**
+📚 **https://zoliqua.github.io/React-Advanced-Odontogram/**
 
 ### 📡 واجهة برمجة التطبيقات العامة
 
@@ -646,6 +656,7 @@ npm run docs           # Generate TypeDoc docs in docs/api/
 | `initOdontogram()` / `destroyOdontogram()` | تهيئة/تنظيف المحرك (تُستدعى داخليًا بواسطة `OdontogramShellComponent`/`OdontogramUiService` عبر رمز `ODONTOGRAM_ENGINE_LIFECYCLE`) |
 | `setNumberingSystem(system)` | التبديل بين FDI وUNIVERSAL وPALMER |
 | `clearSelection()` | إلغاء تحديد كل الأسنان |
+| `getSelectedTeeth()` | الأسنان المحددة حاليًا (أرقام FDI)، بترتيب التحديد |
 | `registerPlugins(plugins)` | تسجيل إضافات SVG مخصصة |
 | `setPluginState(toothNo, pluginId, value)` / `getPluginState(toothNo, pluginId)` | ضبط/قراءة حالة إضافة مخصصة لسن معين |
 | `getToothStateSummary(toothNo)` | الحصول على ملخص مترجم لكل الحالات النشطة لسن معين |
@@ -668,6 +679,13 @@ npm run docs           # Generate TypeDoc docs in docs/api/
 | `setDiagnosisOverride(v)` / `setStageOverride(v)` / `setGradeOverride(v)` / `setExtentOverride(v)` | تجاوز محور من محاور تصنيف دواعم السن المشتقة، أو `null` للعودة إلى القيمة المشتقة |
 | `getCaseMeta()` / `resetCaseMeta()` | الحصول على/إعادة ضبط كائن البيانات الوصفية على مستوى الحالة (العمر، حالة التدخين/السكري، هوية المريض، تاريخ الفحص، …) |
 | `setPatientName(v)` / `setPatientDob(v)` / `setExamDate(v)` | ضبط حقول هوية الحالة (لرأس تقرير PDF فقط — ليست أبدًا جزءًا من تصدير FHIR) |
+| `getToothDiagnoses(toothNo)` | الحصول على تشخيصات سن مرمَّزة وفق ICD-10، كما تشتقها قواعد المحاور السريرية |
+| `getActiveDiagnoses()` | الحصول على صفوف التشخيص الفعلية (المشتقة − المخفاة + المضافة) للسن المحدد حاليًا، بالإضافة إلى فهرس التشخيصات القابلة للإضافة — نموذج عرض (view-model) مكوّن `DiagnosesCardComponent` |
+| `addDiagnosisToSelection(key)` / `removeDiagnosisFromSelection(key)` | إضافة/إزالة تشخيص للتحديد الحالي من الأسنان بالكتابة في نتيجة المخطط الأساسية له |
+| `setDxOverrideForSelection(key, mode)` | فرض تجاوز على تشخيص للتحديد الحالي — `"add"` أو `"suppress"`، أو `null` للمسح |
+| `getDiagnosisCodingPack()` / `setDiagnosisCodingPack(id)` | قراءة/ضبط تراكب حزمة الترميز الوطنية فوق WHO ICD-10 — `"none"`، أو `"bno10"` (عناوين NEAK المجرية)، أو `"icd10cm"` (الأمريكية) |
+| `getSnomedEnabled()` / `setSnomedEnabled(v)` | قراءة/ضبط تراكب ترميز SNOMED CT الاختياري |
+| `getCaseConditions()` / `setCaseCondition(key, laterality)` | قراءة/ضبط تشخيصات الحالة/الإقليمية لكامل الفم (سوء الإطباق ومفصل الفك الصدغي، الأكياس الفموية، أمراض الغدد اللعابية، التهاب الفم والمخاطية الفموية، التشوهات النمائية على مستوى القوس)، لكل منها جانب — `null` للمسح، أو `"left"`/`"right"`/`"bilateral"` |
 | `exportFhir(options?)` | تصدير المخطط كحزمة تجميعية HL7 FHIR R4 (تنزيل JSON)؛ مرجع اختياري `{ subject }` |
 | `importFhirBundle(input)` | استيراد حزمة FHIR R4 (كائن أو نص JSON) صادرة عن هذه الوحدة |
 | `exportImage(format)` | تنزيل المخطط كصورة — `"png"` أو `"jpg"` |
@@ -720,7 +738,7 @@ enablePersistence({
 ملاحظة: قد تتضمن الحمولة المحفوظة بيانات تُعرّف هوية المريض (اسم المريض، تاريخ الفحص) بنص واضح في `localStorage`. إذا سجّلت مثل هذه البيانات، فتأكد من توفير حماية على مستوى الجهاز أو امسحها باستخدام `clearPersistedState()` عند الاقتضاء.
 
 ### 💾 صيغة تصدير/استيراد الحالة
-ينشئ التصدير ملف JSON (الإصدار `2.20`؛ لا تزال الاستيرادات تقبل الإصدارات القديمة `1.4` ومن `2.0` حتى `2.19` وتُرحَّل تلقائيًا) يحتوي على:
+ينشئ التصدير ملف JSON (الإصدار `2.22`؛ لا تزال الاستيرادات تقبل الإصدارات القديمة `1.4` ومن `2.0` حتى `2.21` وتُرحَّل تلقائيًا) يحتوي على:
 
 **الحقول العامة:**
 - `wisdomVisible` - إظهار أسنان العقل
@@ -753,6 +771,7 @@ enablePersistence({
 - `periapicalType` - النوع الفرعي للآفة حول الذروة (none/granuloma/cyst)؛ لا تزال القيمة القديمة `abscess` مقبولة عند الاستيراد
 - `resorptionType` - نوع امتصاص الجذر (none/internal/external-cervical)
 - `periImplant` - حالة ما حول الزرعة للزرعات فقط (none/mucositis/peri-implantitis-mild/-moderate/-severe)، وفق تصنيف الورشة العالمية 2018
+- `dxOverrides` - تجاوزات ترميز التشخيص لكل سن (الإصدار 2.21): كائن مفتاحه مفتاح تشخيص ICD-10 وقيمته `add` أو `suppress`، يفرض تشخيصًا مرمَّزًا رغم عدم وجود نتيجة مطابقة في المخطط، أو يوقفه رغم وجودها؛ يشكّل المجموعة المرمَّزة الفعلية المُصدَّرة كموارد FHIR من نوع `Condition`
 - `endoResection` - علامة استئصال الذروة
 - `fissureSealing` - علامة إغلاق الشقوق
 - `calculus` - علامة الجير
@@ -779,10 +798,14 @@ enablePersistence({
 **الحقل العلوي `plan` (من الإصدار 2.11 فصاعدًا):**
 - `plan` - كائن اختياري، بنفس بنية `teeth` (الحقول لكل سن أعلاه)، يحمل مخطط **الخطة** (المعالجة المقصودة بعد العلاج). يظهر فقط عندما جرى تهيئة مخطط الخطة وكان محتواه مختلفًا عن مخطط الحالة. عند الاستيراد، يؤدي غياب `plan` إلى مسح/إلغاء تهيئة مخطط الخطة؛ ووجوده يستعيد مخطط الخطة إلى جانب الحالة. يمكن أيضًا قراءته/كتابته بمعزل عن التصدير/الاستيراد عبر `getPlanChart()`/`setPlanChart()`.
 
-**الحقل العلوي `case` (من الإصدار 2.17 فصاعدًا، وموسَّع في 2.18 و2.19 و2.20):**
-- `case` - كائن اختياري يحمل بيانات وصفية على مستوى الحالة (وليست لكل سن)، مشتركة بين مخططَي الحالة والخطة. يُحذف عند الفراغ. الحقول (يُحذف كل منها عند قيمته الافتراضية): `age`؛ `smokingStatus` (+ `cigarettesPerDay`)؛ `diabetesStatus` (+ `hba1c`)؛ `toothLossPerio`؛ `maxRblPercent`؛ تجاوزات السريري الأربعة لكل محور من تصنيف 2017 وهي `diagnosisOverride` / `stageOverride` / `gradeOverride` / `extentOverride`؛ `patientName` / `examDate`؛ و`patientDob`. تُقرأ/تُكتب عبر `getCaseMeta()` ودوال `set*` أعلاه. اسم المريض وتاريخ الميلاد وتاريخ الفحص بيانات هوية للمخطط فقط — وهي **ليست** جزءًا من تصدير FHIR.
+**الحقل العلوي `case` (من الإصدار 2.17 فصاعدًا، وموسَّع في 2.18 و2.19 و2.20 و2.22):**
+- `case` - كائن اختياري يحمل بيانات وصفية على مستوى الحالة (وليست لكل سن)، مشتركة بين مخططَي الحالة والخطة. يُحذف عند الفراغ. الحقول (يُحذف كل منها عند قيمته الافتراضية): `age`؛ `smokingStatus` (+ `cigarettesPerDay`)؛ `diabetesStatus` (+ `hba1c`)؛ `toothLossPerio`؛ `maxRblPercent`؛ تجاوزات السريري الأربعة لكل محور من تصنيف 2017 وهي `diagnosisOverride` / `stageOverride` / `gradeOverride` / `extentOverride`؛ `patientName` / `examDate`؛ `patientDob`؛ و(في الإصدار 2.22) `caseConditions` — تشخيصات الحالة/الإقليمية (سوء الإطباق ومفصل الفك الصدغي K07، الأكياس الفموية K09، أمراض الغدد اللعابية K11، التهاب الفم والمخاطية الفموية K12/K13، التشوهات النمائية على مستوى القوس K00)، كل منها مرتبط بجانب (غير محدد/يسار/يمين/ثنائي الجانب). تُقرأ/تُكتب عبر `getCaseMeta()`/`getCaseConditions()` ودوال `set*`/`setCaseCondition()` أعلاه. اسم المريض وتاريخ الميلاد وتاريخ الفحص بيانات هوية للمخطط فقط — وهي **ليست** جزءًا من تصدير FHIR.
 
 ### 🖨️ التصدير
+`exportFhir()` نظيف أمام مدقِّق HL7: يحمل كل عنصر في الحزمة (Bundle) معرِّف `id` ثابتًا و`fullUrl` مطلقًا (بلا عناصر نائبة من نوع `urn:uuid`)، وتُضمِّن الحزمة `CodeSystem` الخاص بالمحرك نفسه لكي تُحلّ رموزه المحلية أثناء التحقق (يُنشَر أيضًا تحت `projects/angular-advanced-odontogram/src/lib/fhir/`؛ مرِّر `includeCodeSystem: false` لحذفه).
+
+تُنقَل بيانات دواعم السن الآن أيضًا ذهابًا وإيابًا عبر استيراد FHIR، وليس فقط عبر حمولة JSON: تعيد `importFhirBundle()` قراءة لوحات دواعم السن في LOINC (`74029-0`) إلى سجل دواعم السن الخاص بكل سن — عمق الجيب، والحافة اللثوية (المُعاد بناؤها من CAL، بحيث تبقى قيم الجيب الكاذب سليمة)، والنزف عند السبر، وتفرع الجذور، وبلاك أوليري، ومؤشرَي PI/GI ومؤشرَي الزرعة mPI/mBI، وعرض اللثة المتقرنة — بالإضافة إلى ملاحظات (Observations) حالة التدخين ودليل HbA1c على مستوى الحالة. التقيّح هو الاستثناء الوحيد: فهو يبقى مقتصرًا على JSON فقط، إذ ليس جزءًا من تصدير FHIR.
+
 إلى جانب تصدير الأودونتوغرام الخاص به بصيغة JSON للحالة / FHIR / PNG / JPG / SVG، يملك **مخطط دواعم السن** مسار تصدير خاصًا به:
 - **SVG/PNG/JPG لدواعم السن:** ترسم `exportPerioSvg()` / `exportPerioImage("png"|"jpg")` مخطط دواعم السن الكامل كملف SVG متجهي مستقل واحد، بمعزل عن عنصر DOM الخاص بمكوّن `PerioChartComponent` المُركَّب. مُعطَّلتان كلما كانت `hasAnyPerioData()` تساوي `false`.
 - **تقرير PDF:** يفتح عنصر "تقرير PDF…" في قائمة التصدير نافذة `ExportOptionsModalComponent` — وهي حوار إعدادات (حقول اسم المريض وتاريخ الميلاد وتاريخ الفحص، مرتبطة مباشرة بالبيانات الوصفية للحالة، مع تاريخ فحص افتراضي هو اليوم الحالي؛ وخانات اختيار للأقسام: بيانات المريض، مخطط الأسنان، وصف مخطط الأسنان، الملاحظات الفردية — مُعطَّلة عندما لا يحمل أي سن ملاحظة — حالة دواعم السن، وصف دواعم السن) قبل استدعاء `exportPdf(opts)` عبر رمز الحقن `EXPORT_PDF_FN`. عند ترك حقول الهوية فارغة تُستخدم قيم بديلة (`"John Doe"` / `"1980-01-01"`، قابلة للضبط عبر `PdfSettings.defaultName`/`defaultDob`) بحيث ينجح التصدير دائمًا. يُجمَّع ملف PDF بشكل أصلي عبر jsPDF — نص متجهي بواسطة `.text()`، وصور نقطية للأسنان/مخطط دواعم السن بواسطة `.addImage()` — دون الاعتماد على مكتبة `svg2pdf.js`. يُتخطى قسم الملاحظات الفردية تلقائيًا عندما لا يحمل أي سن ملاحظة، ويُتخطى قسما دواعم السن تلقائيًا كلما كانت `hasAnyPerioData()` تساوي `false`، بصرف النظر عن خانات الحوار.
@@ -802,10 +825,13 @@ enablePersistence({
 - `projects/angular-advanced-odontogram/src/lib/core/perioExport.ts` / `perioGraphic.ts` / `perioIndexNames.ts` - رسم SVG لمخطط دواعم السن لكامل الفم
 - `projects/angular-advanced-odontogram/src/lib/core/perioPdf.ts` - مُجمِّع تقرير PDF النقي الخاص بـjsPDF (`assemblePdf`)
 - `projects/angular-advanced-odontogram/src/lib/core/status_extras.ts` - 22 قالب ترميم جاهزًا مسبقًا
-- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - الترجمات (12 لغة) وناقل الترجمة الخالي من أي إطار عمل
+- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - الترجمات، وحدة واحدة تُحمَّل كسوليًا لكل لغة تحت `i18n/locales/` (الإنجليزية ثابتة، بينما تُجلب اللغات الـ11 الأخرى عبر `i18n/loader.ts` عند أول استخدام)، وناقل الترجمة الخالي من أي إطار عمل
+- `projects/angular-advanced-odontogram/src/lib/core/dx/` - ترميز تشخيصي قائم على معيار موحّد: قواعد الاشتقاق (`derive.ts`)، وفهرس تشخيصات ICD-10 (`codes.ts`/`caseCodes.ts`)، وحزم الترميز الوطنية — BNO-10/ICD-10-CM (`packs.ts`) — وطبقة تنقيح ICD-10-CM/SNOMED CT (`refine.ts`)
+- `projects/angular-advanced-odontogram/src/lib/core/anatomy/` - ملفات تشريح السن (`classic`/`measured`)؛ تُحمَّل قوالب `measured` المقاسة وفق الأدبيات (`measured.ts`) كجزء (chunk) كسول منفصل
 - `projects/angular-advanced-odontogram/src/lib/core/utils/numbering.ts` - تحويل الترقيم بين FDI والعالمي وبالمر
 - `projects/angular-advanced-odontogram/src/lib/core/registry/` - سجل تصريحي لمحاور الحالة السريرية: ربط حقول FHIR، تفعيل مجموعة SVG الواضحة/العلامات المنطقية، مصفوفة نوع×مادة الترميم، قوائم خيارات الواجهة
-- `projects/angular-advanced-odontogram/src/lib/core/fhir/` - تصدير/استيراد HL7 FHIR R4: `toFhir.ts`/`fromFhir.ts`، أنظمة الترميز، ربط الحقول، الأنواع الأولية
+- `projects/angular-advanced-odontogram/src/lib/core/fhir/` - تصدير/استيراد HL7 FHIR R4: `toFhir.ts`/`fromFhir.ts`، و`toFhirDx.ts`/`importConditions.ts` (موارد `Condition` الخاصة بالتشخيص)، و`importPerio.ts` (ملاحظات دواعم السن)، أنظمة الترميز، ربط الحقول، الأنواع الأولية
+- `projects/angular-advanced-odontogram/src/lib/fhir/` - ملف `CodeSystem-odontogram.json` المنشور بالإضافة إلى مجموعة `ValueSet-odontogram-*.json` المُولَّدة (واحدة لكل مجموعة قيم لمحور سريري، وواحدة لأنواع النتائج، وواحدة لكل الرموز)
 - `projects/angular-advanced-odontogram/src/lib/core/bridgeOverlay.ts` - تراكب موصل امتداد الجسر متعدد الأسنان
 - `projects/angular-advanced-odontogram/src/lib/core/fonts/` - خطوط PDF مضمَّنة تدعم يونيكود (تشكيل عربي، أحرف صينية/يابانية/كورية) + محمِّل الخطوط
 - `projects/angular-advanced-odontogram/src/lib/core/assets/` - ملفات SVG المصدرية للأسنان/الأيقونات (`teeth-svgs/`، `teeth-svgs/measured/`، `icon-svgs/`)
@@ -815,10 +841,11 @@ enablePersistence({
 - `projects/angular-advanced-odontogram/src/lib/components/odontogram-ui.service.ts` - `OdontogramUiService`، طبقة حالة/تأثيرات الواجهة القابلة للتركيب
 - `projects/angular-advanced-odontogram/src/lib/components/engine-state.ts` - الأداة المساعدة `engineState()` الخاصة بالإشارات (Signals)
 - `projects/angular-advanced-odontogram/src/lib/components/odontogram-engine-lifecycle.ts` - رمز الحقن `ODONTOGRAM_ENGINE_LIFECYCLE`
-- `projects/angular-advanced-odontogram/src/lib/components/surfaces/` - الأسطح العرضية الأربعة (الشريط العلوي، المخطط، معلومات السن، عناصر تحكم السن)، وتحت `surfaces/cards/` البطاقات التصريحية السبع لعناصر التحكم
+- `projects/angular-advanced-odontogram/src/lib/components/surfaces/` - الأسطح العرضية الأربعة (الشريط العلوي، المخطط، معلومات السن، عناصر تحكم السن)، وتحت `surfaces/cards/` البطاقات التصريحية الثماني لعناصر التحكم (بما فيها `DiagnosesCardComponent`)
 - `projects/angular-advanced-odontogram/src/lib/components/settings-modal/` - `SettingsModalComponent` (نافذة إعدادات بـ7 علامات تبويب)
 - `projects/angular-advanced-odontogram/src/lib/components/export-options-modal/` - `ExportOptionsModalComponent` ورمز الحقن `EXPORT_PDF_FN`
 - `projects/angular-advanced-odontogram/src/lib/components/credits-modal/` - `CreditsModalComponent`
+- `projects/angular-advanced-odontogram/src/lib/components/case-diagnoses-modal/` - `CaseDiagnosesModalComponent`، النافذة المنبثقة لتشخيصات الحالة/الإقليمية لكامل الفم
 - `projects/angular-advanced-odontogram/src/lib/components/perio-chart/` / `perio-sidebar/` - مخطط دواعم السن المستقل/المضمَّن والشريط الجانبي السياقي الخاص به
 - `projects/angular-advanced-odontogram/src/lib/components/dual-state-confirm/` - حوار التأكيد المشترك (التعديلات المؤثرة على الحالة↔الخطة)
 - `projects/angular-advanced-odontogram/src/lib/components/shared/dialog-focus.ts` - أدوات مساعدة مشتركة لمصيدة/استعادة تركيز النوافذ المنبثقة
@@ -859,7 +886,7 @@ enablePersistence({
 
 **كل الإصدارات (معرّف DOI المفاهيمي):** https://doi.org/10.5281/zenodo.21156787
 
-البيانات الوصفية للاستشهاد القابلة للقراءة الآلية موجودة في ملف [`CITATION.cff`](https://github.com/ZoliQua/React-Odontogram-Modul/blob/main/CITATION.cff) الخاص بالمشروع الأصلي.
+البيانات الوصفية للاستشهاد القابلة للقراءة الآلية موجودة في ملف [`CITATION.cff`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/CITATION.cff) الخاص بالمشروع الأصلي.
 
 ## 🙌 شكر وتقدير
 
@@ -867,7 +894,7 @@ enablePersistence({
 
 **المشروع الأصلي**
 
-- [React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul): التنفيذ الأصلي بلغة React الذي تمثّل هذه الحزمة منفذًا (port) له — المحرك السريري (منطق حالة الأسنان، مخطط دواعم السن، تصدير/استيراد FHIR، نصوص الترجمة، الجولة التعريفية، قوالب SVG) مشترك، حرفيًا.
+- [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) (حزمة npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)): التنفيذ الأصلي بلغة React الذي تمثّل هذه الحزمة منفذًا (port) له — المحرك السريري (منطق حالة الأسنان، مخطط دواعم السن، ترميز التشخيصات، تصدير/استيراد FHIR، نصوص الترجمة، الجولة التعريفية، قوالب SVG) مشترك، حرفيًا.
 
 **مبني باستخدام** [jsPDF](https://github.com/parallax/jsPDF)، [DOMPurify](https://github.com/cure53/DOMPurify)، [Angular](https://angular.dev)، [Angular CLI](https://angular.dev/tools/cli)، [TypeScript](https://www.typescriptlang.org) و[Tailwind CSS](https://tailwindcss.com).
 

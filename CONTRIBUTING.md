@@ -44,7 +44,7 @@ The suite is split across two runners, and both must pass:
 `projects/angular-advanced-odontogram/src/lib/core/` (the clinical engine —
 dental status logic, periodontal charting, FHIR export/import, i18n strings,
 guided tour, SVG templates) is a byte-identical port of the original
-[React Advanced Odontogram](https://github.com/ZoliQua/React-Odontogram-Modul)
+[React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)
 project's engine, pinned to a specific upstream commit and re-copied from that
 pinned snapshot on every resync. Please do not hand-edit files under `core/`
 for a feature or bug fix — a small, explicitly documented set of deviations

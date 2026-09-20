@@ -132,6 +132,45 @@ drop the now-false promise while keeping the "open a pull request on
 GitHub" invitation; EN: "Contributions are welcome — open a pull request on
 GitHub." No other `credits.*` key was touched.
 
+**Deviations (1) and (4), relocated (Phase 11 Task 1, 2026-08-17, v2.6.0
+resync to engine `215c43a`).** Upstream's own 2.5.0/2.6.0 work split the
+single `i18n/translations.ts` aggregator into per-language modules under
+`i18n/locales/<lang>.ts` (12 files, English static/bundled, the other 11
+lazily `import()`ed via the new framework-free `i18n/loader.ts`);
+`translations.ts` itself is now a test-only aggregator, re-copied verbatim
+and guarded by a test that fails if any non-test module imports it. Deviation
+(4) (branding: `"app.title"`; the Phase 7/9 credits adaptations:
+`credits.intro`, `credits.originalProjectTitle`/`Desc`, `credits.welcome`)
+now applies **in each of the 12 `locales/*.ts` files** instead of the one
+retired aggregator — same strings, same 12 languages, new file boundary; the
+Angular shell (`I18nService`/`ODONTOGRAM_I18N_LOADER`) must preload all 12
+languages before tests run, same as production lazy-loads them on demand.
+Deviation (1) (the `?raw` SVG-import swap) now applies on a SECOND path too:
+upstream split the tooth-anatomy artwork into `anatomy/profiles.ts` (dispatch)
+and a lazy `anatomy/measured.ts` (the nine measured templates, `import()`ed
+only when the `measured` profile is selected) — the generated-asset swap
+covers both `odontogram.ts`'s classic templates and this new lazy module,
+and the codegen pipeline (`scripts/generate-svg-assets.mjs`) preserves the
+laziness rather than folding the measured SVGs into the main chunk. See the
+Phase 11 Task 1/Task 2 reports for the file-by-file verification.
+
+**Public API — deliberate superset of upstream (pre-existing, formally
+recorded Phase 11 Task 5, ledger ruling #2).** `public-api.ts`'s
+`export * from "./lib/core/odontogram"` has, since the first core copy,
+re-exported every symbol `odontogram.ts` itself exports — which is a
+strictly WIDER surface than upstream's own curated `App.tsx`/`index.ts`
+re-export list. Task 5's v2.6.0 public-API sweep confirmed and named a
+concrete instance: `getCaseConditions()`/`setCaseCondition()` (new in
+2.6.0) reach this package's public entry point automatically through that
+wildcard, even though upstream's own `App.tsx` does not re-export them
+(verified by grepping the pinned `215c43a:src/App.tsx`/`src/index.ts`
+directly — zero hits for either name). This is accepted as pre-existing
+precedent, not a bug introduced by this resync: narrowing the surface now
+risks breaking consumers who may already depend on it since 1.0.0. Recorded
+here for visibility; revisit deliberately (curate `public-api.ts` down to
+upstream's own list, with a major-version note) in a future phase if
+desired — see §10.
+
 **How the shell and engine couple:** the shell renders a static DOM skeleton
 with fixed ids (`#toothGrid`, `#cariesChecks`, `#modsChecks`,
 `#statusExtraSelect`, `#chartModeToggle`, …); `initOdontogram()` (async) wires
@@ -179,7 +218,12 @@ re-verified green through the full Phase 6 burn-down (Task 5) — see
 what remains deferred beyond this release. **Resynced again (Phase 7,
 2026-08-12): 1.2.0 resyncs to `$ENGINE` main @ `934a911`** (post-v2.4.0;
 payload version unchanged at 2.20) — see §8 item 6 and §10 for the delivered
-scope and the current drift note.
+scope and the current drift note. **Resynced again (Phase 11, 2026-08-17):
+2.6.0 resyncs to `$ENGINE` main @ `215c43a`** (108 commits past `934a911`;
+payload 2.22 — the ICD-10/BNO-10/ICD-10-CM/SNOMED diagnosis-coding layer,
+lazy i18n + lazy measured anatomy, `getSelectedTeeth()`, and the upstream
+repository rename to `React-Advanced-Odontogram`) — see §8 item 7 and §10 for
+the delivered scope.
 
 ## 3. Target workspace
 
@@ -407,6 +451,31 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
    files (`SECURITY.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`), and this
    spec update (Task 6). Released as 1.2.0 (version cut is Task 7's own
    scope, not this task's).
+7. **2.6.0 upstream resync — DELIVERED (Phase 11, 2026-08-17).** Resync to
+   `react-advanced-odontogram` v2.6.0 (`$ENGINE` @ `215c43a`, payload 2.22,
+   108 commits past the `934a911` pin) plus the upstream repository rename
+   (`React-Odontogram-Modul` → `React-Advanced-Odontogram`) adopted
+   everywhere outside core-verbatim historical text (Task 6). Core + full
+   test corpus re-copied (Task 1: new `dx/*` diagnosis layer, `state/*` split
+   of `odontogram.ts`, `anatomy/{profiles,measured}.ts`, `i18n/locales/*.ts`,
+   the three inherited bug fixes — PDF invented identity, perio lower-arch
+   `mirror XOR rot180`, one-pass control-label gathering). i18n and measured
+   anatomy made lazy end-to-end, cutting the demo's main bundle 3.12 MB →
+   1.23 MB and the initial total 3.21 MB → 1.32 MB, with `angular.json`
+   budgets lowered accordingly (Task 2). The diagnosis-coding UI ported —
+   `DiagnosesCardComponent`/`aao-diagnoses-card` and
+   `CaseDiagnosesModalComponent`/`aao-case-diagnoses-modal`, both new public
+   exports (Task 3). Shell/tour/perio deltas plus two more bug fixes found
+   while porting — a stale perio-chart anatomy-switch effect and pre-fix PDF
+   test fixtures (Task 4). The full v2.6.0 test-inventory burn-down
+   (`test:ng` 900/900 ×2 identical; `test:corpus` 1428/1429 unchanged) and
+   public-API sweep — `getSelectedTeeth`, the dx/case-condition functions,
+   and the two new components (Task 5). This rename sweep + 13-document
+   refresh (Task 6). See §2's new deviation-relocation and superset-API
+   notes above and the Phase 11 task reports
+   (`.superpowers/sdd/2026-08-17-phase11-resync-260/`) for evidence. Version
+   cut to 2.6.0 (root + library `package.json`, `CHANGELOG.md`) is Task 7's
+   own scope, not this task's.
 
 ## 9. Risks & mitigations
 
@@ -446,17 +515,32 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
   note this bullet previously carried. See §8 item 6 for the full delivered
   scope and the Phase 7 task reports
   (`.superpowers/sdd/2026-08-12-phase7-composable-resync/`) for evidence.
-- **Drift note (superseding §2's Phase-6-era note):** `$ENGINE` kept moving
-  after the `934a911` pin too — one further commit (`3bfc98c`, ICD-10
-  diagnosis coding) was observed on `$ENGINE` main during Phase 7's own
-  execution window, read-only, and deliberately NOT ported (out of this
-  resync's pinned scope). A further resync beyond `934a911` will be due in a
-  future release.
+- **2.6.0 — DELIVERED (Phase 11, 2026-08-17):** resync to
+  `react-advanced-odontogram` v2.6.0 (`$ENGINE` @ engine commit `215c43a`,
+  payload 2.22, 108 commits past `934a911` — the ICD-10/BNO-10/ICD-10-CM
+  diagnosis-coding layer flagged by the drift note below, an opt-in SNOMED
+  CT overlay, per-tooth `dxOverrides` + whole-mouth `caseConditions`, FHIR
+  `Condition` export **and import**, the published CodeSystem + ValueSets,
+  lazy-loaded i18n + lazy-loaded measured anatomy, `getSelectedTeeth()`, and
+  the upstream repository rename to `React-Advanced-Odontogram`). Closes the
+  drift note below. See §8 item 7 for the full delivered scope and the
+  Phase 11 task reports (`.superpowers/sdd/2026-08-17-phase11-resync-260/`)
+  for evidence.
+- **Drift note (superseding §2's Phase-6-era note; CLOSED by the 2.6.0
+  resync above):** `$ENGINE` kept moving after the `934a911` pin — the
+  commit this note originally flagged (`3bfc98c`, ICD-10 diagnosis coding)
+  landed in full as part of the 215c43a pin the 2.6.0 resync copied from.
+  `$ENGINE` will keep advancing past `215c43a` too; a further resync beyond
+  this pin will be due in a future release.
 - Persistence demo wiring: the new opt-in `enablePersistence` API is not
   wired into the `demo` app shell (upstream doesn't wire it into its shell
   either — host-opt-in by design); a demo toggle could come later if wanted.
-- Remaining 10 README translations (after 1.0.0 content settles).
 - Any shared-core extraction with the React repo (revisit only if dual
   maintenance becomes painful).
-- FHIR *import* of perio data — deferred in the React module too; parity means
-  deferring it here as well.
+- **Public API superset (see §2's Phase 11 Task 5 note):** `public-api.ts`'s
+  wildcard re-export of `core/odontogram` exposes symbols (e.g.
+  `getCaseConditions`/`setCaseCondition`) that upstream's own curated
+  `App.tsx`/`index.ts` does not re-export. Accepted as pre-existing
+  precedent for this release; curating `public-api.ts` down to an explicit,
+  upstream-matching allow-list is a deliberate future revisit, not a defect
+  to silently fix mid-resync.
