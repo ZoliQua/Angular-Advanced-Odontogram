@@ -119,7 +119,7 @@ describe("CreditsModalComponent", () => {
 
     const links = Array.from(dialog.querySelectorAll("a.odon-credits-link")) as HTMLAnchorElement[];
     const originalLink = links.find(
-      (a) => a.getAttribute("href") === "https://github.com/ZoliQua/React-Odontogram-Modul",
+      (a) => a.getAttribute("href") === "https://github.com/ZoliQua/React-Advanced-Odontogram",
     );
     expect(originalLink).toBeTruthy();
     expect(originalLink?.textContent?.trim()).toBe("React Advanced Odontogram");

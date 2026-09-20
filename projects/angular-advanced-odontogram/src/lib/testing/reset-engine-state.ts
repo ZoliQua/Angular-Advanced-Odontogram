@@ -209,8 +209,12 @@ export async function resetEngineStateForTest(): Promise<void> {
   // restore every field to its own module default (see
   // `core/odontogram.ts`'s `const pdfSettings: PdfSettings = {...}`).
   setPdfSettings({
-    defaultName: "John Doe",
-    defaultDob: "1980-01-01",
+    // v2.6.0 resync: core/odontogram.ts's own module default changed from
+    // "John Doe"/"1980-01-01" to "" (the inherited PDF-identity bug fix — an
+    // empty case now prints "not specified" instead of an invented name/DOB;
+    // see pdf-patient-identity.test.ts). Kept in sync here.
+    defaultName: "",
+    defaultDob: "",
     showAge: true,
     dateFormat: "iso",
     colorTheme: DEFAULT_PDF_THEME,

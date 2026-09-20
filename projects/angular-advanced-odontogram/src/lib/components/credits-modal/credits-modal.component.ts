@@ -13,7 +13,7 @@
 // for why the ORIGINAL_PROJECT section below exists):
 //  - `REPO_URL` (the bottom "Star on GitHub" button, `credits.star`):
 //    upstream points at the original React project
-//    (https://github.com/ZoliQua/React-Odontogram-Modul); this port points
+//    (https://github.com/ZoliQua/React-Advanced-Odontogram); this port points
 //    at THIS package's own repo (https://github.com/ZoliQua/Angular-Advanced-Odontogram),
 //    matching OdontogramTopbarComponent's own `#btnGithubLink` (Task 2) —
 //    one consistent "this package's repo" URL across the shell.
@@ -33,11 +33,19 @@
 //    `credits.originalProjectTitle`/`.originalProjectDesc`, translated in all
 //    12 languages) was ADDED, mirroring the Creator section's own
 //    heading+list+link+desc shape, immediately after it. Restores a visible,
-//    clickable, in-modal credit to https://github.com/ZoliQua/React-Odontogram-Modul
+//    clickable, in-modal credit to https://github.com/ZoliQua/React-Advanced-Odontogram
 //    — the three adaptations above only redirect THIS package's own
 //    app-identity touchpoints; they must not (and, with this section, no
 //    longer do) remove the original project's own attribution from the
 //    rendered modal.
+//
+// 2026-08-17 (v2.6.0 resync, Task 4): upstream's own repository rename
+// (`React-Odontogram-Modul` -> `React-Advanced-Odontogram`) reached
+// `CreditsModal.tsx`'s `REPO_URL` constant and file header only (verified via
+// the pinned `934a911..215c43a` diff — no structural/content change reached
+// this component's actual code at 2.6.0). `ORIGINAL_PROJECT_URL` above points
+// at that same original-project repo, so it is renamed to match, alongside
+// this file's own header comment.
 //
 // 2026-08-19 (owner directive, post-1.2.0 test approval): the Contributors
 // section (upstream's project-contributor list — heading, per-contributor
@@ -70,7 +78,7 @@ const REPO_URL = "https://github.com/ZoliQua/Angular-Advanced-Odontogram";
  *  round 1 so the modal keeps a visible, clickable credit to the upstream
  *  project once `REPO_URL`/`LIBRARIES` above were adapted to this package's
  *  own identity; see this file's header comment. */
-const ORIGINAL_PROJECT_URL = "https://github.com/ZoliQua/React-Odontogram-Modul";
+const ORIGINAL_PROJECT_URL = "https://github.com/ZoliQua/React-Advanced-Odontogram";
 
 /** The creator / lead developer (TSX `CREATOR`, unchanged). */
 const CREATOR = { handle: "ZoliQua", descKey: "credits.contrib.zoliqua" } as const;

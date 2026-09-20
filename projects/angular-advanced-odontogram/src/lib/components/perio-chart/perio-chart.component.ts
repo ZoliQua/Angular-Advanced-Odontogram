@@ -100,9 +100,11 @@ import {
   getPerioIndexNameMode,
   getPerioToothKind,
   isToothImplant,
+  getToothAnatomy,
   type PerioCellCoord,
   type PerioOverlayLayer,
   type PerioSite,
+  type ToothAnatomy,
 } from "../../core/odontogram";
 
 // Mirrors `ALL_TEETH` in odontogram.ts — same duplication precedent as
@@ -248,6 +250,22 @@ export class PerioChartComponent {
   // comment for why this hook never touches "./odontogram" until the
   // active-gated effect below runs.
   protected readonly overlayLayer = signal<PerioOverlayLayer>("none");
+  // v2.6.0 resync: mirrors the module-level tooth-anatomy flag into a signal
+  // purely so the tooth-row-graphic effect below can DEPEND on it (TSX
+  // `PerioChart.tsx`'s own `anatomy` state, added for this exact reason — see
+  // that file's header comment on the effect's `[active, anatomy]` deps). The
+  // two anatomy profiles have DIFFERENT template sets (the measured profile
+  // adds 12/15/17/31/46); `archCache` holds documents parsed from whichever
+  // profile was active when the effect last ran. Without this dependency, a
+  // live `setToothAnatomy()` switch while the chart is open kept redrawing
+  // from the STALE profile's cache, silently dropping the measured-only teeth
+  // from the arch (and vice versa on switching back). Initialized eagerly
+  // from the engine (TSX's own `useState(() => getToothAnatomy())`) rather
+  // than a static default like `overlayLayer` above — `getToothAnatomy()` is
+  // a plain flag read with no side effects, so reading it before the chart is
+  // active is safe, and doing so avoids the graphic effect below briefly
+  // building from a wrong assumed profile on first activation.
+  protected readonly anatomy = signal<ToothAnatomy>(getToothAnatomy());
   // Static default, NOT getPerioSummary() — same module-eval-safety reason
   // (TSX 1553-1559). Replaced with the real summary as soon as the grid
   // effect's first fullResync() runs. Only feeds `overlayReadout()` — the
@@ -376,6 +394,13 @@ export class PerioChartComponent {
     // grid-building effect above (TSX 2062-2190). Fully READ-ONLY.
     effect((onCleanup) => {
       if (!this.active()) return;
+      // v2.6.0 resync: re-run this effect (tearing down the old cache via
+      // `onCleanup` and reloading a fresh one below) whenever the anatomy
+      // profile changes, not just when the chart (de)activates — see the
+      // `anatomy` signal's own doc comment above for why a stale cache is a
+      // real bug, not a cosmetic one. Reading the signal HERE (unconditionally,
+      // before any early return) is what makes it a tracked dependency.
+      this.anatomy();
       // Mirrors the grid-build effect's own `container` guard: the scroll
       // container is created by the SAME template swap the `active` gate
       // above reacts to (`@if (active())`), so on the very first pass after
@@ -488,6 +513,16 @@ export class PerioChartComponent {
       if (!this.active()) return;
       this.overlayLayer.set(getPerioOverlayLayer());
       onCleanup(onStateChange(() => this.overlayLayer.set(getPerioOverlayLayer())));
+    });
+
+    // v2.6.0 resync: same mirror for the anatomy profile (TSX 2185-2192).
+    // `setToothAnatomy()` notifies AFTER the profile is already in place, so
+    // this lands once per switch and the graphic effect above (which depends
+    // on `this.anatomy()`) re-parses the new profile's templates.
+    effect((onCleanup) => {
+      if (!this.active()) return;
+      this.anatomy.set(getToothAnatomy());
+      onCleanup(onStateChange(() => this.anatomy.set(getToothAnatomy())));
     });
   }
 

@@ -105,6 +105,15 @@ const MUST_HAVE_IDS = [
   "resorptionRow", "resorptionSelect", "endoResection", "parapulpalPin", "rpPerioBlock",
   "mobilityRow", "mobilitySelect", "perioRow", "perioGrid", "perioReadout", "modsChecks",
   "calculusRow", "calculusToggle", "periImplantRow", "periImplantSelect",
+  // v2.6.0 resync (Task 4): diagnosesSection (ToothControlsSurface.tsx diff,
+  // ported by Task 3) — the DiagnosesCard's own static skeleton (row list +
+  // add-picker) is unconditionally mounted, same "hidden via a wrapper class,
+  // never unmounted" idiom as every other card's own static ids above.
+  "diagnosesSection", "btnToggleDiagnosesCard", "diagnosesRows", "dxAddRow", "dxAddSelect",
+  // v2.6.0 resync (Task 4): #openCaseDiagnosesBtn (App.tsx's ShellLayout diff,
+  // ported by Task 3) — ALWAYS rendered in the `.perio-launch-bar` div,
+  // sibling to the perio-view-mode conditional (not inside either branch).
+  "openCaseDiagnosesBtn",
   // Task 5: topbar contract ids (App.tsx 517-619) — btnExportMenu/
   // btnImportMenu toggle the two dropdowns; the 9 hidden proxy buttons +
   // statusImportInput are the engine's own wireControls() capture targets

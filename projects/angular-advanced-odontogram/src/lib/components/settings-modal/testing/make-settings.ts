@@ -20,10 +20,13 @@ import { DEFAULT_PDF_THEME } from "../../../core/perioPdf";
 // v2.4.0 resync (Task 2): default PDF settings mirror, matching
 // core/odontogram.ts's own module defaults (see `resetEngineStateForTest`'s
 // `setPdfSettings` call in `lib/testing/reset-engine-state.ts`, kept in sync
-// with this literal).
+// with this literal). v2.6.0 resync (Task 4): the module default changed
+// from "John Doe"/"1980-01-01" to "" — the inherited PDF-identity bug fix
+// (an empty case prints "not specified", never an invented name/DOB/age; see
+// pdf-patient-identity.test.ts). Updated here to match.
 const DEFAULT_PDF_SETTINGS: PdfSettings = {
-  defaultName: "John Doe",
-  defaultDob: "1980-01-01",
+  defaultName: "",
+  defaultDob: "",
   showAge: true,
   dateFormat: "iso",
   colorTheme: DEFAULT_PDF_THEME,
