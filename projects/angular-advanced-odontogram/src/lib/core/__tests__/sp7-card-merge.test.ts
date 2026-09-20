@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP7 Task 5: merge the "Root" (#endoSection) and "Periodontium and
@@ -24,6 +24,9 @@ import { __syncInflammationModVisibilityForTest } from "../odontogram";
 vi.mock("../odontogram", async () => {
   const actual = await vi.importActual<typeof import("../odontogram")>("../odontogram");
   return {
+    // DX-2 Task 4: DiagnosesCard (mounted unconditionally as part of ToothControlsSurface) reads/writes these.
+    getActiveDiagnoses: actual.getActiveDiagnoses,
+    setDxOverrideForSelection: actual.setDxOverrideForSelection,
     initOdontogram: vi.fn().mockResolvedValue(undefined),
     destroyOdontogram: vi.fn(),
     rewireControls: vi.fn(),
@@ -138,6 +141,8 @@ vi.mock("../odontogram", async () => {
     closePerioOverlay: vi.fn(),
     isPerioOverlayOpen: vi.fn().mockReturnValue(false),
     getPerioViewMode: vi.fn().mockReturnValue("toggle"),
+    getDiagnosisCodingPack: vi.fn().mockReturnValue("none"),
+    getSnomedEnabled: vi.fn().mockReturnValue(false),
     getFillingDefectEnabled: vi.fn().mockReturnValue(true),
     setFillingDefectEnabled: vi.fn(),
     getFillingComplexity: vi.fn().mockReturnValue("complex"),
@@ -147,6 +152,8 @@ vi.mock("../odontogram", async () => {
     getFillingMaterialAvailability: vi.fn().mockReturnValue({ amalgam: true, composite: true, gic: true, temporary: true }),
     setFillingMaterialAvailability: vi.fn(),
     setPerioViewMode: vi.fn(),
+    setDiagnosisCodingPack: vi.fn(),
+    setSnomedEnabled: vi.fn(),
     getToothAnatomy: vi.fn().mockReturnValue("classic"),
     setToothAnatomy: vi.fn(),
     getPerioRowVisibility: vi.fn().mockReturnValue({

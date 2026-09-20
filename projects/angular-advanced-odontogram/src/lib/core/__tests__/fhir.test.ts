@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { describe, it, expect } from "vitest";
@@ -162,11 +162,12 @@ describe("buildFhirBundle — review fixes", () => {
   it("gives the placeholder Patient a fullUrl that every Observation.subject resolves to", () => {
     const b = buildFhirBundle({ version: "1.3", teeth: { "11": { mobility: "m1" } } });
     const patientEntry = (b.entry ?? []).find((e) => e.resource?.resourceType === "Patient");
-    expect(patientEntry?.fullUrl).toBe("urn:uuid:odontogram-subject");
+    // Absolute, deterministic fullUrl (issue #23: `urn:uuid:` needs a real UUID).
+    expect(patientEntry?.fullUrl).toBe("https://github.com/ZoliQua/React-Advanced-Odontogram/fhir/Patient/odontogram-subject");
     const obs = obsOf(b);
     expect(obs.length).toBeGreaterThan(0);
     for (const o of obs) {
-      expect(o.subject?.reference).toBe("urn:uuid:odontogram-subject");
+      expect(o.subject?.reference).toBe("https://github.com/ZoliQua/React-Advanced-Odontogram/fhir/Patient/odontogram-subject");
     }
   });
 });

@@ -1,9 +1,13 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import type { Bundle, OdontogramExportPayload, FhirExportOptions } from "./types";
 import { buildFhirBundleFromRegistry } from "../registry/fhir";
 import { appendPerioObservations, appendPerioCondition } from "./toFhirPerio";
+import { appendDentalConditions } from "./toFhirDx";
+import { appendCaseConditions } from "./toFhirCase";
+import { assignEntryIdentities } from "./primitives";
+import { appendCodeSystem } from "./codeSystemResource";
 
 /**
  * Convert a serialized odontogram payload into a FHIR R4 collection Bundle.
@@ -19,10 +23,29 @@ import { appendPerioObservations, appendPerioCondition } from "./toFhirPerio";
  * ICD-10/BNO K05) is appended AFTER `appendPerioObservations` by
  * `appendPerioCondition` (same file). A payload whose final classification is
  * "health" contributes nothing.
+ *
+ * Per-tooth dental diagnoses derived from restorative/caries findings (DX-0:
+ * caries K02) are appended by `appendDentalConditions` (`toFhirDx.ts`) as
+ * one `Condition` per finding, tooth-linked via `bodySite` (FDI). The active
+ * national coding pack, if any, rides on `options.codingPack`; a payload with
+ * no derivable diagnoses contributes nothing.
+ *
+ * Case-level (whole-mouth / regional) diagnoses authored on `payload.case.
+ * caseConditions` are appended LAST by `appendCaseConditions` (`toFhirCase.ts`)
+ * as one patient-level `Condition` per active condition (not tooth-linked); a
+ * payload with no case conditions contributes nothing.
  */
 export function buildFhirBundle(payload: OdontogramExportPayload, options: FhirExportOptions = {}): Bundle {
   const bundle = buildFhirBundleFromRegistry(payload, options);
   appendPerioObservations(bundle, payload, options);
   appendPerioCondition(bundle, payload, options);
+  appendDentalConditions(bundle, payload, options);
+  appendCaseConditions(bundle, payload, options);
+  // The engine's own CodeSystem (default on) so local codes resolve in
+  // validators; placed after the Patient, before identities are assigned.
+  appendCodeSystem(bundle, options);
+  // LAST: every entry gets a deterministic id + absolute fullUrl (HL7 validator
+  // bdl-15 / valid-UUID rules, issue #23). Source-identified entries are kept.
+  assignEntryIdentities(bundle);
   return bundle;
 }

@@ -115,6 +115,11 @@ const EMPTY_CASE_META: CaseMetaData = {
   // mirroring the pinned TSX's own EMPTY_CASE_META (PerioSidebar.tsx 84).
   patientDob: null,
   examDate: null,
+  // Phase 11 resync: state/caseMeta.ts's CaseMeta grew a `caseConditions`
+  // field (case/regional diagnoses, DX-2). Mirrors the pinned TSX's own
+  // EMPTY_CASE_META (PerioSidebar.tsx 86) — an empty Map, same as
+  // resetCaseMeta()'s own default. Wiring an actual UI for it is Task 3.
+  caseConditions: new Map(),
 };
 
 type ClassificationData = ReturnType<typeof getPerioClassification>;

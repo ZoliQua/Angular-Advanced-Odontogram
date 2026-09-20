@@ -6,11 +6,19 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   tooth11Svg, tooth13Svg, tooth14Svg, tooth16Svg, tooth14OcclSvg, tooth16OcclSvg,
+} from "../generated/teeth-svgs";
+// Phase 11 (Task 1): the measured artwork moved to its OWN generated module,
+// kept out of the eager `teeth-svgs.ts` so it stays code-split behind
+// `anatomy/measured.ts`'s dynamic-import boundary (see
+// scripts/generate-svg-assets.mjs). This import is a normal static one —
+// harmless here since this file is TEST-ONLY, never part of the shipped
+// bundle graph.
+import {
   measuredTooth11Svg, measuredTooth12Svg, measuredTooth13Svg, measuredTooth14Svg,
   measuredTooth15Svg, measuredTooth16Svg, measuredTooth17Svg, measuredTooth31Svg,
   measuredTooth46Svg, measuredTooth14OcclSvg, measuredTooth34OcclSvg,
   measuredTooth16OcclSvg, measuredTooth46OcclSvg,
-} from "../generated/teeth-svgs";
+} from "../generated/teeth-svgs-measured";
 import {
   icon8Svg, iconGumSvg, iconOcclSvg, iconPulpSvg, iconNoSelectionUrl, brandLogoUrl,
 } from "../generated/icon-svgs";

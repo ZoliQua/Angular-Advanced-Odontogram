@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -30,7 +30,7 @@ describe("UI-3b T1: caseMeta patient name + exam date", () => {
 
   it("omit-when-empty: name/date absent from payload.case when unset, present when set; version is 2.20", () => {
     const empty = __collectExportPayloadForTest() as any;
-    expect(empty.version).toBe("2.20");
+    expect(empty.version).toBe("2.22");
     expect(empty.case).toBeUndefined();  // whole caseMeta empty → no case key
     setPatientName("X"); setExamDate("2026-01-05");
     const p = __collectExportPayloadForTest() as any;

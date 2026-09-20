@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP13 Task 3: "Tooth details" settings tab (wear/discoloration detail level).
@@ -38,6 +38,8 @@ function stubSettings(): SettingsState {
     exportPdf: true, onExportPdf: vi.fn(),
     importStatus: true, onImportStatus: vi.fn(),
     importFhir: true, onImportFhir: vi.fn(),
+    codingPack: "none", onDiagnosisCodingPack: vi.fn(),
+    snomedEnabled: false, onSnomedEnabled: vi.fn(),
     secondaryCariesMode: "standard",
     onSecondaryCariesMode: vi.fn(),
     icdas: false,

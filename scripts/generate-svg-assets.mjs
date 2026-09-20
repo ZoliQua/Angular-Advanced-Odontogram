@@ -47,28 +47,40 @@ function emit(dir, outFile, exportName, extra = "") {
 }
 
 // Teeth SVGs live in two coexisting sets under assets/teeth-svgs/: the
-// classic templates (flat) and the Phase-7 "measured" candidate-anatomy
-// templates (assets/teeth-svgs/measured/). Both are inlined into the SAME
-// generated module so odontogram.ts's single `from "./generated/teeth-svgs"`
-// import (the ?raw-replacement deviation) covers both sets, mirroring how
-// upstream's Vite `?raw` imports consume them side by side.
+// classic templates (flat) and the "measured" candidate-anatomy templates
+// (assets/teeth-svgs/measured/). Phase 11 (2.6.0 resync): upstream made the
+// measured artwork (~1.1 MB) code-split — loaded on demand by
+// `anatomy/measured.ts`, itself only reachable through `ensureMeasuredProfile()`'s
+// dynamic `import("./measured")` in `anatomy/profiles.ts`. Emitting classic and
+// measured into ONE eager generated module (the pre-Phase-11 shape) would defeat
+// that split by pulling the measured SVGs back into the main chunk the moment
+// `anatomy/profiles.ts` imports the classic half. So they are now TWO separate
+// generated modules: `generated/teeth-svgs.ts` (classic, eager, imported by
+// `anatomy/profiles.ts`) and `generated/teeth-svgs-measured.ts` (measured,
+// imported ONLY by `anatomy/measured.ts` — reachable solely through that
+// module's own dynamic-import boundary). `measured-lazy-load.test.ts` (upstream,
+// copied verbatim) guards that nothing statically imports `anatomy/measured`.
 function emitTeethSvgs() {
   const classicDir = resolve(core, "assets/teeth-svgs");
   const classicFiles = readdirSync(classicDir).filter((f) => f.endsWith(".svg")).sort();
   const measuredDir = resolve(core, "assets/teeth-svgs/measured");
   const measuredFiles = readdirSync(measuredDir).filter((f) => f.endsWith(".svg")).sort();
 
-  let out = HEADER;
+  let classicOut = HEADER;
   for (const f of classicFiles) {
     const markup = readFileSync(resolve(classicDir, f), "utf8");
-    out += `export const ${toothExport(f)} = ${JSON.stringify(markup)};\n`;
+    classicOut += `export const ${toothExport(f)} = ${JSON.stringify(markup)};\n`;
   }
+  writeFileSync(resolve(core, "generated/teeth-svgs.ts"), classicOut);
+  console.log(`wrote generated/teeth-svgs.ts (${classicFiles.length} classic assets)`);
+
+  let measuredOut = HEADER;
   for (const f of measuredFiles) {
     const markup = readFileSync(resolve(measuredDir, f), "utf8");
-    out += `export const ${measuredToothExport(f)} = ${JSON.stringify(markup)};\n`;
+    measuredOut += `export const ${measuredToothExport(f)} = ${JSON.stringify(markup)};\n`;
   }
-  writeFileSync(resolve(core, "generated/teeth-svgs.ts"), out);
-  console.log(`wrote generated/teeth-svgs.ts (${classicFiles.length} classic + ${measuredFiles.length} measured assets)`);
+  writeFileSync(resolve(core, "generated/teeth-svgs-measured.ts"), measuredOut);
+  console.log(`wrote generated/teeth-svgs-measured.ts (${measuredFiles.length} measured assets, import()-reachable only)`);
 }
 
 import { mkdirSync } from "node:fs";

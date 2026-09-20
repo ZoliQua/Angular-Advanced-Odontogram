@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // SP15 Task 4:
@@ -47,6 +47,8 @@ function makeSettings(overrides: Partial<SettingsState> = {}): SettingsState {
     exportPdf: true, onExportPdf: vi.fn(),
     importStatus: true, onImportStatus: vi.fn(),
     importFhir: true, onImportFhir: vi.fn(),
+    codingPack: "none", onDiagnosisCodingPack: vi.fn(),
+    snomedEnabled: false, onSnomedEnabled: vi.fn(),
     secondaryCariesMode: "standard",
     onSecondaryCariesMode: vi.fn(),
     icdas: false,

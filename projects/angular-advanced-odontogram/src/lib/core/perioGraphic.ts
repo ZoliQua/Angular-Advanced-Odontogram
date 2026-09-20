@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 //
 // Periodontal tooth-row graphic — draws the perio arch by REUSING the existing
@@ -21,7 +21,7 @@
 //     deterministic in vitest/jsdom.
 //
 // No per-tooth pointer handlers here — this is read-only chart artwork.
-import { activeAnatomyProfile } from "./odontogram";
+import { activeAnatomyProfile } from "./anatomy/profiles";
 
 // Per-template CEJ baseline anchors now live on the active `AnatomyProfile`
 // (`odontogram.ts`), so the perio chart tracks the selected tooth anatomy. The
@@ -37,7 +37,7 @@ export {
   CLASSIC_CEJ_Y as CEJ_Y,
   CLASSIC_IMPLANT_CEJ_Y as IMPLANT_CEJ_Y,
   CLASSIC_MILKTOOTH_CEJ_Y as MILKTOOTH_CEJ_Y,
-} from "./odontogram";
+} from "./anatomy/profiles";
 
 // The union of every template tooth any anatomy profile can supply. The classic
 // profile realizes only 11/13/14/16; the measured profile adds 12/15/17/31/46.
@@ -285,8 +285,18 @@ export function getToothBaseGroupFromCache(
 
   // 2) Horizontal mirror for left/right mesial-distal correctness.
   //    matrix(-1 0 0 1 w 0): x' = -x + w = w - x; y unchanged.
+  //
+  //    The flip must equal the live odontogram's NET horizontal flip, and that
+  //    is `mirror XOR rot180`, not `mirror` alone: the live grid places every
+  //    lower-arch tooth with `rotate(180)` (see `rotate180` in odontogram.ts),
+  //    and a 180° rotation flips BOTH axes — its horizontal half cancels or
+  //    adds to `mirror`. Step 1 above only ever flips vertically, so reading
+  //    `mirror` alone left every lower tooth mirrored the wrong way round, with
+  //    mesial pointing AWAY from the midline in both lower quadrants. Each tooth
+  //    looked plausible on its own; only the pair read as swapped, which is why
+  //    it went unnoticed (the upper arch has rot 0, where both rules agree).
   const mirrorGroup = document.createElementNS(SVG_NS, "g") as unknown as SVGGElement;
-  if (map.mirror) {
+  if (map.mirror !== (map.rot === 180)) {
     mirrorGroup.setAttribute("data-perio-mirror", "1");
     mirrorGroup.setAttribute("transform", `matrix(-1 0 0 1 ${fmt(w)} 0)`);
   }

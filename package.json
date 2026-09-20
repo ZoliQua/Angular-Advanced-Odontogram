@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "parity:capture": "PARITY_CAPTURE=1 vitest run projects/angular-advanced-odontogram/src/lib/core/__tests__/parity/capture.test.ts",
     "gen:assets": "node scripts/generate-svg-assets.mjs",
+    "fhir:codesystem": "FHIR_CODESYSTEM_WRITE=1 vitest run projects/angular-advanced-odontogram/src/lib/core/__tests__/fhir-codesystem.test.ts projects/angular-advanced-odontogram/src/lib/core/__tests__/fhir-valuesets.test.ts",
     "docs": "typedoc"
   },
   "private": true,

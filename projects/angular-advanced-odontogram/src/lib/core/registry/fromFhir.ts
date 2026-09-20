@@ -1,11 +1,13 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import type { OdontogramExportPayload, ToothRecord } from "../fhir/types";
-import { localCode, ensureTooth } from "../fhir/primitives";
+import { localCode, ensureTooth, isToothCode } from "../fhir/primitives";
 import { AXES } from "./axes";
 import type { ClinicalAxis } from "./types";
 import { deciduousToFdi } from "../fhir/iso3950";
+import { importDiagnosisConditions } from "../fhir/importConditions";
+import { importPerioObservations } from "../fhir/importPerio";
 
 // Reverse lookup: finding code -> axis.
 const BY_FINDING: Record<string, ClinicalAxis> = {};
@@ -34,7 +36,7 @@ export function parseFhirBundleFromRegistry(bundle: unknown): OdontogramExportPa
       const toothId = rawToothCode ? (deciduousToFdi(rawToothCode) ?? rawToothCode) : undefined;
 
       if (findingCode === "edentulous") { globals.edentulous = res.valueBoolean === true; continue; }
-      if (!toothId) continue;
+      if (!toothId || !isToothCode(toothId)) continue;
       const rec = ensureTooth(teeth, toothId);
 
       if (findingCode === "tooth-note") {
@@ -142,5 +144,18 @@ export function parseFhirBundleFromRegistry(bundle: unknown): OdontogramExportPa
     for (const surf of Object.keys(rec.secondaryCaries)) delete rec.cariesSeverity[surf];
     if (Object.keys(rec.cariesSeverity).length === 0) delete rec.cariesSeverity;
   }
-  return { version: "2.20", globals, teeth };
+  // DX-9: the LOINC periodontal panels (per-tooth perio record) and the
+  // smoking/HbA1c evidence Observations (case block).
+  const perio = importPerioObservations(entries, teeth);
+  // DX-7: reconstruct the diagnosis layer from Condition resources — case
+  // conditions (direct) + per-tooth dxOverrides (diff vs the re-derived chart).
+  const { caseConditions, dxOverridesByTooth } = importDiagnosisConditions(entries, teeth);
+  for (const [toothId, ov] of Object.entries(dxOverridesByTooth)) {
+    ensureTooth(teeth, toothId).dxOverrides = ov;
+  }
+  const payload: OdontogramExportPayload = { version: "2.20", globals, teeth };
+  const caseBlock: NonNullable<OdontogramExportPayload["case"]> = { ...perio.case };
+  if (Object.keys(caseConditions).length > 0) caseBlock.caseConditions = caseConditions;
+  if (Object.keys(caseBlock).length > 0) payload.case = caseBlock;
+  return payload;
 }

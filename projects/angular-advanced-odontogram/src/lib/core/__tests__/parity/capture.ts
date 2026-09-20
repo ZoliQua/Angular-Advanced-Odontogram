@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // ONE-TIME capture of the pre-rewrite engine's behavior into frozen golden fixtures.
@@ -18,7 +18,7 @@ import { parseFhirBundle } from "../../fhir/fromFhir";
 // file:// path, which breaks fileURLToPath-based asset resolution.
 const root = process.cwd();
 const svgText = (name: string) => readFileSync(resolve(root, "assets/teeth-svgs", `${name}.svg`), "utf8");
-const write = (name: string, data: unknown) => writeFileSync(resolve(root, "__tests__/parity", name), JSON.stringify(data, null, 2) + "\n");
+const write = (name: string, data: unknown) => writeFileSync(resolve(root, "src/__tests__/parity", name), JSON.stringify(data, null, 2) + "\n");
 
 export function runCapture() {
   const svgTexts: Record<string, string> = {};

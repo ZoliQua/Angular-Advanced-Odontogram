@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 import type { Bundle, Observation, Patient, Condition, CodeableConcept, Coding } from "fhir/r4";
@@ -149,6 +149,15 @@ export interface ToothRecord {
   mbi?: Record<string, number>;
   customStates?: Record<string, unknown>;
   note?: string;
+  // DX-7: per-tooth clinician overrides of the derived diagnosis set —
+  // "add" authors a diagnosis the chart doesn't derive, "suppress" hides one
+  // the chart does derive. Present only when at least one key is overridden —
+  // omitted entirely otherwise. Consumed by `deriveDentalDiagnoses`
+  // (`dx/derive.ts`) to compute the EFFECTIVE diagnosis set that FHIR export
+  // (`toFhirDx.ts`) emits; reconstructed on FHIR import by diffing the
+  // Condition resources' effective set against the re-derived raw set
+  // (`fhir/importConditions.ts`, wired in `registry/fromFhir.ts`).
+  dxOverrides?: Record<string, "add" | "suppress">;
 }
 
 /** The serialized odontogram export payload (matches exportStatus()'s object).
@@ -177,6 +186,10 @@ export interface OdontogramExportPayload {
     stageOverride?: string;
     gradeOverride?: string;
     extentOverride?: string;
+    /** Case-level (whole-mouth / regional) diagnoses: key -> laterality
+     *  (`unspecified` | `left` | `right` | `bilateral`). Serialized omit-when-empty
+     *  by `CaseMeta`; produced by the FHIR importer from case Conditions (DX-3b/7). */
+    caseConditions?: Record<string, string>;
   };
 }
 
@@ -188,4 +201,15 @@ export interface FhirExportOptions {
    * referenced by every Observation.
    */
   subject?: string;
+  /** Active national diagnosis coding pack (adds a second coding to each
+   *  Condition). Resolved and passed by the export entry point. */
+  codingPack?: import("../dx/packs").CodingPack;
+  /** Emit a SNOMED CT coding on each Condition when true (DX-6 overlay). Set
+   *  from the `snomedEnabled` session flag by the export entry point. */
+  snomed?: boolean;
+  /** Embed the engine's own `CodeSystem` resource in the Bundle (default `true`)
+   *  so validators can resolve the LOCAL_SYSTEM codes from the Bundle itself.
+   *  Pass `false` for a leaner Bundle when the consumer already hosts the
+   *  published `fhir/CodeSystem-odontogram.json`. */
+  includeCodeSystem?: boolean;
 }

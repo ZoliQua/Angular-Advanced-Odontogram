@@ -1,4 +1,4 @@
-// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Odontogram-Modul
+// Part of React Advanced Odontogram - https://github.com/ZoliQua/React-Advanced-Odontogram
 // Created by Zoltan Dul (https://github.com/ZoliQua) 2025-2026
 
 // Periodontal-arc sub-project P2, Task 1: the separately-invocable perio-chart
@@ -29,6 +29,9 @@ import { openPerioOverlay, closePerioOverlay, isPerioOverlayOpen } from "../odon
 vi.mock("../odontogram", async () => {
   const actual = await vi.importActual<typeof import("../odontogram")>("../odontogram");
   return {
+    // DX-2 Task 4: DiagnosesCard (mounted unconditionally as part of ToothControlsSurface) reads/writes these.
+    getActiveDiagnoses: actual.getActiveDiagnoses,
+    setDxOverrideForSelection: actual.setDxOverrideForSelection,
     initOdontogram: vi.fn().mockImplementation(() => {
       // Simulate the real engine populating #toothGrid with tooth SVGs, so
       // tests can prove the overlay never unmounts the odontogram.
@@ -163,6 +166,8 @@ vi.mock("../odontogram", async () => {
     // mounts stay in popup housing regardless of what any other test file
     // did to the shared module state.
     getPerioViewMode: vi.fn().mockReturnValue("popup"),
+    getDiagnosisCodingPack: vi.fn().mockReturnValue("none"),
+    getSnomedEnabled: vi.fn().mockReturnValue(false),
     getFillingDefectEnabled: vi.fn().mockReturnValue(true),
     setFillingDefectEnabled: vi.fn(),
     getFillingComplexity: vi.fn().mockReturnValue("complex"),
@@ -172,6 +177,8 @@ vi.mock("../odontogram", async () => {
     getFillingMaterialAvailability: vi.fn().mockReturnValue({ amalgam: true, composite: true, gic: true, temporary: true }),
     setFillingMaterialAvailability: vi.fn(),
     setPerioViewMode: vi.fn(),
+    setDiagnosisCodingPack: vi.fn(),
+    setSnomedEnabled: vi.fn(),
     getToothAnatomy: vi.fn().mockReturnValue("classic"),
     setToothAnatomy: vi.fn(),
     getPerioRowVisibility: vi.fn().mockReturnValue({
@@ -250,6 +257,10 @@ vi.mock("../odontogram", async () => {
     setToothLossPerio: actual.setToothLossPerio,
     setMaxRblPercent: actual.setMaxRblPercent,
     resetCaseMeta: actual.resetCaseMeta,
+    // DX-3b Task 5: Case/regional diagnoses picker — <PerioSidebar/> reads/
+    // writes these unconditionally on every mount.
+    getCaseConditions: actual.getCaseConditions,
+    setCaseCondition: actual.setCaseCondition,
     // P4b Task 4: classification panel — <PerioChart/> now reads the final
     // classification + writes the 4 per-axis overrides at mount/render.
     getPerioClassification: actual.getPerioClassification,
