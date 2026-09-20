@@ -6,6 +6,95 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-08-17
+
+Resync to `react-advanced-odontogram` v2.6.0 (engine commit `215c43a`, payload
+version 2.22) — 108 upstream commits past the previous `934a911` pin — and
+adoption of the upstream repository's own rename
+(`React-Odontogram-Modul` → `React-Advanced-Odontogram`) across this port's
+docs, core file provenance headers and links. See
+`docs/superpowers/specs/2.6.0-acceptance.md` for the acceptance evidence and
+`docs/superpowers/plans/2026-08-17-phase11-resync-260.md` for the full resync
+plan.
+
+### Added
+- **Standards-based diagnosis coding layer**: WHO ICD-10 always on, with
+  three selectable national coding-pack overlays — BNO-10 (Hungarian,
+  official NEAK diagnosis titles, keeps the underlying WHO code), US
+  ICD-10-CM (remapped codes, e.g. the K07 dentofacial range → M26), and an
+  opt-in SNOMED CT overlay — configurable via Settings → General →
+  Diagnosis coding system. A new `DiagnosesCardComponent` (per-tooth
+  diagnoses, derived from chart findings, with add/exclude/delete
+  overrides) and `CaseDiagnosesModalComponent` (case/regional diagnoses
+  pop-up), both newly exported from the public API. FHIR `Condition`
+  export **and import** round-trips the coded diagnoses; a published
+  `CodeSystem` + `ValueSet` resources ship alongside.
+- `getSelectedTeeth()`, a new public-API query for the current multi-tooth
+  selection.
+- Two Angular-side bugs this port fixed on its own (not inherited from
+  upstream — found during this resync's own review passes): the packaged
+  library was inlining all 12 UI-language tables into the FESM through a
+  stale `export * from core/i18n/translations` re-export (fixed by exporting
+  `Language`/`LANGUAGES`/`FALLBACK_LANGUAGE` from `core/i18n/languages`
+  instead, so only English ships statically); and `PerioChartComponent`'s
+  tooth-row-graphic effect never re-ran on a live anatomy-profile switch
+  (upstream's own `[active, anatomy]` dependency fix had not been ported) —
+  fixed, with a regression spec pinning the redraw.
+- A drift guard (`app-version.spec.ts`, running under both `test:corpus` and
+  `test:ng`) asserting `app-version.ts`'s `LIB_VERSION` literal matches the
+  library `package.json`'s `version` field, so a future version bump that
+  forgets one of the two now fails loudly instead of silently staling the
+  PDF "generated with" footer stamp and the FHIR CodeSystem/ValueSet
+  resources' embedded version.
+
+### Changed
+- **On-demand (lazy) loading**: the 11 non-English UI languages and the
+  measured tooth-anatomy artwork no longer ship in the main bundle — each
+  locale loads via its own literal dynamic `import()` (English stays
+  static) and the measured SVG set loads behind the existing anatomy-profile
+  switch. Demo build: main bundle 3.12 MB → 1.23 MB, initial total
+  3.21 MB → 1.32 MB. `angular.json` budgets lowered accordingly
+  (3.5/4 MB → 1.6/2 MB).
+- Payload version bumped `2.20` → `2.22` across JSON/FHIR export/import
+  surfaces; regenerated FHIR/roundtrip/SVG-fingerprint parity goldens
+  adopted verbatim from upstream.
+- Upstream repository rename adopted everywhere this port references it:
+  `React-Odontogram-Modul` → `React-Advanced-Odontogram`, across all 13
+  READMEs, core file provenance headers, the credits modal, this changelog,
+  and the port design spec.
+- Full 13-document refresh (root `README.md` + all 12 `lang/README-*.md`
+  translations) covering the diagnosis-coding layer, lazy loading, the bug
+  fixes below, and the rename; a doc inaccuracy found during that refresh's
+  own review — the Settings breadcrumb read "...→ Diagnosis coding pack"
+  where the real UI label is "Diagnosis coding system" — is corrected in
+  all 13 files, each in its own translated label.
+- Engine internals: `odontogram.ts` split into `state/*` modules
+  (`caseMeta`, `chart`, `notify`, `numbering`, `payload`, `perio`,
+  `perioSettings`, `pulpApical`), mirroring upstream's own refactor —
+  no public-API or behavior change.
+- Root/library `package.json` version, `app-version.ts`'s `LIB_VERSION`
+  literal, and the 13 README version badges bumped to `2.6.0`.
+- Upstream added `@playwright/test` as a dev dependency for browser e2e in
+  this release line; deliberately **not** copied — this port's existing
+  dual-runner (`test:corpus` + `test:ng`) stands unchanged.
+
+### Fixed (inherited from upstream)
+- **PDF export no longer invents a patient identity**: an unset patient
+  name/date of birth now prints "not specified" in the exported report,
+  instead of the placeholder defaults `"John Doe"`/`"1980-01-01"`.
+- **Lower-arch periodontal tooth artwork was drawn mirrored**: both anatomy
+  profiles (`classic` and `measured`) now apply `mirror XOR rot180`,
+  correcting the lower-arch flip.
+- **~6× faster selection changes**: control-panel label gathering is now a
+  single pass instead of recomputing per control; verified end-to-end
+  against the real engine and real DOM
+  (`selection-controls-enable.spec.ts`).
+
+### Known drift
+- `$ENGINE` (the upstream source checkout this port reads from) may
+  continue advancing past the `215c43a` pin; a further resync will be due
+  in a future release.
+
 ## [2.4.1] - 2026-08-14
 
 ### Added
@@ -382,7 +471,8 @@ acceptance evidence.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.1...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.1...v2.6.0
 [2.4.1]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.1...v2.4.0
 [1.2.1]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.0...v1.2.1

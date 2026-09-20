@@ -118,11 +118,13 @@ export default defineConfig({
   //
   // The value here is "2.6.0" — the PINNED ENGINE version this resync adopts
   // (matches the CodeSystem.version baked into the adopted upstream goldens,
-  // e.g. `__tests__/parity/fhir-golden.json`) — NOT this package's own
-  // package.json/app-version.ts version, which stays 2.4.1 until Task 7's
-  // version cut. The two are independent: this define only has to make the
-  // corpus's FHIR-export goldens (captured against the pinned engine) match;
-  // it does not change anything the built library ships.
+  // e.g. `__tests__/parity/fhir-golden.json`). As of Task 7's version cut this
+  // also happens to equal this package's own package.json/app-version.ts
+  // version, but the two remain independent settings that coincide by
+  // release-lockstep policy, not by construction: this `define` only has to
+  // make the corpus's FHIR-export goldens (captured against the pinned
+  // engine) match; it does not read package.json and does not change
+  // anything the built library ships.
   define: { __APP_VERSION__: JSON.stringify("2.6.0") },
   test: {
     globals: true,
@@ -130,6 +132,17 @@ export default defineConfig({
     setupFiles: [`./${TESTS}/setup.ts`],
     include: [
       "projects/angular-advanced-odontogram/src/lib/core/**/__tests__/**/*.{test,spec}.{ts,tsx}",
+      // Task 7 drift guard: app-version.ts's LIB_VERSION is a hand-written
+      // literal (ng-packagr's secondary-entry-point program can't import
+      // package.json — see that file's own header). app-version.spec.ts
+      // cross-checks LIB_VERSION against the library package.json's
+      // "version" field at runtime via node:fs, so a future bump that
+      // forgets one of the two fails loudly. It must run under BOTH
+      // runners — `ng test` already picks it up via its own broad
+      // `**/*.spec.ts` include, so it is added here too, outside the
+      // core/__tests__ tree (it is a non-core, Angular-shim-level guard,
+      // not part of the frozen upstream corpus).
+      "projects/angular-advanced-odontogram/src/lib/app-version.spec.ts",
     ],
     exclude: [
       "**/node_modules/**",
