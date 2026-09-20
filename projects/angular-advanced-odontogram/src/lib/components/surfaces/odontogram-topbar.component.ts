@@ -27,7 +27,7 @@ import { I18nService } from "../../i18n/i18n.service";
 import { OdontogramUiService } from "../odontogram-ui.service";
 import { startIntroTour } from "../../core/tour";
 import { setImportFormat } from "../../core/odontogram";
-import type { Language } from "../../core/i18n/translations";
+import type { Language } from "../../core/i18n/languages";
 import { brandLogoUrl } from "../../core/generated/icon-svgs";
 
 // OdontogramTopbar.tsx 20-33's LANGUAGE_OPTIONS, verbatim (order + labelKeys).

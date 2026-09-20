@@ -44,7 +44,7 @@ import {
 import type { OdontogramThemeConfig } from "../../core/theme";
 import type { OdontogramPlugin } from "../../core/plugin";
 import type { NumberingSystem } from "../../core/utils/numbering";
-import type { Language } from "../../core/i18n/translations";
+import type { Language } from "../../core/i18n/languages";
 import { OdontogramUiService } from "../odontogram-ui.service";
 import { I18nService } from "../../i18n/i18n.service";
 import { DualStateConfirmComponent } from "../dual-state-confirm/dual-state-confirm.component";
@@ -86,7 +86,13 @@ export { ODONTOGRAM_ENGINE_LIFECYCLE } from "../odontogram-engine-lifecycle";
     PerioSidebarComponent,
   ],
   template: `
-    <div class="odontogram-root" #root [attr.dir]="ui.isRtl() ? 'rtl' : 'ltr'" [attr.lang]="ui.lang()">
+    <div
+      class="odontogram-root"
+      #root
+      [attr.dir]="ui.isRtl() ? 'rtl' : 'ltr'"
+      [attr.lang]="ui.lang()"
+      [style.visibility]="ui.languageReady() ? null : 'hidden'"
+    >
       <aao-odontogram-topbar />
       <main class="layout">
         <!-- Hide the perio entry point (view toggle / open button) entirely

@@ -49,6 +49,7 @@
 // own header comments for the full rationale (recorded in the Task 2 report).
 import {
   Injectable,
+  PendingTasks,
   Signal,
   computed,
   effect,
@@ -60,7 +61,7 @@ import {
   type OdontogramThemeConfig,
 } from "../core/theme";
 import type { OdontogramPlugin } from "../core/plugin";
-import type { Language } from "../core/i18n/translations";
+import type { Language } from "../core/i18n/languages";
 import type { NumberingSystem } from "../core/utils/numbering";
 import {
   closePerioOverlay,
@@ -79,7 +80,6 @@ import {
   isDualStateConfirmPending,
   isPerioOverlayOpen,
   onStateChange,
-  rebuildGrid,
   registerPlugins,
   setCariesDepthEnabled,
   setChartMode,
@@ -118,6 +118,7 @@ import {
 } from "../core/odontogram";
 import { I18nService } from "../i18n/i18n.service";
 import { ODONTOGRAM_ENGINE_LIFECYCLE } from "./odontogram-engine-lifecycle";
+import { ODONTOGRAM_I18N_LOADER } from "./odontogram-i18n-loader";
 import type {
   FillingComplexity,
   ScreenToothNumberSize,
@@ -191,6 +192,8 @@ export interface OdontogramUiConfig {
 export class OdontogramUiService {
   private readonly i18n = inject(I18nService);
   private readonly engineLifecycle = inject(ODONTOGRAM_ENGINE_LIFECYCLE);
+  private readonly i18nLoader = inject(ODONTOGRAM_I18N_LOADER);
+  private readonly pendingTasks = inject(PendingTasks);
   private cfg: OdontogramUiConfig | null = null;
 
   // ---------------------------------------------------------------------
@@ -201,6 +204,25 @@ export class OdontogramUiService {
   // ---------------------------------------------------------------------
   readonly lang = computed<Language>(() => this.cfg!.language?.() ?? this.i18n.lang());
   readonly isRtl = computed(() => RTL_LANGUAGES.has(this.lang()));
+
+  // v2.6.0 resync: whether the shell may PAINT yet — gates the FIRST render
+  // only (OdontogramContext.tsx's `useLanguageReady`/`OdontogramProvider`:
+  // "if(!ready) return null"). React unmounts the whole subtree until an
+  // explicit initial `language` config value has loaded, so the fallback
+  // language is never painted even for one frame. Angular's engine-mount
+  // contract (`initOdontogram()`'s `wireControls()` needs every `#id` already
+  // in the DOM at `ngAfterViewInit()`, see odontogram-engine-lifecycle.ts's
+  // header note) makes an unmount-based gate risky, so this mirrors the
+  // OUTCOME instead of the mechanism: the shell's root stays mounted (so
+  // `ngAfterViewInit()`/`wireControls()` timing is untouched) but visually
+  // hidden (`[style.visibility]` in the shell template) until the requested
+  // language is in — nothing is ever PAINTED in the wrong language. Defaults
+  // true (English, the module default, is always already loaded) and is only
+  // ever set false, once, from `configure()` below — exactly like the React
+  // gate, it never re-closes for a later switch (`useI18n`/`I18nService`
+  // already keep the PREVIOUS language on screen until a later switch's
+  // chunk arrives, so nothing but the very first paint needs gating).
+  readonly languageReady = signal(true);
 
   private readonly internalNumbering = signal<NumberingSystem>("FDI");
   readonly currentNumbering = computed(
@@ -401,13 +423,20 @@ export class OdontogramUiService {
     this.screenSpacing.set(v);
   private readonly onScreenToothNumberSize = (v: ScreenToothNumberSize): void =>
     this.screenNumberSize.set(v);
-  // Tooth-anatomy profile picker (OdontogramContext.tsx 725-730): writes the
-  // local mirror, the engine module flag, then rebuilds the grid so the new
-  // profile's layout/artwork takes effect immediately.
+  // Tooth-anatomy profile picker (OdontogramContext.tsx 788-797, v2.6.0
+  // resync). Deliberately does NOT set `toothAnatomy` optimistically here, and
+  // does NOT rebuild the grid here either: `setToothAnatomy()` is async since
+  // 2.6.0 (the measured artwork is a lazily loaded chunk), rebuilds the grid
+  // itself, and only THEN notifies — the `toothAnatomy` onStateChange mirror
+  // above (the `effect()` in `configure()` reading `getToothAnatomy()`) is
+  // what actually flips this signal. Setting it up front instead would apply
+  // `data-anatomy="measured"` (and its two-arch CSS) to a grid still drawn on
+  // the classic profile for the whole download, and permanently desync the UI
+  // if the chunk never arrives. Registered as a pending task for the same
+  // `whenStable()` reason as `I18nService.setLanguage()`.
   private readonly onToothAnatomy = (v: ToothAnatomy): void => {
-    this.toothAnatomy.set(v);
-    setToothAnatomy(v);
-    void rebuildGrid();
+    const done = this.pendingTasks.add();
+    setToothAnatomy(v).finally(done);
   };
   private readonly onShowStatusCard = (v: boolean): void => this.showStatusCard.set(v);
   private readonly onShowOrthoCard = (v: boolean): void => this.showOrthoCard.set(v);
@@ -560,6 +589,51 @@ export class OdontogramUiService {
     this.fillingMaterialsState.set(cfg.fillingMaterialAvailability?.() ?? getFillingMaterialAvailability());
     this.showStatusCard.set(cfg.showStatusCard?.() ?? true);
     this.showOrthoCard.set(cfg.showOrthoCard?.() ?? true);
+
+    // First-paint language gate (OdontogramContext.tsx's `useLanguageReady`,
+    // v2.6.0 resync) — see `languageReady`'s own doc comment. Only an
+    // EXPLICIT initial `language` config value that is not yet loaded closes
+    // the gate; standalone mode (no `language` prop) always starts ready,
+    // exactly like React's own `language === undefined` short-circuit. A
+    // load that FAILS still opens the gate (rendering in the English
+    // fallback beats never rendering), matching `setI18nLanguage()`'s own
+    // "never rejects" contract. Reads through the `ODONTOGRAM_I18N_LOADER`
+    // DI seam (not the core module directly) so a spec can force this branch
+    // closed with a controlled deferred — every real language is preloaded
+    // before any spec runs (`reset-engine-state.ts`), so the real
+    // `isLanguageLoaded()` never reports `false` for an actual `Language`
+    // once the suite is running.
+    //
+    // Deliberately an `effect()`, NOT a plain synchronous read here in
+    // `configure()`: `configure()` runs from the shell's own CONSTRUCTOR, and
+    // Angular does not populate a parent-bound `input()` signal until AFTER
+    // the child instance is constructed (the same reason `@Input` values are
+    // documented as unavailable in a constructor, only from `ngOnChanges`/
+    // `ngOnInit` on) — reading `cfg.language?.()` here directly would always
+    // observe the signal's un-set default, never an actual initial `language`
+    // binding. An `effect()`'s first run is scheduled for the microtask right
+    // after creation, by which point Angular has already applied every bound
+    // input — still before the browser's next paint, so this closes the gate
+    // in time to prevent the flash it exists to avoid. `gateResolved` makes
+    // the one-shot "first render only" decision exactly once, matching
+    // `useLanguageReady`'s own "once true it stays true" comment — a LATER
+    // change to the `language` config value is handled entirely by
+    // `I18nService`/`setI18nLanguage()` keeping the previous language on
+    // screen, not by this gate.
+    let gateResolved = false;
+    effect(() => {
+      const initialLanguage = cfg.language?.();
+      if (gateResolved) return;
+      gateResolved = true;
+      if (initialLanguage === undefined || this.i18nLoader.isLanguageLoaded(initialLanguage)) return;
+      this.languageReady.set(false);
+      const done = this.pendingTasks.add();
+      const open = () => {
+        this.languageReady.set(true);
+        done();
+      };
+      this.i18nLoader.loadLanguage(initialLanguage).then(open, open);
+    });
 
     // Language: push the effective language into the core i18n bus whenever
     // it changes (useI18n.ts-era 73-75). A same-value guard makes this

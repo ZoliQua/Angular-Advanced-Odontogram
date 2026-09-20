@@ -43,7 +43,7 @@ import {
 } from "@angular/core";
 import { I18nService } from "../../i18n/i18n.service";
 import { focusFirst, nextDialogTitleId, trapTabKey } from "../shared/dialog-focus";
-import type { Language } from "../../core/i18n/translations";
+import type { Language } from "../../core/i18n/languages";
 import type { NumberingSystem } from "../../core/utils/numbering";
 import type {
   PdfBorderThickness,

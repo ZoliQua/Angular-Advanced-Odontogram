@@ -16,7 +16,15 @@ export * from "./lib/core/tour";
 export * from "./lib/core/perioClassification";
 export * from "./lib/core/utils/numbering";
 export type * from "./lib/core/fhir/types";
-export * from "./lib/core/i18n/translations";
+// v2.6.0 resync: `core/i18n/translations.ts` is now a TEST-ONLY aggregator
+// that statically imports all 12 locale tables (see its own header comment) —
+// re-exporting it here (as this line did pre-resync, when translations.ts WAS
+// the single runtime i18n module) would pull every UI language back into the
+// main bundle for every consumer, exactly the regression the lazy `loader.ts`
+// split exists to avoid. `Language`/`LANGUAGES`/`FALLBACK_LANGUAGE` are the
+// framework-free, load-nothing replacement for what this line used to expose.
+export type { Language } from "./lib/core/i18n/languages";
+export { LANGUAGES, FALLBACK_LANGUAGE } from "./lib/core/i18n/languages";
 export * from "./lib/i18n/i18n.service";
 export * from "./lib/components/dual-state-confirm/dual-state-confirm.component";
 export * from "./lib/components/settings-modal/settings-modal.component";

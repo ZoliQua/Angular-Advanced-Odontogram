@@ -85,7 +85,29 @@ import {
   type PerioRowId,
 } from "../core/odontogram";
 import { setI18nLanguage } from "../core/i18n/useI18n";
+import { LANGUAGES } from "../core/i18n/languages";
+import { loadLanguage } from "../core/i18n/loader";
 import { DEFAULT_PDF_THEME } from "../core/perioPdf";
+
+// v2.6.0 resync: every UI language but English is now a lazily fetched chunk
+// (core/i18n/loader.ts) — mirrors core/__tests__/setup.ts's own preload
+// (`await Promise.all(LANGUAGES.map(loadLanguage))`), for the identical
+// reason: this suite's specs were written against the pre-2.6.0 synchronous
+// semantics (`setI18nLanguage("hu")` switches at once, `t()` answers in
+// Hungarian on the next line). Without this, a spec is the FIRST caller ever
+// to request a given language, `setI18nLanguage()` takes its async
+// "load-then-flip" branch, and a synchronous assertion right after observes
+// the OLD language (or the English fallback) instead.
+//
+// This is a ONE-TIME preload at module-load time, not a per-test reset — the
+// loader's own `tables` cache is monotonic by design (once a language has
+// loaded, it stays loaded for the rest of the process; there is no
+// `unloadLanguage()` seam to reset it with, upstream or here), so there is
+// nothing for `resetEngineStateForTest()` below to reset on that front. The
+// still-unloaded "closed gate" branch this monotonic preload makes
+// unreachable through the ordinary test suite is instead exercised directly,
+// via a controlled DI seam, in `lazy-loading.guard.spec.ts`.
+await Promise.all(LANGUAGES.map((lang) => loadLanguage(lang)));
 
 // Phase 3 Task 3: the Settings -> Periodontal tab's two module-level
 // singletons (`core/odontogram.ts`'s `perioRowVisibility`/`perioIndexNameMode`)
@@ -115,8 +137,10 @@ const ALL_FILLING_MATERIALS = ["amalgam", "composite", "gic", "temporary"] as co
 /** Resets every known core/odontogram + i18n singleton to its default state.
  *  Exported (not just used internally) so a spec file can call it mid-test
  *  if it ever needs an extra reset point beyond the automatic
- *  before/afterEach below. */
-export function resetEngineStateForTest(): void {
+ *  before/afterEach below. Async since v2.6.0: `setToothAnatomy()` now
+ *  returns a `Promise<void>` (see the call below), and vitest awaits an
+ *  async `beforeEach`/`afterEach` hook the same way it does a sync one. */
+export async function resetEngineStateForTest(): Promise<void> {
   // Chart Maps (status + plan), planInitialized, planEditedTeeth, the
   // pending DualState confirm, chartMode, and caseMeta.
   __resetChartStateForTest();
@@ -141,8 +165,13 @@ export function resetEngineStateForTest(): void {
   // `perioViewMode` above — module-level singleton, public setter, no
   // bulk-reset export. Task 4's own specs (and any future one) that call
   // `onToothAnatomy("measured")` would otherwise leak the profile to every
-  // later spec file in this `test.isolate: false` run.
-  setToothAnatomy("classic");
+  // later spec file in this `test.isolate: false` run. v2.6.0 resync: now
+  // ASYNC (the measured artwork is a lazily loaded chunk; switching back to
+  // classic never needs to fetch anything, but the function is `async`
+  // regardless) — awaited so the flag (and the grid rebuild + notify inside
+  // it) has actually settled back to classic before the next spec runs,
+  // instead of leaving a floating promise that could resolve mid-test.
+  await setToothAnatomy("classic");
   // v2.4.0 resync (Task 3 fold-in, ledgered leak-class item): the Tooth
   // details -> Notes toggle's module-level singleton
   // (`core/odontogram.ts`'s `let notesEnabled = false`) has no reset seam of
