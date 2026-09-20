@@ -67,6 +67,7 @@ import {
   __resetChartStateForTest,
   __setActiveToothForTest,
   closePerioOverlay,
+  setDiagnosisCodingPack,
   setFillingComplexity,
   setFillingDefectEnabled,
   setFillingMaterialAvailability,
@@ -79,6 +80,7 @@ import {
   setPerioRowVisibility,
   setPerioViewMode,
   setReadOnly,
+  setSnomedEnabled,
   setToothAnatomy,
   setWearDetailLevel,
   setDiscolorationDetailLevel,
@@ -238,6 +240,14 @@ export async function resetEngineStateForTest(): Promise<void> {
   setPerioOverlayLayer("none");
   closePerioOverlay();
   setReadOnly(false);
+  // v2.6.0 resync (Phase 11 Task 3 fold-in): the Settings -> General tab's
+  // diagnosis coding-pack / SNOMED overlay singletons
+  // (`core/odontogram.ts`'s `let diagnosisCodingPack = "none"`, `let
+  // snomedEnabled = false`) are the exact same leak class as
+  // `perioViewMode`/`toothAnatomy` above — module-level flags, public
+  // setters, no bulk-reset export of their own.
+  setDiagnosisCodingPack("none");
+  setSnomedEnabled(false);
 }
 
 beforeEach(resetEngineStateForTest);

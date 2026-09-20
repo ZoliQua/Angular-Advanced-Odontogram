@@ -21,6 +21,15 @@
 // backdrop-mousedown-on-self closes, focus trapped while open + restored to
 // the opener on close (Task 1's `dialog-focus.ts` helpers, TSX 1005-1042).
 //
+// v2.6.0 resync (Phase 11 Task 3): the General tab gains a diagnosis
+// coding-pack `<select>` (WHO ICD-10 base / BNO-10 / ICD-10-CM) and a SNOMED
+// CT overlay toggle (default off), right after the Import FHIR toggle,
+// mirroring the pinned `SettingsModal.tsx` diff exactly (`934a911..215c43a`).
+// Both are session-only module flags with no dual-state-confirm/revert path
+// (same category as `perioViewMode`), so neither uses the `[aaoForceValue]`/
+// `[aaoForceChecked]` directives — see `OdontogramUiService`'s own comment on
+// `codingPack`/`snomedEnabled` for the full rationale.
+//
 // Additionally implements the APG tabs pattern for the `role="tablist"` tab
 // strip (TSX 1051-1073): roving tabindex + Arrow Left/Right/Up/Down wrap,
 // Home/End, activation-follows-focus. The Export Settings tab is disabled
@@ -125,6 +134,14 @@ export interface SettingsState {
   onImportStatus: (value: boolean) => void;
   importFhir: boolean;
   onImportFhir: (value: boolean) => void;
+  // v2.6.0 resync: diagnosis coding-pack selection ("none" = WHO ICD-10 base
+  // only, "bno10"/"icd10cm" = national packs) + a SNOMED CT overlay toggle
+  // (adds a SNOMED CT coding to each Condition in the FHIR export). Both are
+  // session-only module flags (mirrors `perioViewMode`); default "none"/off.
+  codingPack: string;
+  onDiagnosisCodingPack: (value: string) => void;
+  snomedEnabled: boolean;
+  onSnomedEnabled: (value: boolean) => void;
   secondaryCariesMode: SecondaryCariesMode;
   onSecondaryCariesMode: (value: SecondaryCariesMode) => void;
   icdas: boolean;
@@ -235,6 +252,12 @@ const LANGUAGE_OPTIONS: ReadonlyArray<{ value: Language; labelKey: string }> = [
   { value: "zh", labelKey: "language.zh" },
   { value: "ar", labelKey: "language.ar" },
   { value: "fr", labelKey: "language.fr" },
+];
+
+const DIAGNOSIS_CODING_OPTIONS: ReadonlyArray<{ value: string; labelKey: string }> = [
+  { value: "none", labelKey: "settings.diagnosisCoding.none" },
+  { value: "bno10", labelKey: "settings.diagnosisCoding.bno10" },
+  { value: "icd10cm", labelKey: "settings.diagnosisCoding.icd10cm" },
 ];
 
 const SECONDARY_OPTIONS: ReadonlyArray<{ value: SecondaryCariesMode; labelKey: string }> = [
@@ -618,6 +641,46 @@ const TABLIST_NAV_KEYS = ["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Ho
                           [attr.aria-label]="i18n.t('settings.import.fhir')"
                           [checked]="settings().importFhir"
                           (change)="settings().onImportFhir($any($event.target).checked)"
+                        />
+                        <span class="odon-settings-switch-track" aria-hidden="true"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="odon-settings-row">
+                    <div class="odon-settings-row-text">
+                      <div class="odon-settings-row-label">{{ i18n.t("settings.diagnosisCoding") }}</div>
+                      <div class="odon-settings-row-desc" id="settingsDesc-diagnosisCoding">
+                        {{ i18n.t("settings.diagnosisCoding.desc") }}
+                      </div>
+                    </div>
+                    <div class="odon-settings-row-control" data-desc="settingsDesc-diagnosisCoding">
+                      <select
+                        class="odon-settings-select"
+                        [attr.aria-label]="i18n.t('settings.diagnosisCoding')"
+                        (change)="settings().onDiagnosisCodingPack($any($event.target).value)"
+                      >
+                        @for (opt of diagnosisCodingOptions; track opt.value) {
+                          <option [attr.value]="opt.value" [selected]="opt.value === settings().codingPack">
+                            {{ i18n.t(opt.labelKey) }}
+                          </option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+                  <div class="odon-settings-row">
+                    <div class="odon-settings-row-text">
+                      <div class="odon-settings-row-label">{{ i18n.t("settings.snomed") }}</div>
+                      <div class="odon-settings-row-desc" id="settingsDesc-snomed">
+                        {{ i18n.t("settings.snomed.desc") }}
+                      </div>
+                    </div>
+                    <div class="odon-settings-row-control" data-desc="settingsDesc-snomed">
+                      <label class="odon-settings-switch">
+                        <input
+                          type="checkbox"
+                          [attr.aria-label]="i18n.t('settings.snomed')"
+                          [checked]="settings().snomedEnabled"
+                          (change)="settings().onSnomedEnabled($any($event.target).checked)"
                         />
                         <span class="odon-settings-switch-track" aria-hidden="true"></span>
                       </label>
@@ -1742,6 +1805,7 @@ export class SettingsModalComponent {
   protected readonly tabs = SETTINGS_TABS;
   protected readonly numberingOptions = NUMBERING_OPTIONS;
   protected readonly languageOptions = LANGUAGE_OPTIONS;
+  protected readonly diagnosisCodingOptions = DIAGNOSIS_CODING_OPTIONS;
   protected readonly secondaryOptions = SECONDARY_OPTIONS;
   protected readonly rootOptions = ROOT_OPTIONS;
   protected readonly radiographicOptions = RADIOGRAPHIC_OPTIONS;

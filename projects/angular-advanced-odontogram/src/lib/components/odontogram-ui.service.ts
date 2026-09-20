@@ -66,6 +66,7 @@ import type { NumberingSystem } from "../core/utils/numbering";
 import {
   closePerioOverlay,
   getChartMode,
+  getDiagnosisCodingPack,
   getFillingComplexity,
   getFillingDefectEnabled,
   getFillingMaterialAvailability,
@@ -75,6 +76,7 @@ import {
   getPerioIndexNameMode,
   getPerioRowVisibility,
   getPerioViewMode,
+  getSnomedEnabled,
   getToothAnatomy,
   hasAnyPerioData,
   isDualStateConfirmPending,
@@ -83,6 +85,7 @@ import {
   registerPlugins,
   setCariesDepthEnabled,
   setChartMode,
+  setDiagnosisCodingPack,
   setDiscolorationDetailLevel,
   setFillingComplexity,
   setFillingDefectEnabled,
@@ -100,6 +103,7 @@ import {
   setReadOnly,
   setRootCariesMode,
   setSecondaryCariesMode,
+  setSnomedEnabled,
   setSurfaceNotation,
   setToothAnatomy,
   setWearDetailLevel,
@@ -286,6 +290,14 @@ export class OdontogramUiService {
   readonly pdfSettingsState = signal<PdfSettings>(getPdfSettings());
   readonly perioRowVisibilityState = signal<Record<PerioRowId, boolean>>(getPerioRowVisibility());
   readonly perioIndexNameModeState = signal<PerioIndexNameMode>(getPerioIndexNameMode());
+  // v2.6.0 resync: session-only diagnosis coding-pack / SNOMED overlay
+  // mirrors (OdontogramContext.tsx 486-490/725-737), same
+  // module-flag-mirrored-into-a-signal shape as `viewMode`/`perioViewMode`
+  // above — the module flags themselves have no dual-state-confirm/revert
+  // path (mirrors `perioViewMode`, not the per-tooth `set*ForSelection`
+  // setters), so no force-value concern applies to their consumers.
+  readonly codingPack = signal<string>(getDiagnosisCodingPack());
+  readonly snomedEnabled = signal<boolean>(getSnomedEnabled());
   readonly confirmOpen = signal(false);
   // Mirrors the module-level tooth-anatomy profile (OdontogramContext.tsx
   // 432-435/646-652) — consumed by OdontogramChartSurfaceComponent's
@@ -311,6 +323,11 @@ export class OdontogramUiService {
   // wired here now so OdontogramTopbarComponent's new "About and credits"
   // button has something real to toggle.
   readonly creditsOpen = signal(false);
+  // Case/regional-diagnoses modal (v2.6.0 resync — new in the pinned
+  // provider). Opened from OdontogramShellComponent's own
+  // `#openCaseDiagnosesBtn` (App.tsx's ShellLayout, `.perio-launch-bar`), the
+  // modal component itself is this task's own `CaseDiagnosesModalComponent`.
+  readonly caseDxOpen = signal(false);
 
   setSettingsOpen(open: boolean): void {
     this.settingsOpen.set(open);
@@ -320,6 +337,9 @@ export class OdontogramUiService {
   }
   setCreditsOpen(open: boolean): void {
     this.creditsOpen.set(open);
+  }
+  setCaseDxOpen(open: boolean): void {
+    this.caseDxOpen.set(open);
   }
 
   // -----------------------------------------------------------------------
@@ -457,6 +477,10 @@ export class OdontogramUiService {
     setPerioRowVisibility(id, v);
   private readonly onPerioIndexNameMode = (v: PerioIndexNameMode): void =>
     setPerioIndexNameMode(v);
+  // Diagnosis coding-pack / SNOMED overlay — call the engine setter only,
+  // same "onStateChange mirror feeds it back" shape as perioViewMode above.
+  private readonly onDiagnosisCodingPack = (v: string): void => setDiagnosisCodingPack(v);
+  private readonly onSnomedEnabled = (v: boolean): void => setSnomedEnabled(v);
   // Fillings tab config — mirrors odontogram.ts module flags, same
   // round-trip-through-local-state pattern as the other module-backed
   // handlers above, PLUS the host callback (fired only from here, never
@@ -553,6 +577,10 @@ export class OdontogramUiService {
     onPerioRowVisibility: this.onPerioRowVisibility,
     perioIndexNameMode: this.perioIndexNameModeState(),
     onPerioIndexNameMode: this.onPerioIndexNameMode,
+    codingPack: this.codingPack(),
+    onDiagnosisCodingPack: this.onDiagnosisCodingPack,
+    snomedEnabled: this.snomedEnabled(),
+    onSnomedEnabled: this.onSnomedEnabled,
     fillingDefectEnabled: this.fillingDefectOn(),
     onFillingDefectEnabled: this.onFillingDefectEnabled,
     fillingComplexity: this.fillingComplexityState(),
@@ -806,6 +834,16 @@ export class OdontogramUiService {
       const refresh = () => {
         this.perioRowVisibilityState.set(getPerioRowVisibility());
         this.perioIndexNameModeState.set(getPerioIndexNameMode());
+      };
+      refresh();
+      onCleanup(onStateChange(refresh));
+    });
+
+    // Diagnosis coding-pack / SNOMED overlay mirrors (v2.6.0 resync).
+    effect((onCleanup) => {
+      const refresh = () => {
+        this.codingPack.set(getDiagnosisCodingPack());
+        this.snomedEnabled.set(getSnomedEnabled());
       };
       refresh();
       onCleanup(onStateChange(refresh));

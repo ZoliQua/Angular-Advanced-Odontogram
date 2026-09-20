@@ -16,7 +16,17 @@
 // `surfaces/*.component.ts`), so this file's own template is the thinner
 // "shell-managed layout" slice: `.perio-launch-bar`, `.chart-column`/
 // `.dental-chart-column` wrappers, `<aside class="panel">`, the popup
-// `<aao-perio-chart>`, and the four modals.
+// `<aao-perio-chart>`, and the five modals.
+//
+// v2.6.0 resync (Phase 11 Task 3): `#openCaseDiagnosesBtn` (always rendered
+// inside `.perio-launch-bar`, alongside the view-toggle/popup-open button —
+// per the pinned `App.tsx` diff, NOT PerioSidebar) opens the new
+// `<aao-case-diagnoses-modal>`, mounted alongside the other four modals below.
+// The modal's open/close state (`ui.caseDxOpen`/`ui.setCaseDxOpen`) is the
+// only new piece `OdontogramUiService` owns for this — the rest of the
+// diagnosis-coding UI's state lives in the cards/modal themselves (own
+// `engineState`/subscription reads), matching how every other declarative
+// card in this port works.
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -54,6 +64,7 @@ import {
 } from "../settings-modal/settings-modal.component";
 import { ExportOptionsModalComponent } from "../export-options-modal/export-options-modal.component";
 import { CreditsModalComponent } from "../credits-modal/credits-modal.component";
+import { CaseDiagnosesModalComponent } from "../case-diagnoses-modal/case-diagnoses-modal.component";
 import { PerioChartComponent } from "../perio-chart/perio-chart.component";
 import { PerioSidebarComponent } from "../perio-sidebar/perio-sidebar.component";
 import { OdontogramTopbarComponent } from "../surfaces/odontogram-topbar.component";
@@ -82,6 +93,7 @@ export { ODONTOGRAM_ENGINE_LIFECYCLE } from "../odontogram-engine-lifecycle";
     SettingsModalComponent,
     ExportOptionsModalComponent,
     CreditsModalComponent,
+    CaseDiagnosesModalComponent,
     PerioChartComponent,
     PerioSidebarComponent,
   ],
@@ -127,6 +139,14 @@ export { ODONTOGRAM_ENGINE_LIFECYCLE } from "../odontogram-engine-lifecycle";
               [attr.aria-label]="i18n.t('perio.open')"
             >{{ i18n.t('perio.open') }}</button>
           }
+          <button
+            type="button"
+            id="openCaseDiagnosesBtn"
+            class="btn btn-ghost"
+            (click)="ui.setCaseDxOpen(true)"
+            [attr.title]="i18n.t('case.diagnoses.section')"
+            [attr.aria-label]="i18n.t('case.diagnoses.section')"
+          >{{ i18n.t('case.diagnoses.button') }}</button>
         </div>
         <!-- Hide (not unmount) the odontogram column while the Dental Chart
              segment is active in toggle mode, so its wired controls
@@ -172,6 +192,8 @@ export { ODONTOGRAM_ENGINE_LIFECYCLE } from "../odontogram-engine-lifecycle";
       <aao-export-options-modal [open]="ui.pdfOpen()" (close)="ui.setPdfOpen(false)" />
 
       <aao-credits-modal [open]="ui.creditsOpen()" (close)="ui.setCreditsOpen(false)" />
+
+      <aao-case-diagnoses-modal [open]="ui.caseDxOpen()" (close)="ui.setCaseDxOpen(false)" />
     </div>
   `,
 })

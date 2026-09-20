@@ -1,10 +1,13 @@
-// Angular port of $ENGINE@934a911:src/surfaces/ToothControlsSurface.tsx (124 lines).
+// Angular port of $ENGINE@215c43a:src/surfaces/ToothControlsSurface.tsx (137
+// lines) — v2.6.0 resync (Phase 11 Task 3) adds the `#diagnosesSection` card
+// (`DiagnosesCard`) at its pinned position, right after Root/periodontium,
+// same static-wrapper/declarative-body split as every other card here.
 //
 // Composable surface — the `<div class="panel-odontogram-controls">` region:
 // the odontogram control panel (selection actions, Statuses/Tooth/Ortho/
-// Caries/Fillings/Root-periodontium cards). STATIC card wrappers + the
-// shared delegated collapse infra live here; the seven declarative card
-// components (Task 3) own each card's BODY — the shared collapse behavior
+// Caries/Fillings/Root-periodontium/Diagnoses cards). STATIC card wrappers +
+// the shared delegated collapse infra live here; the eight declarative card
+// components own each card's BODY — the shared collapse behavior
 // itself is engine-side (`odontogram.ts`'s single document-level delegated
 // listener over `.icon-btn`/`#btnToggle*`, see `wireControls()`), so no
 // Angular-side collapse logic is needed here beyond keeping the same
@@ -31,6 +34,7 @@ import { I18nService } from "../../i18n/i18n.service";
 import { OdontogramUiService } from "../odontogram-ui.service";
 import { resetTooth, rewireControls } from "../../core/odontogram";
 import { CariesCardComponent } from "./cards/caries-card.component";
+import { DiagnosesCardComponent } from "./cards/diagnoses-card.component";
 import { FillingsCardComponent } from "./cards/fillings-card.component";
 import { OrthodonticsCardComponent } from "./cards/orthodontics-card.component";
 import { RootPeriodontiumCardComponent } from "./cards/root-periodontium-card.component";
@@ -47,6 +51,7 @@ import { ToothDetailsCardComponent } from "./cards/tooth-details-card.component"
     CariesCardComponent,
     FillingsCardComponent,
     RootPeriodontiumCardComponent,
+    DiagnosesCardComponent,
   ],
   template: `
     <div class="panel-odontogram-controls" [style.display]="ui.isPerioView() ? 'none' : null">
@@ -144,6 +149,16 @@ import { ToothDetailsCardComponent } from "./cards/tooth-details-card.component"
             </button>
           </div>
           <aao-root-periodontium-card />
+        </section>
+
+        <section id="diagnosesSection" class="card">
+          <div class="card-title card-title-row">
+            <span>{{ i18n.t('card.diagnoses') }}</span>
+            <button id="btnToggleDiagnosesCard" class="icon-btn" [attr.title]="i18n.t('actions.collapse', { label: i18n.t('card.diagnoses') })" [attr.aria-label]="i18n.t('actions.collapse', { label: i18n.t('card.diagnoses') })">
+              <span class="toggle-icon" aria-hidden="true">&minus;</span>
+            </button>
+          </div>
+          <aao-diagnoses-card />
         </section>
       </div>
     </div>
