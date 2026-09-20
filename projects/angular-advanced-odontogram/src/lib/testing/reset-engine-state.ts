@@ -90,6 +90,23 @@ import { setI18nLanguage } from "../core/i18n/useI18n";
 import { LANGUAGES } from "../core/i18n/languages";
 import { loadLanguage } from "../core/i18n/loader";
 import { DEFAULT_PDF_THEME } from "../core/perioPdf";
+// v2.6.0 resync (Class A, Task 5): `fhir/codeSystemResource.ts`/`valueSetResources.ts`
+// read the build-time global `__APP_VERSION__` as a DEFAULT PARAMETER value
+// (evaluated the first time a caller invokes the function with no explicit
+// argument, e.g. `buildFhirBundle()`'s always-on CodeSystem embed). The root
+// `vitest.config.ts` supplies this via Vite's `define` for `test:corpus`
+// (core files run directly there) — `@angular/build:unit-test`'s Vitest
+// builder has NO equivalent `define` option in its schema (verified: neither
+// `angular.json`'s `test` target nor a `buildTarget` exposes one for this
+// builder), so `test:ng` never got the global at all. Importing this
+// module's side effect here (its ONLY supported customization point,
+// `setupFiles`, per the file header above) reuses the SAME source of truth
+// the shipped library itself uses (`app-version.ts`'s `LIB_VERSION`, already
+// documented there as "bump alongside package.json's version field") instead
+// of hardcoding a second, independently drifting version literal into test
+// config — this is the exact mechanism `public-api.ts` already relies on for
+// real consumers, just also wired into the test entry point.
+import "../app-version";
 
 // v2.6.0 resync: every UI language but English is now a lazily fetched chunk
 // (core/i18n/loader.ts) — mirrors core/__tests__/setup.ts's own preload

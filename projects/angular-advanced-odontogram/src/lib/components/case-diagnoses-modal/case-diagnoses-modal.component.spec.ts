@@ -104,4 +104,52 @@ describe("CaseDiagnosesModalComponent", () => {
 
     expect(getCaseConditions().find((c) => c.key === "tmjDisorder")?.laterality).toBe("left");
   });
+
+  // Phase 11 Task 5 (exclusion-audit gap close, vs core/__tests__/case-conditions-ui.test.tsx):
+  // 3 upstream assertions this file's Task 3 version didn't yet exercise —
+  // a non-lateralizable row hides the laterality select, the add-select is
+  // code-first/code-sorted, and it excludes catalog keys already active.
+  it("a non-lateralizable condition's row has no laterality select", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    await openModal(f);
+
+    const addSelect = f.nativeElement.querySelector("#caseDxAddSelect") as HTMLSelectElement;
+    addSelect.value = "malocclusionUnspecified"; // NOT lateralizable
+    fire(addSelect);
+    await f.whenStable();
+
+    const row = f.nativeElement.querySelector(".case-diagnoses-row") as HTMLElement;
+    expect(row).toBeTruthy();
+    expect(row.querySelector(".dx-code")?.textContent).toBe("K07.4");
+    expect(row.querySelector("select")).toBeNull();
+  });
+
+  it("the add-select options are code-first and code-sorted (K00.0 first)", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    await openModal(f);
+
+    const select = f.nativeElement.querySelector("#caseDxAddSelect") as HTMLSelectElement;
+    // options[0] is the placeholder; options[1] is the lowest ICD-10 code (K00.0 anodontia).
+    expect(select.options[1].textContent?.startsWith("K00.0 ")).toBe(true);
+    const codes = Array.from(select.options).slice(1).map((o) => o.textContent!.split(" ")[0]);
+    const sorted = [...codes].sort((a, b) => a.localeCompare(b));
+    expect(codes).toEqual(sorted);
+  });
+
+  it("the add-select excludes catalog keys that are already active", async () => {
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+    await openModal(f);
+
+    const addSelect = f.nativeElement.querySelector("#caseDxAddSelect") as HTMLSelectElement;
+    addSelect.value = "tmjDisorder";
+    fire(addSelect);
+    await f.whenStable();
+
+    const optionValues = Array.from(addSelect.options).map((o) => (o as HTMLOptionElement).value);
+    expect(optionValues).not.toContain("tmjDisorder");
+    expect(optionValues).toContain("malocclusionUnspecified");
+  });
 });

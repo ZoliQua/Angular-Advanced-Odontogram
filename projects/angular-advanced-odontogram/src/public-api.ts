@@ -51,3 +51,11 @@ export * from "./lib/components/surfaces/cards/fillings-card.component";
 export * from "./lib/components/surfaces/cards/root-periodontium-card.component";
 export * from "./lib/components/surfaces/cards/orthodontics-card.component";
 export * from "./lib/components/surfaces/cards/surface-cross.component";
+// v2.6.0 resync: the diagnosis-coding UI (Task 3) — mirrors upstream's own
+// `export { default as DiagnosesCard } from "./surfaces/cards/DiagnosesCard"`
+// (App.tsx). `CaseDiagnosesModal` has no equivalent upstream export (React
+// never re-exports it from App.tsx/index.ts — it's mounted internally by
+// ShellLayout only) but IS part of this port's own public surface, the same
+// way every other modal component here (credits/settings/export-options) is.
+export * from "./lib/components/surfaces/cards/diagnoses-card.component";
+export * from "./lib/components/case-diagnoses-modal/case-diagnoses-modal.component";

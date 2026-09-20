@@ -13,6 +13,7 @@ import {
   getActiveDiagnoses,
   getStatusChart,
   setChartMode,
+  setDxOverrideForSelection,
   setNumberingSystem,
   __resetChartStateForTest,
   __setSelectionForTest,
@@ -125,5 +126,57 @@ describe("DiagnosesCardComponent", () => {
     // unconditional `value=""` reassertion — see the component's own header
     // comment for why a plain `[value]` binding would NOT do this.
     expect(addSelect.value).toBe("");
+  });
+
+  // Phase 11 Task 5 (exclusion-audit gap close, vs core/__tests__/dx-card.test.tsx):
+  // an "added" row (an `add`-mode dxOverride the RAW rules would not
+  // otherwise derive) is a genuinely different render path from the
+  // "derived" row every test above exercises — no exclude/suppress toggle
+  // (nothing rule-derived to suppress), an "added" tag, and its own delete
+  // route (removeDiagnosisFromSelection). Set up via setDxOverrideForSelection
+  // directly, NOT the #dxAddSelect picker: the picker calls
+  // addDiagnosisToSelection, which writes a REAL chart axis (per the
+  // component's own header comment / DiagnosesCard.tsx's pinned behavior),
+  // so the row it creates is always tagged "derived", never "added" — an
+  // "added" row only arises from a `dxOverrides` entry with no matching raw
+  // finding (e.g. restored from an import), which is exactly what upstream's
+  // own dx-card.test.tsx has to MOCK getActiveDiagnoses() to exercise at all.
+  it("an added diagnosis renders with an 'added' tag and no exclude toggle; delete removes it", async () => {
+    __setSelectionForTest([11]);
+    setDxOverrideForSelection("calculus", "add");
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+
+    const row = f.nativeElement.querySelector("#dxRow-calculus") as HTMLElement;
+    expect(row).toBeTruthy();
+    expect(row.getAttribute("data-source")).toBe("added");
+    expect(row.querySelector(".pill.dx-added-tag")).toBeTruthy();
+    expect(f.nativeElement.querySelector("#dxSuppress-calculus")).toBeNull();
+
+    const removeBtn = row.querySelector("#dxRemove-calculus") as HTMLButtonElement;
+    expect(removeBtn).toBeTruthy();
+    removeBtn.click();
+    await f.whenStable();
+
+    expect(getActiveDiagnoses().rows.some((r) => r.key === "calculus")).toBe(false);
+    expect(f.nativeElement.querySelector("#dxRow-calculus")).toBeNull();
+  });
+
+  it("clicking the exclude toggle on an already-suppressed row un-suppresses it", async () => {
+    __setToothStateForTest(11, { toothSelection: "tooth-base", pulpDx: "irreversible-pulpitis" });
+    __setSelectionForTest([11]);
+    const f = TestBed.createComponent(OdontogramShellComponent);
+    await f.whenStable();
+
+    const suppressBtn = f.nativeElement.querySelector("#dxSuppress-pulpitis") as HTMLButtonElement;
+    suppressBtn.click();
+    await f.whenStable();
+    expect(getActiveDiagnoses().rows.find((r) => r.key === "pulpitis")?.suppressed).toBe(true);
+
+    suppressBtn.click();
+    await f.whenStable();
+
+    expect(getActiveDiagnoses().rows.find((r) => r.key === "pulpitis")?.suppressed).toBe(false);
+    expect(suppressBtn.getAttribute("aria-pressed")).toBe("false");
   });
 });
