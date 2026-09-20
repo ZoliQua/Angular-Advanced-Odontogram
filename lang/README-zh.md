@@ -249,7 +249,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - **样式表是独立的**——你**必须**注册一次 `angular-advanced-odontogram/styles.css`；它不会被自动注入。样式为全局 CSS，作用域限定在 `.odontogram-root` 下，并由 `--odon-*` CSS 变量驱动。
 - **SSR / 仅限客户端**——该组件在挂载时会读取 DOM，因此必须在浏览器中运行；请仅在浏览器端渲染它。
 - **资源是自包含的**——牙齿和图标的 SVG 在构建时被内联到包中（生成的 TypeScript 模块，`npm run gen:assets`）；**无需配置任何运行时资源请求**，也无需向你的应用 public 文件夹额外复制任何文件。
-- **按需加载**——初始包中只包含英语和 `classic` 牙齿解剖美术资源；另外 11 种界面语言的语言表以及 `measured` 解剖轮廓的美术资源均为独立的懒加载分片，仅在宿主首次切换到它们时才会被获取（分别对应 `setI18nLanguage`/语言菜单，以及 `setToothAnatomy("measured")`/设置 → 牙位图 → 牙齿解剖）。此次重新同步的拆分将演示应用的主分片从 3.12 MB 降至 1.23 MB，初始总体积从 3.21 MB 降至 1.32 MB——宿主端无需任何额外配置。
+- **按需加载**——初始包中只包含英语和 `classic` 牙齿解剖美术资源；另外 11 种界面语言的语言表以及 `measured` 解剖轮廓的美术资源均为独立的懒加载分片，仅在宿主首次切换到它们时才会被获取（分别对应 `[language]` / `I18nService.setLanguage()`/语言菜单，以及 `setToothAnatomy("measured")`/设置 → 牙位图 → 牙齿解剖）。此次重新同步的拆分将演示应用的主分片从 3.12 MB 降至 1.25 MB，初始总体积从 3.21 MB 降至 1.33 MB——宿主端无需任何额外配置。
 - **本版本中每个页面仅限一个实例**——引擎状态是模块级单例（与 React 原版相同），因此在同一页面渲染两个 `<aao-odontogram-shell>` 实例会导致它们共享同一份图表状态。
 
 ---

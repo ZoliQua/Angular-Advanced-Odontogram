@@ -52,8 +52,8 @@ plan.
   measured tooth-anatomy artwork no longer ship in the main bundle — each
   locale loads via its own literal dynamic `import()` (English stays
   static) and the measured SVG set loads behind the existing anatomy-profile
-  switch. Demo build: main bundle 3.12 MB → 1.23 MB, initial total
-  3.21 MB → 1.32 MB. `angular.json` budgets lowered accordingly
+  switch. Demo build: main bundle 3.12 MB → 1.25 MB, initial total
+  3.21 MB → 1.33 MB. `angular.json` budgets lowered accordingly
   (3.5/4 MB → 1.6/2 MB).
 - Payload version bumped `2.20` → `2.22` across JSON/FHIR export/import
   surfaces; regenerated FHIR/roundtrip/SVG-fingerprint parity goldens
