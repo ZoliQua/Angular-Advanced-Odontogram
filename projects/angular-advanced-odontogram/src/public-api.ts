@@ -9,6 +9,12 @@
 import "./lib/app-version";
 
 export * from "./lib/core/odontogram";
+// v2.7.0 resync: upstream's App.tsx additionally exports the perio half of
+// `compareExams()`'s result shape and its progression threshold (the
+// `ExamComparison` type and `compareExams` itself already arrive through
+// core/odontogram above). `comparePerioExams` stays internal, as upstream.
+export { PROGRESSION_MM } from "./lib/core/state/examCompare";
+export type { PerioExamComparison, PerioExamAggregate, PerioSiteDelta } from "./lib/core/state/examCompare";
 export * from "./lib/core/persistence";
 export * from "./lib/core/theme";
 export * from "./lib/core/plugin";

@@ -48,6 +48,49 @@ describe("public API surface — public-api.ts (this package's npm entry point)"
     expect(typeof PublicApi.CaseDiagnosesModalComponent).toBe("function");
   });
 
+  it("exports the v2.7.0 display-settings API, getNumberingSystem, compareExams and the perio-comparison constant", () => {
+    const names = [
+      "getNumberingSystem",
+      "getScreenToothSpacing", "setScreenToothSpacing",
+      "getScreenToothNumberSize", "setScreenToothNumberSize",
+      "getSelectionColor", "setSelectionColor",
+      "getSelectionBorderStyle", "setSelectionBorderStyle",
+      "getToothInfoVisible", "setToothInfoVisible",
+      "compareExams",
+    ] as const;
+    for (const name of names) {
+      expect(typeof (PublicApi as Surface)[name], `${name} should be a function`).toBe("function");
+    }
+    expect(PublicApi.PROGRESSION_MM).toBe(2);
+    // Upstream keeps the per-perio comparator internal; so do we.
+    expect((PublicApi as Surface)["comparePerioExams"]).toBeUndefined();
+  });
+
+  it("compareExams() works through the public entry point", () => {
+    const exam = (teeth: Record<string, unknown>) => ({ version: "2.22", globals: {}, teeth });
+    const before = exam({ "16": { toothSelection: "tooth-base" } });
+    const after = exam({ "16": { toothSelection: "no-tooth-after-extraction" } });
+    const same = PublicApi.compareExams(before, structuredClone(before));
+    expect(same.changes).toEqual([]);
+    const diff = PublicApi.compareExams(before, after);
+    expect(diff.changes.length).toBeGreaterThan(0);
+    expect(diff.perio.from.chartedSites).toBe(0);
+  });
+
+  it("the FHIR plan export has no entry point of its own: exportFhir() appends ServiceRequests when the plan differs", () => {
+    PublicApi.__resetChartStateForTest();
+    PublicApi.importStatus({ version: "2.22", globals: {}, teeth: { "16": { toothSelection: "tooth-base" } } });
+    const none = PublicApi.exportFhir() as { entry: { resource: { resourceType: string } }[] };
+    expect(none.entry.filter((e) => e.resource.resourceType === "ServiceRequest")).toEqual([]);
+    PublicApi.setChartMode("plan");
+    PublicApi.__setSelectionForTest([16]);
+    PublicApi.setToothSelectionForSelection("no-tooth-after-extraction");
+    const planned = PublicApi.exportFhir() as { entry: { resource: { resourceType: string; intent?: string } }[] };
+    const requests = planned.entry.map((e) => e.resource).filter((r) => r.resourceType === "ServiceRequest");
+    expect(requests.length).toBeGreaterThan(0);
+    expect(requests.every((r) => r.intent === "plan")).toBe(true);
+  });
+
   it("does NOT re-export the raw i18n translations record (would inline all 12 languages into the FESM — see public-api.ts's own header comment and task-2-report.md §5)", () => {
     const key = "translations"; // indirected: esbuild statically flags a literal "translations" property access as always-undefined (it IS, by design) and warns at build time; the check itself is the point.
     expect((PublicApi as Surface)[key]).toBeUndefined();

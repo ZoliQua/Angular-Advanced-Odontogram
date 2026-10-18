@@ -80,6 +80,12 @@ import {
   getToothAnatomy,
   getSelectionBorderStyle,
   getSelectionColor,
+  getScreenToothNumberSize,
+  getScreenToothSpacing,
+  getToothInfoVisible,
+  setScreenToothNumberSize,
+  setScreenToothSpacing,
+  setToothInfoVisible,
   hasAnyPerioData,
   isDualStateConfirmPending,
   isPerioOverlayOpen,
@@ -172,6 +178,11 @@ export interface OdontogramUiConfig {
    *  given. Defined-gated, like the fillings props. */
   selectionColor?: Signal<string | undefined>;
   selectionBorderStyle?: Signal<SelectionBorderStyle | undefined>;
+  /** Chart display-setting props (OdontogramContext.tsx 2.7.0): same
+   *  defined-gated, setter-backed contract as the selection props. */
+  screenToothSpacing?: Signal<ScreenToothSpacing | undefined>;
+  screenToothNumberSize?: Signal<ScreenToothNumberSize | undefined>;
+  toothInfo?: Signal<boolean | undefined>;
   plugins?: Signal<OdontogramPlugin[] | undefined>;
   readOnly?: Signal<boolean | undefined>;
   enableNotes?: Signal<boolean | undefined>;
@@ -262,7 +273,7 @@ export class OdontogramUiService {
   private readonly wearLevel = signal<ToothDetailLevel>("complex");
   private readonly discoLevel = signal<ToothDetailLevel>("complex");
   private readonly notation = signal<SurfaceNotation>("full");
-  readonly toothInfoOn = signal(true);
+  readonly toothInfoOn = signal<boolean>(getToothInfoVisible());
 
   // Per-format export + per-source import availability (session-only UI
   // config, all default ON — OdontogramContext.tsx 391-399).
@@ -275,8 +286,12 @@ export class OdontogramUiService {
   // Odontogram-tab on-screen controls (session-only, OdontogramContext.tsx 400-407).
   readonly planModeAvailable = signal(true);
   readonly perioChartAvailable = signal(true);
-  readonly screenSpacing = signal<ScreenToothSpacing>("normal");
-  readonly screenNumberSize = signal<ScreenToothNumberSize>("normal");
+  // Chart styling + tooth-info panel mirror ./core/state/displaySettings
+  // (kept in sync via the onStateChange effect in configure()), so a host can
+  // read/restore them (2.7.0). Handlers call the setters only; the setters
+  // notify and the mirror flips these signals (React parity).
+  readonly screenSpacing = signal<ScreenToothSpacing>(getScreenToothSpacing());
+  readonly screenNumberSize = signal<ScreenToothNumberSize>(getScreenToothNumberSize());
   // Mirror ./core/state/displaySettings (kept in sync via the onStateChange
   // effect in configure()), so a host can read/restore them (2.7.0).
   readonly selectionColor = signal<string>(getSelectionColor());
@@ -395,7 +410,7 @@ export class OdontogramUiService {
   private readonly onNumbering = (v: NumberingSystem): void => this.setNumbering(v);
   private readonly onLanguage = (v: Language): void => this.setLang(v);
   private readonly onToggleDark = (): void => this.toggleDark();
-  private readonly onToothInfo = (v: boolean): void => this.toothInfoOn.set(v);
+  private readonly onToothInfo = (v: boolean): void => setToothInfoVisible(v);
   private readonly onExportPng = (v: boolean): void => this.exportPngOn.set(v);
   private readonly onExportJpg = (v: boolean): void => this.exportJpgOn.set(v);
   private readonly onExportSvg = (v: boolean): void => this.exportSvgOn.set(v);
@@ -453,9 +468,9 @@ export class OdontogramUiService {
     if (!v && getChartMode() === "plan") setChartMode("status");
   };
   private readonly onScreenToothSpacing = (v: ScreenToothSpacing): void =>
-    this.screenSpacing.set(v);
+    setScreenToothSpacing(v);
   private readonly onScreenToothNumberSize = (v: ScreenToothNumberSize): void =>
-    this.screenNumberSize.set(v);
+    setScreenToothNumberSize(v);
   // Tooth-anatomy profile picker (OdontogramContext.tsx 788-797, v2.6.0
   // resync). Deliberately does NOT set `toothAnatomy` optimistically here, and
   // does NOT rebuild the grid here either: `setToothAnatomy()` is async since
@@ -707,6 +722,18 @@ export class OdontogramUiService {
       const v = cfg.selectionBorderStyle?.();
       if (v !== undefined) setSelectionBorderStyle(v);
     });
+    effect(() => {
+      const v = cfg.screenToothSpacing?.();
+      if (v !== undefined) setScreenToothSpacing(v);
+    });
+    effect(() => {
+      const v = cfg.screenToothNumberSize?.();
+      if (v !== undefined) setScreenToothNumberSize(v);
+    });
+    effect(() => {
+      const v = cfg.toothInfo?.();
+      if (v !== undefined) setToothInfoVisible(v);
+    });
     effect(() => registerPlugins(cfg.plugins?.() ?? []));
     effect(() => setReadOnly(cfg.readOnly?.() ?? false));
     effect(() => {
@@ -854,9 +881,13 @@ export class OdontogramUiService {
       onCleanup(onStateChange(refresh));
     });
 
-    // Selection-ring colour / border style (2.7.0 display settings).
+    // Chart display settings (2.7.0): spacing, number size, selection ring,
+    // tooth-info panel — all mirrored from the setter-backed engine state.
     effect((onCleanup) => {
       const refresh = () => {
+        this.screenSpacing.set(getScreenToothSpacing());
+        this.screenNumberSize.set(getScreenToothNumberSize());
+        this.toothInfoOn.set(getToothInfoVisible());
         this.selectionColor.set(getSelectionColor());
         this.selectionBorderStyle.set(getSelectionBorderStyle());
       };

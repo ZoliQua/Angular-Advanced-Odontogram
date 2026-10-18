@@ -81,7 +81,10 @@ import {
   setPerioViewMode,
   setReadOnly,
   setSelectionBorderStyle,
+  setScreenToothNumberSize,
+  setScreenToothSpacing,
   setSelectionColor,
+  setToothInfoVisible,
   setSnomedEnabled,
   setToothAnatomy,
   setWearDetailLevel,
@@ -277,6 +280,12 @@ export async function resetEngineStateForTest(): Promise<void> {
   // idempotent, so resetting to the module defaults is a cheap no-op normally.
   setSelectionColor("#3b7bff");
   setSelectionBorderStyle("dashed");
+  // Task 3 fold-in (Task 2 review carry): the other three display settings —
+  // inter-tooth spacing, tooth-number size and the tooth-info panel toggle —
+  // join the same singleton family; module defaults "normal" / "normal" / true.
+  setScreenToothSpacing("normal");
+  setScreenToothNumberSize("normal");
+  setToothInfoVisible(true);
 }
 
 beforeEach(resetEngineStateForTest);

@@ -13,7 +13,8 @@
 //      by the real engine: every position has its own template, primary teeth
 //      draw from the primary templates, the derived dentin core is there.
 //   4. Dark mode deliberately leaves the dentin alone.
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
 import { TestBed } from "@angular/core/testing";
 import { provideZonelessChangeDetection } from "@angular/core";
 import { ODONTOGRAM_ENGINE_LIFECYCLE, OdontogramShellComponent } from "./odontogram-shell.component";
@@ -136,6 +137,25 @@ describe("themeConfig.selection: through the setters, never a CSS variable", () 
     expect(getSelectionBorderStyle()).toBe("solid");
   });
 
+  it("a dedicated input still wins when themeConfig.selection CHANGES afterwards (exercises the === undefined gate)", async () => {
+    // The dedicated-input effects are declared after the themeConfig effect, so
+    // setting both in one pass passes even without the gate. Changing the
+    // themeConfig AFTER the dedicated input is applied re-runs only the
+    // themeConfig effect: without the gate it would overwrite the explicit value.
+    const f = mountFaked();
+    f.componentRef.setInput("selectionColor", "#123456");
+    f.componentRef.setInput("selectionBorderStyle", "solid");
+    await f.whenStable();
+    expect(getSelectionColor()).toBe("#123456");
+    f.componentRef.setInput("themeConfig", { selection: { color: "#abcdef", borderStyle: "dotted" } });
+    await f.whenStable();
+    expect(getSelectionColor(), "themeConfig must not clobber the dedicated colour").toBe("#123456");
+    expect(getSelectionBorderStyle(), "nor the dedicated border style").toBe("solid");
+    f.componentRef.setInput("themeConfig", { selection: { color: "#fedcba" } });
+    await f.whenStable();
+    expect(getSelectionColor()).toBe("#123456");
+  });
+
   it("the Settings control writes through the same setter (state is the core's, not a local signal)", async () => {
     const f = mountFaked();
     await f.whenStable();
@@ -227,15 +247,18 @@ describe("measured anatomy: the completed 40-template set", () => {
 });
 
 describe("measured anatomy in the real grid (real engine)", () => {
-  vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 });
+  // Per-test timeouts (the real measured chunk + 32-tile grid are slow under
+  // jsdom): passed on each hook/test instead of a describe-scope vi.setConfig,
+  // which would leak a 60 s timeout file-wide (and, under isolate:false, on).
+  const SLOW = 60000;
   beforeEach(async () => {
     installDomStubs();
     await ensureMeasuredProfile();
-  });
+  }, SLOW);
   afterEach(async () => {
     await setToothAnatomy("classic");
     document.documentElement.classList.remove("dark");
-  });
+  }, SLOW);
 
   async function mountReal() {
     TestBed.configureTestingModule({
@@ -265,7 +288,7 @@ describe("measured anatomy in the real grid (real engine)", () => {
     f.componentRef.setInput("themeConfig", { tooth: { body: "#273140" } });
     await f.whenStable();
     expect(flattenThemeTokens(one, root(f))).toContain("#273140");
-  });
+  }, SLOW);
 
   it("dark mode leaves the dentin alone: no dentin value on the root, nested default intact", async () => {
     await setToothAnatomy("measured");
@@ -276,5 +299,15 @@ describe("measured anatomy in the real grid (real engine)", () => {
     const grid = f.nativeElement.querySelector("#toothGrid") as HTMLElement;
     const xml = new XMLSerializer().serializeToString(grid.querySelector(".tooth-tile.side-view svg")!);
     expect(xml).toContain("var(--odon-tooth-dentin, var(--odon-tooth-body,");
-  });
+    // …and the dark CSS block itself declares no dentin (it follows the body).
+    const css = readFileSync("projects/angular-advanced-odontogram/src/lib/core/index.css", "utf8");
+    const start = css.indexOf("/* ── Dark mode: tooth artwork");
+    expect(start, "dark artwork block present").toBeGreaterThan(-1);
+    const open = css.indexOf("{", css.indexOf(".dark{", start));
+    const block = css.slice(open + 1, css.indexOf("}", open));
+    // Declarations only: the block's comments legitimately NAME the dentin token.
+    const declared = [...block.matchAll(/(--odon-[\w-]+)\s*:/g)].map((m) => m[1]);
+    expect(declared, "the dark artwork block declares the crown").toContain("--odon-tooth-body");
+    expect(declared, "the dark block must not declare a dentin").not.toContain("--odon-tooth-dentin");
+  }, SLOW);
 });

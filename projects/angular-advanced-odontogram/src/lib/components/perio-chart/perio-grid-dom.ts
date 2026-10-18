@@ -40,6 +40,7 @@ import {
   getRootConcavity,
   isPerioRowHidden,
   isToothImplant,
+  getPerioToothKind,
   getPlaqueIndex,
   getGingivalIndex,
   getKeratinizedWidth,
@@ -290,7 +291,11 @@ export function drawArchCurves(cache: TemplateDocCache, container: HTMLElement |
   // Remove any stale curve layers first (safe to call on every state change).
   container.querySelectorAll(".perio-curve").forEach((el) => el.remove());
 
-  const layout = archToothLayout(cache, teeth);
+  // Kind-aware, matching the arch builders above: a deciduous molar reserves a
+  // wider column than the premolar position it sits on, and the curve, the
+  // overlays and the number columns all have to ride the SAME columns as the
+  // artwork or they drift apart on a mixed dentition.
+  const layout = archToothLayout(cache, teeth, undefined, getPerioToothKind);
   const opts = { cejY: layout.cejY, mmPx: PERIO_MM_PX };
 
   const buccalSvg = resolveAspectSvg(container, "perio-tooth-arch-buccal");
@@ -429,7 +434,11 @@ export function drawArchOverlay(
   const palatalParent = ((palatalSvg?.querySelector(".perio-tooth-row-palatal-inner") as SVGGElement | null) ??
     palatalSvg) as SVGGElement | Element | null;
 
-  const layout = archToothLayout(cache, teeth);
+  // Kind-aware, matching the arch builders above: a deciduous molar reserves a
+  // wider column than the premolar position it sits on, and the curve, the
+  // overlays and the number columns all have to ride the SAME columns as the
+  // artwork or they drift apart on a mixed dentition.
+  const layout = archToothLayout(cache, teeth, undefined, getPerioToothKind);
   const opts = { cejY: layout.cejY, mmPx: PERIO_MM_PX };
   const className = `perio-overlay-${layer}`;
 
@@ -1405,7 +1414,11 @@ export function applyArchColumns(
   scrollContainer: HTMLElement | null,
 ): void {
   if (!grid) return;
-  const layout = archToothLayout(cache, teeth);
+  // Kind-aware, matching the arch builders above: a deciduous molar reserves a
+  // wider column than the premolar position it sits on, and the curve, the
+  // overlays and the number columns all have to ride the SAME columns as the
+  // artwork or they drift apart on a mixed dentition.
+  const layout = archToothLayout(cache, teeth, undefined, getPerioToothKind);
   if (layout.teeth.length === 0) return;
   const containerWidth = scrollContainer?.clientWidth ?? 0;
   const available = containerWidth - ROW_LABEL_WIDTH - GRID_SCROLLBAR_ALLOWANCE;

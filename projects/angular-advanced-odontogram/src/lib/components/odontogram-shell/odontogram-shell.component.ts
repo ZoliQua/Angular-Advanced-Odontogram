@@ -52,7 +52,7 @@ import {
   type ToothDetailLevel,
 } from "../../core/odontogram";
 import type { OdontogramThemeConfig } from "../../core/theme";
-import type { SelectionBorderStyle } from "../../core/odontogram";
+import type { ScreenToothNumberSize, ScreenToothSpacing, SelectionBorderStyle } from "../../core/odontogram";
 import type { OdontogramPlugin } from "../../core/plugin";
 import type { NumberingSystem } from "../../core/utils/numbering";
 import type { Language } from "../../core/i18n/languages";
@@ -213,6 +213,12 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   readonly selectionColor = input<string>();
   /** Selection-ring border style. Wins over `themeConfig.selection.borderStyle`. */
   readonly selectionBorderStyle = input<SelectionBorderStyle>();
+  /** Inter-tooth spacing of the on-screen grid. Setter-backed; omitted = engine value stays. */
+  readonly screenToothSpacing = input<ScreenToothSpacing>();
+  /** Tooth-number size of the on-screen grid. Setter-backed; omitted = engine value stays. */
+  readonly screenToothNumberSize = input<ScreenToothNumberSize>();
+  /** Whether the tooth-information panel is shown. Setter-backed; omitted = engine value stays. */
+  readonly toothInfo = input<boolean>();
   readonly plugins = input<OdontogramPlugin[]>();
   readonly readOnly = input<boolean>();
   readonly enableNotes = input<boolean>();
@@ -272,6 +278,9 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
       themeConfig: this.themeConfig,
       selectionColor: this.selectionColor,
       selectionBorderStyle: this.selectionBorderStyle,
+      screenToothSpacing: this.screenToothSpacing,
+      screenToothNumberSize: this.screenToothNumberSize,
+      toothInfo: this.toothInfo,
       themeRoot: computed(() => this.rootRef()?.nativeElement ?? null),
       plugins: this.plugins,
       readOnly: this.readOnly,
