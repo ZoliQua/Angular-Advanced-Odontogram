@@ -80,6 +80,8 @@ import {
   setPerioRowVisibility,
   setPerioViewMode,
   setReadOnly,
+  setSelectionBorderStyle,
+  setSelectionColor,
   setSnomedEnabled,
   setToothAnatomy,
   setWearDetailLevel,
@@ -269,6 +271,12 @@ export async function resetEngineStateForTest(): Promise<void> {
   // setters, no bulk-reset export of their own.
   setDiagnosisCodingPack("none");
   setSnomedEnabled(false);
+  // v2.7.0 resync (Phase 12 Task 2 fold-in): the selection-ring display
+  // settings (`core/state/displaySettings.ts`) are module-level singletons
+  // with public setters and no bulk reset — same leak class. Both setters are
+  // idempotent, so resetting to the module defaults is a cheap no-op normally.
+  setSelectionColor("#3b7bff");
+  setSelectionBorderStyle("dashed");
 }
 
 beforeEach(resetEngineStateForTest);

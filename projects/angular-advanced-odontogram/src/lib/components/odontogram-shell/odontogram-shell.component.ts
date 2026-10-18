@@ -52,6 +52,7 @@ import {
   type ToothDetailLevel,
 } from "../../core/odontogram";
 import type { OdontogramThemeConfig } from "../../core/theme";
+import type { SelectionBorderStyle } from "../../core/odontogram";
 import type { OdontogramPlugin } from "../../core/plugin";
 import type { NumberingSystem } from "../../core/utils/numbering";
 import type { Language } from "../../core/i18n/languages";
@@ -208,6 +209,10 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   readonly numberingSystem = input<NumberingSystem>();
   readonly darkMode = input<boolean>();
   readonly themeConfig = input<OdontogramThemeConfig>();
+  /** Selection-ring colour as `#rrggbb`. Wins over `themeConfig.selection.color`. */
+  readonly selectionColor = input<string>();
+  /** Selection-ring border style. Wins over `themeConfig.selection.borderStyle`. */
+  readonly selectionBorderStyle = input<SelectionBorderStyle>();
   readonly plugins = input<OdontogramPlugin[]>();
   readonly readOnly = input<boolean>();
   readonly enableNotes = input<boolean>();
@@ -265,6 +270,8 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
       darkMode: this.darkMode,
       onDarkModeChange: (v) => this.darkModeChange.emit(v),
       themeConfig: this.themeConfig,
+      selectionColor: this.selectionColor,
+      selectionBorderStyle: this.selectionBorderStyle,
       themeRoot: computed(() => this.rootRef()?.nativeElement ?? null),
       plugins: this.plugins,
       readOnly: this.readOnly,

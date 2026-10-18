@@ -78,6 +78,8 @@ import {
   getPerioViewMode,
   getSnomedEnabled,
   getToothAnatomy,
+  getSelectionBorderStyle,
+  getSelectionColor,
   hasAnyPerioData,
   isDualStateConfirmPending,
   isPerioOverlayOpen,
@@ -103,6 +105,8 @@ import {
   setReadOnly,
   setRootCariesMode,
   setSecondaryCariesMode,
+  setSelectionBorderStyle,
+  setSelectionColor,
   setSnomedEnabled,
   setSurfaceNotation,
   setToothAnatomy,
@@ -163,6 +167,11 @@ export interface OdontogramUiConfig {
   onDarkModeChange?: (dark: boolean) => void;
   themeConfig?: Signal<OdontogramThemeConfig | undefined>;
   themeRoot?: Signal<HTMLElement | null>;
+  /** Dedicated selection-ring props (OdontogramContext.tsx 2.7.0): the more
+   *  specific control, so they win over `themeConfig.selection` when both are
+   *  given. Defined-gated, like the fillings props. */
+  selectionColor?: Signal<string | undefined>;
+  selectionBorderStyle?: Signal<SelectionBorderStyle | undefined>;
   plugins?: Signal<OdontogramPlugin[] | undefined>;
   readOnly?: Signal<boolean | undefined>;
   enableNotes?: Signal<boolean | undefined>;
@@ -268,8 +277,10 @@ export class OdontogramUiService {
   readonly perioChartAvailable = signal(true);
   readonly screenSpacing = signal<ScreenToothSpacing>("normal");
   readonly screenNumberSize = signal<ScreenToothNumberSize>("normal");
-  readonly selectionColor = signal<string>("#3b7bff");
-  readonly selectionBorderStyle = signal<SelectionBorderStyle>("dashed");
+  // Mirror ./core/state/displaySettings (kept in sync via the onStateChange
+  // effect in configure()), so a host can read/restore them (2.7.0).
+  readonly selectionColor = signal<string>(getSelectionColor());
+  readonly selectionBorderStyle = signal<SelectionBorderStyle>(getSelectionBorderStyle());
   // Fillings-tab config (OdontogramContext.tsx 408-414) — the initializers
   // prefer a provided prop, falling back to the engine's current module
   // value, so an imperative setX() call before `configure()` is never
@@ -411,9 +422,11 @@ export class OdontogramUiService {
     this.radiographicMode.set(v);
     setRadiographicDepthMode(v);
   };
-  private readonly onSelectionColor = (v: string): void => this.selectionColor.set(v);
+  // Setter only — the onStateChange mirror in configure() feeds the signal
+  // (React: OdontogramContext.tsx `onSelectionColor` -> core setter).
+  private readonly onSelectionColor = (v: string): void => setSelectionColor(v);
   private readonly onSelectionBorderStyle = (v: SelectionBorderStyle): void =>
-    this.selectionBorderStyle.set(v);
+    setSelectionBorderStyle(v);
   private readonly onPulpLevel = (v: PulpDetailLevel): void => {
     this.pulpLevel.set(v);
     setPulpDetailLevel(v);
@@ -675,6 +688,25 @@ export class OdontogramUiService {
 
     effect(() => setNumberingSystem(this.currentNumbering()));
     effect(() => applyThemeConfig(cfg.themeRoot?.() ?? null, cfg.themeConfig?.()));
+    // `themeConfig.selection` is NOT a CSS custom property: it goes through the
+    // same session setters as the dedicated props (OdontogramContext.tsx
+    // 2.7.0), and the dedicated props, being the more specific control, win.
+    effect(() => {
+      const sel = cfg.themeConfig?.()?.selection;
+      if (!sel) return;
+      if (sel.color !== undefined && cfg.selectionColor?.() === undefined) setSelectionColor(sel.color);
+      if (sel.borderStyle !== undefined && cfg.selectionBorderStyle?.() === undefined) {
+        setSelectionBorderStyle(sel.borderStyle);
+      }
+    });
+    effect(() => {
+      const v = cfg.selectionColor?.();
+      if (v !== undefined) setSelectionColor(v);
+    });
+    effect(() => {
+      const v = cfg.selectionBorderStyle?.();
+      if (v !== undefined) setSelectionBorderStyle(v);
+    });
     effect(() => registerPlugins(cfg.plugins?.() ?? []));
     effect(() => setReadOnly(cfg.readOnly?.() ?? false));
     effect(() => {
@@ -818,6 +850,16 @@ export class OdontogramUiService {
     // Perio view mode.
     effect((onCleanup) => {
       const refresh = () => this.viewMode.set(getPerioViewMode());
+      refresh();
+      onCleanup(onStateChange(refresh));
+    });
+
+    // Selection-ring colour / border style (2.7.0 display settings).
+    effect((onCleanup) => {
+      const refresh = () => {
+        this.selectionColor.set(getSelectionColor());
+        this.selectionBorderStyle.set(getSelectionBorderStyle());
+      };
       refresh();
       onCleanup(onStateChange(refresh));
     });
