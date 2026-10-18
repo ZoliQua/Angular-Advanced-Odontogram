@@ -9,7 +9,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { provideZonelessChangeDetection } from "@angular/core";
 import { ODONTOGRAM_ENGINE_LIFECYCLE, OdontogramShellComponent } from "./odontogram-shell.component";
-import { ODONTOGRAM_SET_TOOTH_ANATOMY, type OdontogramUiService } from "../odontogram-ui.service";
+import type { OdontogramUiService } from "../odontogram-ui.service";
+import { ODONTOGRAM_SET_TOOTH_ANATOMY } from "../odontogram-set-tooth-anatomy";
 import { getToothAnatomy, setToothAnatomy, __resetChartStateForTest, type ToothAnatomy } from "../../core/odontogram";
 
 const engineLifecycle = { init: async () => {}, destroy: () => {} };

@@ -223,7 +223,11 @@ scope and the current drift note. **Resynced again (Phase 11, 2026-08-17):
 payload 2.22 — the ICD-10/BNO-10/ICD-10-CM/SNOMED diagnosis-coding layer,
 lazy i18n + lazy measured anatomy, `getSelectedTeeth()`, and the upstream
 repository rename to `React-Advanced-Odontogram`) — see §8 item 7 and §10 for
-the delivered scope.
+the delivered scope. **Resynced again (Phase 12, 2026-10-18): 2.7.0 resyncs to
+`$ENGINE` main @ `ee27435`** (33 commits past `215c43a`; payload stays 2.22 —
+themable tooth artwork, the completed 40-template measured anatomy,
+`compareExams()`, the chart display settings + `getNumberingSystem()` and the
+FHIR `ServiceRequest` plan export) — see §8 item 8 and §10.
 
 ## 3. Target workspace
 
@@ -476,6 +480,31 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
    (`.superpowers/sdd/2026-08-17-phase11-resync-260/`) for evidence. Version
    cut to 2.6.0 (root + library `package.json`, `CHANGELOG.md`) is Task 7's
    own scope, not this task's.
+8. **2.7.0 upstream resync — DELIVERED (Phase 12, 2026-10-18).** Resync to
+   `react-advanced-odontogram` v2.7.0 (`$ENGINE` @ `ee27435`, payload 2.22
+   unchanged, 33 commits past the `215c43a` pin). Core + corpus re-copied with
+   the six sanctioned deviations re-applied; the asset generator absorbed the
+   measured set growing 13 → 40 files (including the `46.svg` removal and the
+   `46_occl.svg` → `38_occl.svg` rename) while keeping classic eager and
+   measured lazy; `dompurify` bumped to `^3.4.16` (Task 1). Themable tooth
+   artwork exposed through the shell — `themeConfig.tooth` / `.tokens`, the
+   dark artwork palette, and `themeConfig.selection` routed through the
+   existing setters (which also fixed a real Angular-side bug: selection
+   settings had never reached the engine); a framework-free token spec
+   restored the coverage of upstream's one unrunnable React test; demo bundle
+   measured against 2.6.0 (Task 2). `compareExams()`, the chart display
+   settings + `getNumberingSystem()` and the FHIR plan export surfaced
+   through the shell and the public API (Task 3). Full v2.7.0 test-inventory
+   burn-down, the second Angular-side fix (the Settings anatomy select showing
+   a stale value after a failed lazy-chunk load), and the public-API sweep
+   (Task 4). This 13-document refresh, `THIRD-PARTY-NOTICES.md` shipped in the
+   tarball, the `ODONTOGRAM_SET_TOOTH_ANATOMY` test seam moved out of the
+   public export surface, and the 2.7.0 version cut (Task 5; the version
+   literals themselves were bumped in Task 1, forced by the adopted FHIR
+   golden). See `docs/superpowers/specs/2.7.0-acceptance.md` and the Phase 12
+   task reports (`.superpowers/sdd/2026-10-18-phase12-resync-270/`) for
+   evidence. The release itself (tag, GitHub release, npm publish) is
+   deliberately left to the owner.
 
 ## 9. Risks & mitigations
 
@@ -526,12 +555,24 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
   drift note below. See §8 item 7 for the full delivered scope and the
   Phase 11 task reports (`.superpowers/sdd/2026-08-17-phase11-resync-260/`)
   for evidence.
+- **2.7.0 — DELIVERED (Phase 12, 2026-10-18):** resync to
+  `react-advanced-odontogram` v2.7.0 (`$ENGINE` @ engine commit `ee27435`,
+  payload 2.22, 33 commits past `215c43a` — themable tooth artwork, the
+  completed 40-template measured anatomy, `compareExams()`, the chart display
+  settings, the FHIR `ServiceRequest` plan export and the patched
+  `dompurify`). Closes the drift note below. See §8 item 8 and
+  `docs/superpowers/specs/2.7.0-acceptance.md` for the delivered scope and
+  evidence.
 - **Drift note (superseding §2's Phase-6-era note; CLOSED by the 2.6.0
   resync above):** `$ENGINE` kept moving after the `934a911` pin — the
   commit this note originally flagged (`3bfc98c`, ICD-10 diagnosis coding)
   landed in full as part of the 215c43a pin the 2.6.0 resync copied from.
   `$ENGINE` will keep advancing past `215c43a` too; a further resync beyond
   this pin will be due in a future release.
+- **Drift note (CLOSED by the 2.7.0 resync above):** the `215c43a` pin was
+  superseded — the 2.7.0 resync copied from `ee27435`. `$ENGINE` will keep
+  advancing past `ee27435` too; a further resync beyond this pin will be due
+  in a future release.
 - Persistence demo wiring: the new opt-in `enablePersistence` API is not
   wired into the `demo` app shell (upstream doesn't wire it into its shell
   either — host-opt-in by design); a demo toggle could come later if wanted.

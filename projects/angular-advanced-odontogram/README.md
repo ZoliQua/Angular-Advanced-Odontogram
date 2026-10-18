@@ -11,7 +11,7 @@
 
 An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angular + TypeScript** — with a full **periodontal charting module**, multi-surface caries/restorations, endodontic/prosthetic states, FDI/Universal/Palmer numbering, **HL7 FHIR R4** export/import, optional ICDAS scoring, and a 12-language UI.
 
-This is the official Angular port of **[React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)**, also published on npm as **[react-advanced-odontogram](https://www.npmjs.com/package/react-advanced-odontogram)**. Feature parity with react-advanced-odontogram **v2.6.0** (engine `215c43a`), payload **2.22**. The clinical engine is shared, verbatim, between the two libraries — only the component shell is framework-native — so JSON and FHIR R4 exports round-trip cleanly between an Angular app using this package and a React app using the original.
+This is the official Angular port of **[React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)**, also published on npm as **[react-advanced-odontogram](https://www.npmjs.com/package/react-advanced-odontogram)**. Feature parity with react-advanced-odontogram **v2.7.0** (engine `ee27435`), payload **2.22**. The clinical engine is shared, verbatim, between the two libraries — only the component shell is framework-native — so JSON and FHIR R4 exports round-trip cleanly between an Angular app using this package and a React app using the original.
 
 🔗 **Live demo:** https://angular-advanced-odontogram.vercel.app/ \
 📖 **Full documentation:** https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/lang/README-en.md (11 more languages linked from there) \
@@ -61,7 +61,9 @@ export class ChartComponent {}
 - 🧬 **Standards-based diagnosis coding** — WHO ICD-10 always on, a per-tooth Diagnoses card and a case/regional-diagnoses pop-up, selectable national packs (BNO-10, US ICD-10-CM), an opt-in SNOMED CT overlay, and FHIR `Condition` export/import round-trip
 - 🖼️ PNG / JPG / SVG chart export and a configurable **PDF report** (jsPDF) — multilingual PDF fonts (Arabic shaping, CJK), per-tooth notes
 - 🧱 **Composable UI** — beyond the all-in-one shell, `OdontogramUiService`, the four presentational surfaces and all eight declarative control cards are individually exported for custom host layouts
-- 🦴 Selectable **tooth anatomy profile** — `classic` (default) or `measured` (nine literature-measured tooth templates), switchable at runtime
+- 🦴 Selectable **tooth anatomy profile** — `classic` (default) or `measured`: one literature-measured template for every one of the 40 tooth positions (permanent and primary, primary teeth drawn as primary teeth, with a derived dentin core), switchable at runtime
+- 🎨 **Themable tooth artwork** — every colour in the drawings is a CSS custom property with the shipped colour as its fallback, set through `themeConfig.tooth` / `themeConfig.tokens` (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …); the selection highlight through `themeConfig.selection` (applied via the session setters, not a CSS variable); a dark artwork palette is built in, and the dentin deliberately stays out of it
+- ⚖️ **Exam comparison and display settings** — `compareExams()` diffs two exported exams of the same mouth; the chart display settings (tooth spacing, tooth-number size, selection colour and border style, tooth-information panel) and `getNumberingSystem()` are part of the public API
 - ⚡ **On-demand loading** — only English and the `classic` anatomy ship in the initial bundle; the 11 other UI languages and the `measured` anatomy artwork load as separate chunks on first use
 - 💾 Opt-in **localStorage persistence** API (host-wired, off by default)
 - 🔢 FDI / Universal / Palmer numbering · 🌐 12 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, Arabic RTL) · 🎨 theming via `--odon-*` CSS variables · 🧩 plugin system · ⌨️ keyboard accessibility
@@ -81,6 +83,8 @@ import {
   setReadOnly, clearSelection, getSelectedTeeth,
   getToothDiagnoses, getActiveDiagnoses,   // diagnosis coding
   getDiagnosisCodingPack, getSnomedEnabled, // national pack / SNOMED CT overlay
+  compareExams,                 // diff two exported exams of the same mouth
+  getNumberingSystem, getScreenToothSpacing, // chart display settings (and their setters)
   registerPlugins,              // custom SVG plugin system
   startIntroTour,               // launch the onboarding tour
   // …and well over 100 more functions and types, fully typed in the bundled .d.ts
@@ -95,6 +99,8 @@ import {
 
 Status charts export to **HL7 FHIR R4** (a collection Bundle of per-tooth Observations, ISO 3950 tooth coding) and to a versioned JSON format with automatic migration from older payload versions. Because the clinical engine is shared verbatim with the original React library, both formats round-trip losslessly between this package and **[react-advanced-odontogram](https://www.npmjs.com/package/react-advanced-odontogram)** — export from one, import into the other.
 
+The treatment plan travels with the FHIR export: when the plan chart differs from the status chart, `exportFhir()` also emits one `ServiceRequest` (`intent: "plan"`) per planned intervention, coded with the intended clinical state on that tooth. FHIR import ignores the plan layer — it round-trips through the JSON payload.
+
 ## 🖥️ SSR / singleton notes
 
 - The component reads the DOM on mount, so it must run **browser-side only** — guard it out of any server-rendered pass (e.g. Angular Universal) and let it hydrate/mount on the client.
@@ -105,6 +111,8 @@ Status charts export to **HL7 FHIR R4** (a collection Bundle of per-tooth Observ
 ## 📄 License & citation
 
 MIT © Zoltán Dul. This library is a port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram); if you use it in research, please cite the original project — see its [`CITATION.cff`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/CITATION.cff) and the [Zenodo record](https://doi.org/10.5281/zenodo.21156787).
+
+Commercial use is included, and that covers the tooth drawings — they are original work, not third-party assets. The runtime dependencies (jsPDF, DOMPurify, tslib), the embedded PDF fonts and the Angular peer dependencies keep their own, also permissive, terms: see [`THIRD-PARTY-NOTICES.md`](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/THIRD-PARTY-NOTICES.md), which ships inside this package too.
 
 ## 🙌 Credits
 

@@ -96,6 +96,14 @@ describe("public API surface — public-api.ts (this package's npm entry point)"
     expect((PublicApi as Surface)[key]).toBeUndefined();
   });
 
+  it("keeps the DI test seams out of the public surface", () => {
+    // Test seams live in their own files that public-api.ts does not re-export
+    // (ODONTOGRAM_ENGINE_LIFECYCLE is the deliberate exception: hosts override it).
+    for (const key of ["ODONTOGRAM_SET_TOOTH_ANATOMY", "ODONTOGRAM_I18N_LOADER"]) {
+      expect((PublicApi as Surface)[key], `${key} must not be exported`).toBeUndefined();
+    }
+  });
+
   it("sanity: the surface is large and every entry is a real runtime value", () => {
     const names = Object.keys(PublicApi);
     expect(names.length).toBeGreaterThan(150);

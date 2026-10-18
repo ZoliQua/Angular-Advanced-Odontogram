@@ -6,6 +6,118 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-18
+
+Resync to `react-advanced-odontogram` v2.7.0 (engine commit `ee27435`,
+payload version stays 2.22 — no migration) — 33 upstream commits past the
+previous `215c43a` pin. See `docs/superpowers/specs/2.7.0-acceptance.md` for
+the acceptance evidence and
+`docs/superpowers/plans/2026-10-18-phase12-resync-270.md` for the full resync
+plan.
+
+### Added
+- **Themable tooth artwork**: every colour in the tooth drawings (all 46
+  tooth SVGs: 6 classic and 40 measured) is now a CSS custom property with the shipped
+  colour as its fallback. `themeConfig.tooth` names the curated subset
+  (`body`, `dentin`, `outline`, `highlight`, `milktoothBody`,
+  `milktoothHighlight`, `cusp`, `groove`, `pulpHealthy`, `pulpInflamed`,
+  `gum`, `bone`, `caries`, `cariesOutline`, `wear`, `calculus`,
+  `restorationOutline`, `outlineDark`) and `themeConfig.tokens` accepts any
+  `--odon-*` palette token by name. An export resolves the tokens before the
+  file leaves the page.
+- **`themeConfig.selection`** (`{ color, borderStyle }`): the selection
+  highlight, applied through the existing session setters
+  (`setSelectionColor` / `setSelectionBorderStyle`) rather than a CSS custom
+  property; the dedicated `selectionColor` / `selectionBorderStyle` inputs win
+  when both are given.
+- **Default dark palette for the artwork**, so the chart darkens with the rest
+  of the interface; the dentin is deliberately left out of it and keeps
+  following the body colour. In dark mode the occlusal tiles darken with the
+  side views.
+- **Completed measured anatomy**: one literature-measured template per tooth
+  position — the measured asset set grows from 13 to 40 templates (the new
+  18/18 occlusal, 17 occlusal, 15 occlusal, 32–38 and their occlusals;
+  `46.svg` removed, `46_occl.svg` renamed to `38_occl.svg`), primary teeth are
+  finally drawn as primary teeth (20 primary templates), and the crown and
+  root carry a derived dentin core. The measured artwork stays a lazy chunk,
+  fetched only when a host switches to it.
+- **`compareExams(before, after)`**: compares two exported exams of the same
+  mouth — axis-level changes, per-site periodontal probing-depth and
+  attachment-level movement (changes of 2 mm or more are flagged) and each
+  exam's 2017 classification. Pure; never touches the live chart. The result
+  types `PerioExamComparison`, `PerioSiteDelta`, `PerioExamAggregate` and the
+  `PROGRESSION_MM` threshold are exported too.
+- **Chart display settings as API**: `getScreenToothSpacing()` /
+  `setScreenToothSpacing()`, `getScreenToothNumberSize()` /
+  `setScreenToothNumberSize()`, `getSelectionColor()` / `setSelectionColor()`,
+  `getSelectionBorderStyle()` / `setSelectionBorderStyle()`,
+  `getToothInfoVisible()` / `setToothInfoVisible()`, plus
+  `getNumberingSystem()`; the shell accepts the matching `screenToothSpacing`,
+  `screenToothNumberSize`, `selectionColor`, `selectionBorderStyle` and
+  `toothInfo` inputs.
+- **FHIR `ServiceRequest` export for the treatment plan**: when the plan chart
+  differs from the status chart, `exportFhir()` also emits one
+  `ServiceRequest` (`intent: "plan"`) per planned intervention, coded with the
+  intended clinical state on that tooth. There is no separate entry point and
+  FHIR import still ignores the plan layer (it round-trips through the JSON
+  payload).
+- `THIRD-PARTY-NOTICES.md`, adapted to this package's actual dependency set
+  (jsPDF, DOMPurify, tslib, the Angular peer dependencies, the embedded PDF
+  fonts), now ships inside the npm tarball; a drift guard keeps the shipped
+  copy byte-identical to the repo-root one.
+- A framework-free token and dark-palette spec
+  (`lib/theming/tooth-artwork-theming.spec.ts`, upstream's 33 invariants,
+  running under both `test:corpus` and `test:ng`) and coverage ports for the
+  note save/delete notifications and the primary-dentition grid.
+
+### Changed
+- **Upstream's `--odon-tooth-enamel` → `--odon-tooth-body` rename
+  (`themeConfig.tooth.enamel` → `.body`) is new API here, never a migration**:
+  the renamed tokens never shipped in any release of either library, so there
+  is nothing to migrate from in this package.
+- `dompurify` `^3.4.13` → `^3.4.16` (the patched release; a fresh install
+  resolves 3.4.17) in the root and library `package.json`.
+- Bundle size (demo build): the main bundle grows from 1.25 MB to 1.29 MB and
+  the initial total from 1.33 MB to 1.38 MB — the classic artwork is now
+  token-painted, so the generated teeth module grew from 435,064 to 471,783
+  bytes. The measured artwork (now 40 templates) and all 11 non-English
+  locales remain lazy chunks. `angular.json` budgets lowered to 1.5 MB warn /
+  1.6 MB error.
+- Payload version stays `2.22`; the adopted FHIR golden embeds the 2.7.0
+  library version.
+- Full 13-document refresh (root `README.md` + all 12 `lang/README-*.md`
+  translations) plus the npm-facing README, covering the themable artwork, the
+  completed measured anatomy, `compareExams()`, the display settings, the
+  FHIR plan export and the dompurify patch; the Settings tab names in the
+  translations now match the in-app labels, and the Portuguese document no
+  longer carries untranslated English UI labels.
+- The `ODONTOGRAM_SET_TOOTH_ANATOMY` test seam (a DI token used to force a
+  failed lazy-chunk load in a spec) moved to its own file that the public API
+  does not re-export, and its comment now says so; it is not part of the
+  public surface.
+
+### Fixed (inherited from upstream)
+- Every session-setting setter is now idempotent **and** notifies
+  `onStateChange` when the value actually changes.
+- Tooth-note badges survive a grid rebuild.
+- Saving or deleting a tooth note notifies `onStateChange`.
+- Dark-mode occlusal crown and caries polarity corrected (a carious lesion
+  keeps its dark fill; its outline flips to light).
+
+### Fixed (Angular-side, found by this resync's own reviews)
+- **Selection settings never reached the engine**: selection was a local
+  signal the core setters never saw, so `themeConfig.selection` and a host's
+  `setSelectionColor()` had no effect on the chart or the Settings modal. They
+  are now routed through `setSelectionColor` / `setSelectionBorderStyle` with
+  upstream's exact defined-gated precedence — no CSS-variable leak, no
+  feedback loop.
+- **The Settings anatomy select showed a stale value when the lazy measured
+  chunk failed to load**: the core returns without notifying, so the select
+  kept saying "Measured" while the chart stayed Classic, and re-picking
+  Measured fired no change event. The select is now force-written back from
+  engine truth after the load settles, so a failed load snaps back and a retry
+  works.
+
 ## [2.6.0] - 2026-08-17
 
 Resync to `react-advanced-odontogram` v2.6.0 (engine commit `215c43a`, payload
@@ -471,7 +583,8 @@ acceptance evidence.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.1...v2.6.0
 [2.4.1]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v1.2.1...v2.4.0

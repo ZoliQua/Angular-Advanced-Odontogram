@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.6.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.7.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 Ce projet est un éditeur d'odontogramme interactif fonctionnant dans le navigateur, pour **Angular + TypeScript**, qui prend en charge une saisie rapide du schéma dentaire au moyen d'une interface épurée. Il génère des modèles de dents SVG superposés pour représenter les restaurations, les caries, le statut endodontique, la mobilité et d'autres détails cliniques, tout en offrant la sélection multiple, des filtres de sélection et des préréglages d'état prédéfinis.
 
-**Ceci est le portage officiel en Angular de [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm : [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Parité fonctionnelle avec react-advanced-odontogram **v2.6.0** (commit du moteur `215c43a`), version de la charge utile **2.22** — les exports JSON et FHIR R4 sont interopérables (aller-retour) entre les deux bibliothèques. Le moteur clinique (`projects/angular-advanced-odontogram/src/lib/core/`) est partagé à l'identique — la logique de statut dentaire, le bilan parodontal, la codification diagnostique, l'export/import FHIR, les chaînes i18n, la visite guidée et les modèles SVG sont octet pour octet identiques à l'original React, recopiés depuis un commit amont figé à chaque resynchronisation ; seule la coquille de composants (`projects/angular-advanced-odontogram/src/lib/components/`) est native à Angular. Un petit ensemble de divergences, explicitement documenté, existe (uniquement des chaînes de marque/identité — voir la spécification de conception du portage dans ce dépôt). Le versionnement évolue en lockstep avec celui du module React.
+**Ceci est le portage officiel en Angular de [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm : [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Parité fonctionnelle avec react-advanced-odontogram **v2.7.0** (commit du moteur `ee27435`), version de la charge utile **2.22** — les exports JSON et FHIR R4 sont interopérables (aller-retour) entre les deux bibliothèques. Le moteur clinique (`projects/angular-advanced-odontogram/src/lib/core/`) est partagé à l'identique — la logique de statut dentaire, le bilan parodontal, la codification diagnostique, l'export/import FHIR, les chaînes i18n, la visite guidée et les modèles SVG sont octet pour octet identiques à l'original React, recopiés depuis un commit amont figé à chaque resynchronisation ; seule la coquille de composants (`projects/angular-advanced-odontogram/src/lib/components/`) est native à Angular. Un petit ensemble de divergences, explicitement documenté, existe (uniquement des chaînes de marque/identité — voir la spécification de conception du portage dans ce dépôt). Le versionnement évolue en lockstep avec celui du module React.
 
 ---
 ![Aperçu de l'éditeur d'odontogramme](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
@@ -117,7 +117,7 @@ export class ChartComponent {}
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | Système de numérotation dentaire. |
 | `darkMode` | `boolean` | `false` | Bascule du thème sombre. |
 | `readOnly` | `boolean` | `false` | Désactive toute modification (lecture seule). |
-| `themeConfig` | `OdontogramThemeConfig` | — | Surcharge des variables CSS du thème (`--odon-*`). |
+| `themeConfig` | `OdontogramThemeConfig` | — | Remplace les variables CSS du thème (`--odon-*`), la palette des illustrations dentaires (`tooth`, `tokens`) et la mise en évidence de la sélection (`selection`) — voir [Intégration](#-intégration). |
 | `plugins` | `OdontogramPlugin[]` | — | Enregistre des plugins d'état personnalisés / des calques supplémentaires. |
 | `enableNotes` | `boolean` | `false` | Active les notes par dent. |
 | `enableIcdas` | `boolean` | `false` | Active le système d'évaluation des caries ICDAS II. |
@@ -125,6 +125,11 @@ export class ChartComponent {}
 | `fillingDefectEnabled` | `boolean` | `true` | Active les constats de défaut d'obturation sur la carte Obturations. |
 | `fillingMaterialAvailability` | `Record<string, boolean>` | tous disponibles | Matériaux d'obturation disponibles sous forme de mappage booléen sur `amalgam`/`composite`/`gic`/`temporary` (les clés inconnues sont ignorées). |
 | `fissureSealingEnabled` | `boolean` | `true` | Active le scellement des sillons sur la carte Obturations. |
+| `screenToothSpacing` | `"wide" \| "normal" \| "close"` | `"normal"` | Espacement des dents à l'écran. |
+| `screenToothNumberSize` | `"small" \| "normal" \| "xlarge"` | `"normal"` | Taille des numéros de dents dans la grille à l'écran. |
+| `selectionColor` | `string` | `"#3b7bff"` | Couleur de l'anneau de sélection (`#rrggbb`) ; prévaut sur `themeConfig.selection.color`. |
+| `selectionBorderStyle` | `"solid" \| "dashed" \| "dotted"` | `"dashed"` | Style de bordure de l'anneau de sélection ; prévaut sur `themeConfig.selection.borderStyle`. |
+| `toothInfo` | `boolean` | `true` | Afficher le panneau d'informations dentaires. |
 | `languageChange` / `numberingChange` / `darkModeChange` (sorties) | `output<T>` | — | Émis lorsque l'utilisateur modifie le paramètre depuis l'interface. |
 | `fillingComplexityChange` / `fillingDefectEnabledChange` / `fillingMaterialAvailabilityChange` / `fissureSealingEnabledChange` (sorties) | `output<T>` | — | Émis lorsque l'utilisateur modifie le paramètre correspondant depuis Paramètres → Obturations. |
 
@@ -249,7 +254,7 @@ Les deux existent parce que les fonctions réelles touchent au DOM/canvas/aux m�
 - **La feuille de style est séparée** — vous **devez** enregistrer `angular-advanced-odontogram/styles.css` une seule fois ; elle n'est pas injectée automatiquement. La mise en forme est du CSS global délimité sous `.odontogram-root` et pilotée par les variables CSS `--odon-*`.
 - **SSR / côté client uniquement** — le composant lit le DOM au montage, il doit donc s'exécuter dans le navigateur ; affichez-le uniquement côté navigateur.
 - **Les ressources sont autonomes** — les SVG des dents et des icônes sont incorporés dans le bundle au moment du build (modules TypeScript générés, `npm run gen:assets`) ; il n'y a **aucune récupération de ressource à l'exécution** à configurer et rien de plus à copier dans le dossier public de votre application.
-- **Chargement à la demande** — seuls l'anglais et l'illustration de l'anatomie dentaire `classic` sont intégrés au bundle initial ; les 11 autres tables de langue de l'interface et l'illustration du profil d'anatomie `measured` sont des chunks paresseux séparés, récupérés la première fois qu'un hôte bascule vers eux (`[language]` / `I18nService.setLanguage()`/le menu de langue, et `setToothAnatomy("measured")`/Paramètres → Odontogramme → anatomie dentaire, respectivement). Ce découpage lié à la resynchronisation a réduit le chunk principal de la démo de 3,12 Mo à 1,25 Mo et le total initial de 3,21 Mo à 1,33 Mo — rien à configurer côté hôte.
+- **Chargement à la demande** — seuls l'anglais et l'illustration de l'anatomie dentaire `classic` sont intégrés au bundle initial ; les 11 autres tables de langue de l'interface et l'illustration du profil d'anatomie `measured` sont des chunks paresseux séparés, récupérés la première fois qu'un hôte bascule vers eux (`[language]` / `I18nService.setLanguage()`/le menu de langue, et `setToothAnatomy("measured")`/Paramètres → Odontogramme → anatomie dentaire, respectivement). Ce découpage lié à la resynchronisation a réduit le chunk principal de la démo de 3,12 Mo à 1,29 Mo et le total initial de 3,21 Mo à 1,38 Mo — rien à configurer côté hôte.
 - **Une seule instance par page** dans cette version — l'état du moteur est un singleton au niveau du module (comme dans l'original React), donc afficher deux instances `<aao-odontogram-shell>` sur la même page les ferait partager l'état d'un même schéma.
 
 ---
@@ -275,7 +280,7 @@ Les deux existent parce que les fonctions réelles touchent au DOM/canvas/aux m�
 - 📦 22 modèles de restauration prédéfinis (ponts, prothèses amovibles, prothèses sur barre avec implants)
 - 💾 Export/import de l'état en JSON (version 2.22 ; les imports acceptent encore les formats hérités 1.4 et 2.0 à 2.21 et migrent automatiquement, avec les états personnalisés des plugins et les notes par dent)
 - 💽 Persistance localStorage optionnelle (`enablePersistence`/`disablePersistence`/`clearPersistedState`/`isPersistenceEnabled`) — désactivée par défaut ; sauvegarde automatiquement le schéma d'état (et, en option, le schéma de plan) avec une protection de taille de 4 Mo et les erreurs de stockage/analyse dirigées vers un callback `onError` (ou `console.warn`) au lieu de lever une exception
-- 🔗 Export HL7 FHIR R4 (Bundle de collection d'Observations par dent, codage dentaire ISO 3950 pour la dentition permanente **et** les dents temporaires (51-85, aller-retour sans perte à l'import), système de codes local, plus une surcouche SNOMED CT optionnelle (Paramètres → Général → SNOMED CT)) ; un composant de carie porteur d'une sévérité renseignée porte aussi le codage d'un système d'évaluation — ICDAS sur une surface primaire (non obturée), CARS sur une surface récidivante (obturée)
+- 🔗 Export HL7 FHIR R4 (Bundle de collection d'Observations par dent, codage dentaire ISO 3950 pour la dentition permanente **et** les dents temporaires (51-85, aller-retour sans perte à l'import), système de codes local, plus une surcouche SNOMED CT optionnelle (Paramètres → Général → SNOMED CT)) ; un composant de carie porteur d'une sévérité renseignée porte aussi le codage d'un système d'évaluation — ICDAS sur une surface primaire (non obturée), CARS sur une surface récidivante (obturée) — le plan de traitement voyage avec lui : lorsque le graphique du plan diffère de celui du statut, `exportFhir()` émet en plus un `ServiceRequest` (`intent: "plan"`) par intervention planifiée, codé avec l'état clinique visé sur cette dent ; l'import FHIR ignore la couche du plan, qui revient par la charge utile JSON
 - ✚ Interface de sélection de surface en croix/plus (V/M/O/D/L) pour les caries et les obturations — `SurfaceCrossComponent`, exporté pour les mises en page composables
 - 🧱 Matériaux de restauration par surface (obturations mixtes, p. ex. amalgame vestibulaire + composite distal)
 - 🖼️ Export d'image PNG/JPG/SVG du schéma (téléchargeable ; PNG/JPG matricés à partir du SVG vectoriel)
@@ -312,7 +317,10 @@ Les deux existent parce que les fonctions réelles touchent au DOM/canvas/aux m�
 - 🔢 Trois systèmes de numérotation (FDI, Universel, Palmer)
 - 🌐 I18n — 12 langues d'interface (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) avec un sélecteur de langue ; l'arabe affiche l'interface de droite à gauche avec les schémas dentaire/parodontal épinglés de gauche à droite ; seule la langue active est intégrée au bundle principal — chaque autre langue est un chunk séparé, récupéré la première fois qu'elle est sélectionnée
 - 🌗 Prise en charge du mode sombre avec bouton de bascule (autonome ou contrôlé par l'application parente)
-- 🎨 Configuration de thème personnalisée (entrée `themeConfig`) avec des propriétés CSS personnalisées (`--odon-*`)
+- 🎨 Graphique et illustrations dentaires thémables : `themeConfig` (`colors`, `tooth`, `tokens`, `selection`) pilote les propriétés CSS personnalisées `--odon-*` — y compris les dessins des dents eux-mêmes (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) — et une palette sombre pour les illustrations est intégrée
+- 📐 Anatomie mesurée complétée : le profil `measured` porte désormais un modèle mesuré d'après la littérature pour chacune des 40 positions dentaires, les dents temporaires sont dessinées comme des dents temporaires, et la couronne et la racine ont un noyau de dentine dérivé ; l'illustration est un chunk paresseux séparé, récupéré uniquement lorsque vous basculez dessus (Paramètres → Odontogramme → Anatomie dentaire)
+- ⚖️ `compareExams(before, after)` — compare deux examens exportés de la même bouche : changements au niveau des axes, évolution par site de la profondeur de sondage et du niveau d'attache (les variations de 2 mm ou plus sont signalées) et classification 2017 de chaque examen ; pure, elle ne touche jamais le graphique en direct
+- 🖥️ Paramètres d'affichage du graphique exposés dans l'API : espacement des dents, taille des numéros de dents, couleur et style de bordure de la sélection, panneau d'informations dentaires (paires `get…`/`set…` et entrées correspondantes du shell), ainsi que `getNumberingSystem()`
 - 📱 UX tactile mobile : popover tap-to-zoom, menu contextuel par appui long, pincer pour zoomer, cibles tactiles WCAG de 44 px, navigation par bascule d'arcade
 - 🔌 Système de plugins SVG personnalisés : injecter des superpositions visuelles, un état personnalisé par dent, la prise en charge de l'export/import JSON — la sortie de `renderSvg()` d'un plugin est désinfectée avec DOMPurify (profil SVG) avant insertion dans le schéma en direct ; les plugins s'exécutent toujours comme du code de confiance, ne chargez donc que des plugins provenant de sources fiables
 - ⚠️ Avertissements de validation d'état pour les combinaisons d'états dentaires incompatibles
@@ -496,12 +504,12 @@ Les deux existent parce que les fonctions réelles touchent au DOM/canvas/aux m�
 Ouverts depuis l'icône d'engrenage de la barre supérieure (`SettingsModalComponent`) ; un `dialog` ARIA à piège de focus avec une disposition à 7 onglets (Échap/clic sur le fond pour fermer, touches fléchées pour changer d'onglet). La boîte de dialogue est une vue pure sur un `SettingsState` fourni par l'hôte — elle ne possède elle-même aucun état de paramètre. Tous les paramètres ne concernent que l'état de l'interface au niveau de la session, sauf mention contraire — aucun d'eux ne mute les données par dent ni la charge utile d'export.
 
 - **Général :** système de numérotation (FDI/Universel/Palmer), langue, thème sombre/clair, disponibilité d'export par format (PNG/JPG/SVG/PDF — masque l'élément de menu Export correspondant lorsqu'il est désactivé, et désactive l'onglet Export lorsque le PDF est désactivé), disponibilité d'import par source (JSON d'état/FHIR), système de codage du diagnostic (aucun / BNO-10 / ICD-10-CM) et une bascule optionnelle de surcouche SNOMED CT
-- **Odontogramme :** disposition à l'écran — espacement des dents, taille du numéro de dent, couleur et style de bordure de sélection ; visibilité du panneau d'informations sur la dent ; disponibilité du mode Plan ; profil d'anatomie dentaire (`classic` par défaut / `measured` — neuf modèles dentaires mesurés d'après la littérature dans une disposition à deux arcades avec largeur par dent, commutable à l'exécution ; son illustration est un chunk paresseux séparé, récupéré uniquement lorsque vous basculez dessus, si bien que le `classic` par défaut ne coûte rien de plus) ; visibilité de la carte États et de la carte Orthodontie
-- **Bilan parodontal :** une bascule de disponibilité qui conditionne le reste de l'onglet et les points d'entrée parodontaux de la shell ; mode d'affichage du bilan parodontal (`toggle`/`popup`) ; 16 bascules d'affichage/masquage par indice réparties en 5 groupes (Poche : PD/GM/CAL/BOP · Hygiène : Plaque/PI/GI · Muco-gingival : visibilité JEC/Concavité radiculaire/KG/GT · Soutien : Furcation/Mobilité/Classe de Miller · Péri-implantaire : mPI/mBI) ; un mode d'affichage du nom d'indice traduit vs canonique (canonique = un nom scientifique fixe en anglais/latin dans toutes les langues de l'interface ; les infobulles restent toujours localisées)
-- **Détails de la dent :** niveau de détail pulpaire (simple/AAE/latin pratique, par défaut AAE), niveau de détail de l'usure et niveau de détail de la coloration (simple/complexe, chacun complexe par défaut), notation de surface (simple/complète, complète par défaut), bascule des notes par dent
-- **Caries :** bascule de score ICDAS II, bascule de profondeur de carie, granularité de la carie radiculaire (simple/severity), granularité secondaire/CARS (simple/standard/full), granularité de la profondeur radiographique (off/threeLevel/detailed)
+- **Odontogramme :** disposition à l'écran — espacement des dents, taille du numéro de dent, couleur et style de bordure de sélection ; visibilité du panneau d'informations sur la dent ; disponibilité du mode Plan ; profil d'anatomie dentaire (`classic` par défaut / `measured` — 40 modèles dentaires mesurés d'après la littérature dans une disposition à deux arcades avec largeur par dent, commutable à l'exécution ; son illustration est un chunk paresseux séparé, récupéré uniquement lorsque vous basculez dessus, si bien que le `classic` par défaut ne coûte rien de plus) ; visibilité de la carte États et de la carte Orthodontie
+- **Charte parodontale :** une bascule de disponibilité qui conditionne le reste de l'onglet et les points d'entrée parodontaux de la shell ; mode d'affichage du bilan parodontal (`toggle`/`popup`) ; 16 bascules d'affichage/masquage par indice réparties en 5 groupes (Poche : PD/GM/CAL/BOP · Hygiène : Plaque/PI/GI · Muco-gingival : visibilité JEC/Concavité radiculaire/KG/GT · Soutien : Furcation/Mobilité/Classe de Miller · Péri-implantaire : mPI/mBI) ; un mode d'affichage du nom d'indice traduit vs canonique (canonique = un nom scientifique fixe en anglais/latin dans toutes les langues de l'interface ; les infobulles restent toujours localisées)
+- **Détails dentaires :** niveau de détail pulpaire (simple/AAE/latin pratique, par défaut AAE), niveau de détail de l'usure et niveau de détail de la coloration (simple/complexe, chacun complexe par défaut), notation de surface (simple/complète, complète par défaut), bascule des notes par dent
+- **Carie :** bascule de score ICDAS II, bascule de profondeur de carie, granularité de la carie radiculaire (simple/severity), granularité secondaire/CARS (simple/standard/full), granularité de la profondeur radiographique (off/threeLevel/detailed)
 - **Obturations :** complexité d'obturation (complex/simple), bascule des constats de défaut d'obturation, disponibilité par matériau (amalgame/composite/CVI/temporaire), bascule de scellement de sillon
-- **Export :** la configuration complète du rapport PDF (`PdfSettings` — voir [Export](#-export) ci-dessous) — désactivé (retombe sur le contenu de l'onglet Général) chaque fois que l'export PDF est désactivé dans l'onglet Général
+- **Paramètres d'exportation :** la configuration complète du rapport PDF (`PdfSettings` — voir [Export](#-export) ci-dessous) — désactivé (retombe sur le contenu de l'onglet Général) chaque fois que l'export PDF est désactivé dans l'onglet Général
 
 ### 🖼️ Système de modèles SVG
 
@@ -513,7 +521,7 @@ Ouverts depuis l'icône d'engrenage de la barre supérieure (`SettingsModalCompo
 | `14.svg` / `14_occl.svg` | 14, 15, 24, 25, 34, 35, 44, 45 (prémolaires) |
 | `16.svg` / `16_occl.svg` | 16, 17, 18, 26, 27, 28, 36, 37, 38, 46, 47, 48 (molaires) |
 
-Les modèles sont pivotés de 180 degrés pour la mâchoire inférieure et reflétés horizontalement pour le côté gauche. Un sous-dossier parallèle `measured/` contient les neuf modèles dentaires mesurés d'après la littérature que le profil d'anatomie `measured` affiche dans une disposition à deux arcades avec largeur par dent (Paramètres → Odontogramme → anatomie dentaire).
+Les modèles sont pivotés de 180 degrés pour la mâchoire inférieure et reflétés horizontalement pour le côté gauche. Un sous-dossier parallèle `measured/` contient les 40 modèles dentaires mesurés d'après la littérature que le profil d'anatomie `measured` affiche dans une disposition à deux arcades avec largeur par dent (Paramètres → Odontogramme → anatomie dentaire).
 
 **SVG d'icônes** (dans `projects/angular-advanced-odontogram/src/lib/core/assets/icon-svgs/`) :
 `icon_8.svg` (sagesse), `icon_gum.svg` (os), `icon_no_selection.svg` (effacer), `icon_occl.svg` (vue occlusale), `icon_pulp.svg` (pulpe)
@@ -584,19 +592,41 @@ export class HostComponent {
 
 **Thème personnalisé :**
 ```ts
+import type { OdontogramThemeConfig } from "angular-advanced-odontogram";
+
 @Component({
   template: `<aao-odontogram-shell [themeConfig]="theme" />`,
 })
 export class ThemedHostComponent {
-  readonly theme = {
+  readonly theme: OdontogramThemeConfig = {
     colors: {
       accent: "#e74c3c",
       background: "#fafafa",
       text: "#222222",
     },
+    // The tooth drawings are themable too. Omitted keys keep the colour the
+    // artwork is drawn in, so this is additive: set nothing and nothing moves.
+    tooth: {
+      // `body` is the tooth's own silhouette, crown AND root. In `classic`
+      // that is the whole tooth; in `measured` it is the outer shell around
+      // `dentin`, which takes its colour unless you set it.
+      body: "#f2f2f2",
+      dentin: "#e6d7bf",
+      outline: "#b9bdc2",
+      gum: "#e8a5a0",
+      bone: "#f6e6c8",
+    },
+    // Any palette token by name, for the surfaces `tooth` does not cover
+    // (per-material restoration colours, gradient stops).
+    tokens: { "--odon-rest-gold": "#d4af37" },
+    // The selection highlight. Applied through the session setters,
+    // not as a CSS custom property.
+    selection: { color: "#3b7bff", borderStyle: "dashed" },
   };
 }
 ```
+
+Les dessins portent leurs couleurs sous forme de propriétés CSS personnalisées, avec la couleur d'origine en repli (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) : les clés omises laissent donc l'illustration exactement telle qu'elle est dessinée, et les deux profils d'anatomie suivent un seul réglage ; un export résout les tokens avant que le fichier ne quitte la page. `tooth.body` est toute la silhouette (couronne et racine) — la dent entière en `classic`, la coque extérieure autour du noyau de dentine en `measured` — et `tooth.dentin` colore ce noyau (`measured` uniquement ; non défini, il suit le corps, la frontière n'apparaît donc que si vous le demandez). La sélection n'est pas une variable CSS : `themeConfig.selection` est appliquée par les mêmes setters que les entrées `selectionColor` / `selectionBorderStyle` (`setSelectionColor()` / `setSelectionBorderStyle()`), et les entrées dédiées l'emportent lorsque les deux sont fournies. Le mode sombre apporte sa propre palette d'illustrations, de sorte que le graphique s'assombrit avec le reste de l'interface — la dentine est volontairement exclue de cette palette et continue donc de suivre la couleur du corps. En mode sombre, les tuiles occlusales s'assombrissent avec les vues latérales, et une lésion carieuse conserve son remplissage sombre tandis que son contour passe au clair. La table complète des tokens se trouve dans [`tools/toothgen/palette.py`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/tools/toothgen/palette.py) du projet d'origine.
 
 **Intégration de plugins :**
 ```ts
@@ -666,9 +696,16 @@ L'API du moteur clinique partagé est également documentée dans le projet d'or
 | `setNotesEnabled(value)` / `getNotesEnabled()` | Active/désactive / interroge les notes par dent |
 | `setPulpDetailLevel(level)` / `getPulpDetailLevel()` | Définit/obtient le vocabulaire du sélecteur pulpaire — `"simple"`, `"aae"`, ou `"latin"` |
 | `getToothAnatomy()` / `setToothAnatomy(v)` | Obtient/définit le profil d'anatomie dentaire — `"classic"` ou `"measured"` |
+| `getNumberingSystem()` | Le système de numérotation dentaire actuellement actif |
+| `getScreenToothSpacing()` / `setScreenToothSpacing(v)` | Obtient/définit l'espacement des dents à l'écran — `"wide"`, `"normal"` ou `"close"` |
+| `getScreenToothNumberSize()` / `setScreenToothNumberSize(v)` | Obtient/définit la taille des numéros de dents — `"small"`, `"normal"` ou `"xlarge"` |
+| `getSelectionColor()` / `setSelectionColor(hex)` | Obtient/définit la couleur de l'anneau de sélection (`#rrggbb`) |
+| `getSelectionBorderStyle()` / `setSelectionBorderStyle(v)` | Obtient/définit le style de bordure de l'anneau de sélection — `"solid"`, `"dashed"` ou `"dotted"` |
+| `getToothInfoVisible()` / `setToothInfoVisible(on)` | Obtient/définit l'affichage du panneau d'informations dentaires |
 | `getChartMode()` / `setChartMode(mode)` | Obtient/bascule le schéma actif — `"status"` ou `"plan"` (le schéma de plan est copié en profondeur depuis l'état la première fois qu'on y entre) |
 | `getStatusChart()` / `getPlanChart()` / `setPlanChart(payload)` | Lit les charges utiles du schéma d'état/de plan indépendamment du schéma actif, ou remplace les dents du schéma de plan |
 | `getPlanChanges()` | Obtient le diff structuré état→plan (`{ toothNo, axis, from, to }[]`) |
+| `compareExams(before, after)` | Compare deux examens EXPORTÉS de la même bouche — changements au niveau des axes (même forme que `getPlanChanges()`), valeurs parodontales par site (profondeur de sondage et niveau d'attache, avec ce qui a bougé de 2 mm ou plus) et classification 2017 de chaque examen. Pure : ne touche jamais le graphique en direct |
 | `setPerioSite(toothNo, site, patch)` / `getToothPerio(toothNo)` | Définit/obtient les données parodontales pour l'un des six sites (`patch` = `{ pd?, gm?, bop?, sup? }`) |
 | `getToothCal(toothNo)` | Obtient le CAL dérivé par site pour une dent |
 | `getPerioSummary()` | Agrégats parodontaux bucco-dentaires : nombre de sites chartés, nombre de saignements, %BOP, pire CAL, PD max |
@@ -686,7 +723,7 @@ L'API du moteur clinique partagé est également documentée dans le projet d'or
 | `getDiagnosisCodingPack()` / `setDiagnosisCodingPack(id)` | Obtient/définit la surcouche de pack de codification nationale par-dessus l'OMS ICD-10 — `"none"`, `"bno10"` (intitulés NEAK hongrois) ou `"icd10cm"` (américain) |
 | `getSnomedEnabled()` / `setSnomedEnabled(v)` | Obtient/définit la surcouche optionnelle de codage SNOMED CT |
 | `getCaseConditions()` / `setCaseCondition(key, laterality)` | Obtient/définit les diagnostics de cas/régionaux bouche entière (malocclusion et ATM, kystes buccaux, pathologie des glandes salivaires, stomatite et muqueuse buccale, anomalies de développement au niveau de l'arcade), chacun avec une latéralité — `null` efface, ou `"left"`/`"right"`/`"bilateral"` |
-| `exportFhir(options?)` | Exporte le schéma sous forme de Bundle de collection HL7 FHIR R4 (téléchargement JSON) ; référence `{ subject }` optionnelle |
+| `exportFhir(options?)` | Exporte le schéma sous forme de Bundle de collection HL7 FHIR R4 (téléchargement JSON) ; référence `{ subject }` optionnelle; lorsque le graphique du plan diffère de celui du statut, également un `ServiceRequest` (`intent: "plan"`) par intervention planifiée |
 | `importFhirBundle(input)` | Importe un Bundle FHIR R4 (objet ou chaîne JSON) produit par ce module |
 | `exportImage(format)` | Télécharge le schéma sous forme d'image — `"png"` ou `"jpg"` |
 | `exportSvg()` | Télécharge le schéma sous forme de SVG évolutif (vectoriel) |
@@ -878,6 +915,8 @@ Au-delà de l'export propre à l'odontogramme (JSON d'état / FHIR / PNG / JPG /
   default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'
   ```
 
+- **Dépendance corrigée.** DOMPurify est déclaré en `^3.4.16` (la version corrigée) dans le `package.json` de la bibliothèque, si bien qu'une installation neuve ne résout jamais une version plus ancienne.
+
 ### 📖 Comment citer
 
 Ce paquet n'a pas de fiche de citation propre — il s'agit d'un portage qui partage son moteur clinique, à l'identique, avec le projet d'origine. Si vous utilisez ce logiciel dans le cadre d'une recherche, veuillez citer l'original :
@@ -897,5 +936,7 @@ Angular Advanced Odontogram est créé et maintenu par Zoltan Dul ([@ZoliQua](ht
 - [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) (npm : [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)) : l'implémentation React d'origine dont ce paquet est le portage — le moteur clinique (logique de statut dentaire, bilan parodontal, codification diagnostique, export/import FHIR, chaînes i18n, visite guidée, modèles SVG) est partagé à l'identique.
 
 **Construit avec** [jsPDF](https://github.com/parallax/jsPDF), [DOMPurify](https://github.com/cure53/DOMPurify), [Angular](https://angular.dev), [Angular CLI](https://angular.dev/tools/cli), [TypeScript](https://www.typescriptlang.org) et [Tailwind CSS](https://tailwindcss.com).
+
+**Licence.** Ce projet est sous licence MIT, usage commercial inclus — et cela couvre les dessins des dents, qui sont une œuvre originale. Les dépendances d'exécution (jsPDF, DOMPurify, tslib), les polices PDF intégrées et les dépendances peer d'Angular conservent leurs propres conditions, elles aussi permissives : voir [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md), également livré dans le paquet npm.
 
 Les contributions sont les bienvenues — voir [`CONTRIBUTING.md`](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/CONTRIBUTING.md). Si ce projet vous est utile, n'hésitez pas à [lui donner une étoile sur GitHub](https://github.com/ZoliQua/Angular-Advanced-Odontogram).

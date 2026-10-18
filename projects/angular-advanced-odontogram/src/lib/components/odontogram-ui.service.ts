@@ -48,7 +48,6 @@
 // `.hidden`" strategy for all of it instead — see the surface components'
 // own header comments for the full rationale (recorded in the Task 2 report).
 import {
-  InjectionToken,
   Injectable,
   PendingTasks,
   Signal,
@@ -116,7 +115,6 @@ import {
   setSelectionColor,
   setSnomedEnabled,
   setSurfaceNotation,
-  setToothAnatomy,
   setWearDetailLevel,
   type OdontogramSummary,
   type PdfSettings,
@@ -136,6 +134,7 @@ import {
 } from "../core/odontogram";
 import { I18nService } from "../i18n/i18n.service";
 import { ODONTOGRAM_ENGINE_LIFECYCLE } from "./odontogram-engine-lifecycle";
+import { ODONTOGRAM_SET_TOOTH_ANATOMY } from "./odontogram-set-tooth-anatomy";
 import { ODONTOGRAM_I18N_LOADER } from "./odontogram-i18n-loader";
 import type {
   FillingComplexity,
@@ -212,15 +211,6 @@ export interface OdontogramUiConfig {
   fissureSealingEnabled?: Signal<boolean | undefined>;
   onFissureSealingEnabledChange?: (enabled: boolean) => void;
 }
-
-/** Internal seam (NOT exported from the public API) over the core's async
- *  `setToothAnatomy()`. The core swallows a failed lazy chunk load and returns
- *  without notifying; tests substitute this to force that path, because
- *  `vi.mock` is unavailable under the Angular test builder. */
-export const ODONTOGRAM_SET_TOOTH_ANATOMY = new InjectionToken<(v: ToothAnatomy) => Promise<void>>(
-  "ODONTOGRAM_SET_TOOTH_ANATOMY",
-  { providedIn: "root", factory: () => setToothAnatomy },
-);
 
 @Injectable()
 export class OdontogramUiService {

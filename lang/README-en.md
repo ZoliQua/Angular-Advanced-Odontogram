@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.6.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.7.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 This project is an interactive, browser-based odontogram editor for **Angular + TypeScript** that supports fast dental charting with a clean UI. It renders layered SVG tooth templates to represent restorations, caries, endodontic status, mobility, and other clinical details, while providing multi-select, selection filters, and predefined status presets.
 
-**This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Feature parity with react-advanced-odontogram **v2.6.0** (engine commit `215c43a`), payload version **2.22** — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine (`projects/angular-advanced-odontogram/src/lib/core/`) is shared, verbatim — dental status logic, periodontal charting, diagnosis coding, FHIR export/import, i18n strings, the guided tour and the SVG templates are byte-identical to the React original, re-copied from a pinned upstream commit on every resync; only the component shell (`projects/angular-advanced-odontogram/src/lib/components/`) is Angular-native. A small, explicitly documented set of deviations exists (branding/identity strings only — see the port design spec in this repository). Versioned in lockstep with the React module.
+**This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Feature parity with react-advanced-odontogram **v2.7.0** (engine commit `ee27435`), payload version **2.22** — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine (`projects/angular-advanced-odontogram/src/lib/core/`) is shared, verbatim — dental status logic, periodontal charting, diagnosis coding, FHIR export/import, i18n strings, the guided tour and the SVG templates are byte-identical to the React original, re-copied from a pinned upstream commit on every resync; only the component shell (`projects/angular-advanced-odontogram/src/lib/components/`) is Angular-native. A small, explicitly documented set of deviations exists (branding/identity strings only — see the port design spec in this repository). Versioned in lockstep with the React module.
 
 ---
 ![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
@@ -117,7 +117,7 @@ export class ChartComponent {}
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | Tooth numbering system. |
 | `darkMode` | `boolean` | `false` | Dark theme toggle. |
 | `readOnly` | `boolean` | `false` | Disable all editing (view-only). |
-| `themeConfig` | `OdontogramThemeConfig` | — | Override theme CSS variables (`--odon-*`). |
+| `themeConfig` | `OdontogramThemeConfig` | — | Override theme CSS variables (`--odon-*`), the tooth-artwork palette (`tooth`, `tokens`) and the selection highlight (`selection`) — see [Integration](#-integration). |
 | `plugins` | `OdontogramPlugin[]` | — | Register custom state plugins / extra layers. |
 | `enableNotes` | `boolean` | `false` | Enable per-tooth notes. |
 | `enableIcdas` | `boolean` | `false` | Enable ICDAS II caries scoring. |
@@ -125,6 +125,11 @@ export class ChartComponent {}
 | `fillingDefectEnabled` | `boolean` | `true` | Enable filling-defect findings on the Fillings card. |
 | `fillingMaterialAvailability` | `Record<string, boolean>` | all available | Available filling materials as a boolean map over `amalgam`/`composite`/`gic`/`temporary` (unknown keys ignored). |
 | `fissureSealingEnabled` | `boolean` | `true` | Enable fissure sealing on the Fillings card. |
+| `screenToothSpacing` | `"wide" \| "normal" \| "close"` | `"normal"` | On-screen inter-tooth spacing. |
+| `screenToothNumberSize` | `"small" \| "normal" \| "xlarge"` | `"normal"` | Tooth-number size in the on-screen grid. |
+| `selectionColor` | `string` | `"#3b7bff"` | Selection-ring colour (`#rrggbb`); wins over `themeConfig.selection.color`. |
+| `selectionBorderStyle` | `"solid" \| "dashed" \| "dotted"` | `"dashed"` | Selection-ring border style; wins over `themeConfig.selection.borderStyle`. |
+| `toothInfo` | `boolean` | `true` | Show the tooth-information panel. |
 | `languageChange` / `numberingChange` / `darkModeChange` (outputs) | `output<T>` | — | Emit when the user changes the setting from the UI. |
 | `fillingComplexityChange` / `fillingDefectEnabledChange` / `fillingMaterialAvailabilityChange` / `fissureSealingEnabledChange` (outputs) | `output<T>` | — | Emit when the user changes the matching setting from Settings → Fillings. |
 
@@ -249,7 +254,7 @@ Both exist because the real functions touch the DOM/canvas/`jsPDF` internals a h
 - **The stylesheet is separate** — you **must** register `angular-advanced-odontogram/styles.css` once; it is not injected automatically. Styling is global CSS scoped under `.odontogram-root` and driven by `--odon-*` CSS variables.
 - **SSR / client-only** — the component reads the DOM on mount, so it must run in the browser; render it browser-side only.
 - **Assets are self-contained** — the tooth and icon SVGs are inlined into the bundle at build time (generated TypeScript modules, `npm run gen:assets`); there is **no runtime asset fetch** to configure and nothing extra to copy to your app's public folder.
-- **On-demand loading** — only English and the `classic` tooth-anatomy artwork ship in the initial bundle; the 11 other UI-language tables and the `measured` anatomy profile's artwork are separate lazy chunks, fetched the first time a host switches to them (`[language]` / `I18nService.setLanguage()`/the language menu, and `setToothAnatomy("measured")`/Settings → Odontogram → tooth anatomy, respectively). This resync's split cut the demo's main chunk from 3.12 MB to 1.25 MB and the initial total from 3.21 MB to 1.33 MB — nothing to configure on the host side.
+- **On-demand loading** — only English and the `classic` tooth-anatomy artwork ship in the initial bundle; the 11 other UI-language tables and the `measured` anatomy profile's artwork are separate lazy chunks, fetched the first time a host switches to them (`[language]` / `I18nService.setLanguage()`/the language menu, and `setToothAnatomy("measured")`/Settings → Odontogram → tooth anatomy, respectively). This resync's split cut the demo's main chunk from 3.12 MB to 1.29 MB and the initial total from 3.21 MB to 1.38 MB — nothing to configure on the host side.
 - **One instance per page** in this release — engine state is a module-level singleton (same as the React original), so rendering two `<aao-odontogram-shell>` instances on the same page would make them share a single chart's state.
 
 ---
@@ -275,7 +280,7 @@ Both exist because the real functions touch the DOM/canvas/`jsPDF` internals a h
 - 📦 22 predefined restoration templates (bridges, removable dentures, bar dentures with implants)
 - 💾 Status export/import in JSON (version 2.22; imports still accept legacy 1.4 and 2.0 through 2.21 and migrate automatically, with plugin custom states and per-tooth notes)
 - 💽 Opt-in localStorage persistence (`enablePersistence`/`disablePersistence`/`clearPersistedState`/`isPersistenceEnabled`) — disabled by default; auto-saves the status chart (and, optionally, the plan chart) with a 4 MB size guard and storage/parse errors routed to an `onError` callback (or `console.warn`) instead of throwing
-- 🔗 HL7 FHIR R4 export (collection Bundle of per-tooth Observations, ISO 3950 tooth coding for permanent dentition **and** deciduous milk teeth (51-85, lossless round-trip on import), local code system, plus an opt-in SNOMED CT overlay (Settings → General → SNOMED CT)); a caries component with a charted severity also carries a scoring-system coding — ICDAS on a primary (unfilled) surface, CARS on a recurrent (filled) one
+- 🔗 HL7 FHIR R4 export (collection Bundle of per-tooth Observations, ISO 3950 tooth coding for permanent dentition **and** deciduous milk teeth (51-85, lossless round-trip on import), local code system, plus an opt-in SNOMED CT overlay (Settings → General → SNOMED CT)); a caries component with a charted severity also carries a scoring-system coding — ICDAS on a primary (unfilled) surface, CARS on a recurrent (filled) one — the treatment plan travels with it: when the plan chart differs from the status chart, `exportFhir()` also emits one `ServiceRequest` (`intent: "plan"`) per planned intervention, coded with the intended clinical state on that tooth; FHIR import ignores the plan layer, which round-trips through the JSON payload
 - ✚ Cross/plus surface selection UI (B/M/O/D/L) for caries and fillings — `SurfaceCrossComponent`, exported for composable layouts
 - 🧱 Per-surface restoration materials (mixed fillings, e.g. buccal amalgam + distal composite)
 - 🖼️ PNG/JPG/SVG image export of the chart (downloadable; PNG/JPG rasterized from vector SVG)
@@ -312,7 +317,10 @@ Both exist because the real functions touch the DOM/canvas/`jsPDF` internals a h
 - 🔢 Three numbering systems (FDI, Universal, Palmer)
 - 🌐 I18n — 12 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) with a language switcher; Arabic renders the UI right-to-left with the dental/perio charts pinned left-to-right; only the active language ships in the main bundle — every other language is a separate chunk, fetched the first time it is selected
 - 🌗 Dark mode support with toggle button (standalone or controlled by parent app)
-- 🎨 Custom theme configuration (`themeConfig` input) with CSS custom properties (`--odon-*`)
+- 🎨 Themable chart and tooth artwork: `themeConfig` (`colors`, `tooth`, `tokens`, `selection`) drives the `--odon-*` CSS custom properties — including the tooth drawings themselves (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) — and a dark artwork palette ships built in
+- 📐 Completed measured anatomy: the `measured` profile now carries one literature-measured template for every one of the 40 tooth positions, primary teeth are drawn as primary teeth, and the crown and root have a derived dentin core; the artwork is a separate lazy chunk, fetched only when you switch to it (Settings → Odontogram → Tooth anatomy)
+- ⚖️ `compareExams(before, after)` — compare two exported exams of the same mouth: axis-level changes, the per-site periodontal probing-depth and attachment-level movement (changes of 2 mm or more are flagged) and each exam's 2017 classification; pure, it never touches the live chart
+- 🖥️ Chart display settings as API: tooth spacing, tooth-number size, selection colour and border style and the tooth-information panel (`get…`/`set…` pairs and matching shell inputs), plus `getNumberingSystem()`
 - 📱 Mobile touch UX: tap-to-zoom popover, long-press context menu, pinch-to-zoom, WCAG 44px touch targets, arch toggle navigation
 - 🔌 Custom SVG plugin system: inject visual overlays, per-tooth custom state, JSON export/import support — plugin `renderSvg()` output is sanitized with DOMPurify (SVG profile) before insertion into the live chart; plugins still run as trusted code, so only load plugins from sources you trust
 - ⚠️ State validation warnings for incompatible tooth state combinations
@@ -496,7 +504,7 @@ Both exist because the real functions touch the DOM/canvas/`jsPDF` internals a h
 Opened from the topbar gear icon (`SettingsModalComponent`); a focus-trapped, ARIA `dialog` with a 7-tab layout (Esc/backdrop-click to close, arrow keys to switch tabs). The dialog is a pure view over a host-supplied `SettingsState` — it owns no setting state itself. All settings are session-level UI state only, unless noted — none of them mutate per-tooth data or the export payload.
 
 - **General:** numbering system (FDI/Universal/Palmer), language, dark/light theme, per-format export availability (PNG/JPG/SVG/PDF — hides the matching Export menu item when off, and disables the Export tab when PDF is off), per-source import availability (Status JSON/FHIR), diagnosis coding system (none / BNO-10 / ICD-10-CM) and an opt-in SNOMED CT overlay toggle
-- **Odontogram:** on-screen layout — tooth spacing, tooth-number size, selection color and border style; tooth-information panel visibility; Plan-mode availability; tooth anatomy profile (`classic` default / `measured` — nine literature-measured tooth templates in a two-arch, per-tooth-width layout, switchable at runtime; its artwork is a separate lazy chunk, fetched only when you switch to it, so the classic default costs nothing extra); Statuses-card and Orthodontics-card visibility
+- **Odontogram:** on-screen layout — tooth spacing, tooth-number size, selection color and border style; tooth-information panel visibility; Plan-mode availability; tooth anatomy profile (`classic` default / `measured` — 40 literature-measured tooth templates in a two-arch, per-tooth-width layout, switchable at runtime; its artwork is a separate lazy chunk, fetched only when you switch to it, so the classic default costs nothing extra); Statuses-card and Orthodontics-card visibility
 - **Periodontal Chart:** an availability toggle that gates the rest of the tab and the perio entry points in the shell; perio view mode (`toggle`/`popup`); 16 per-index show/hide toggles across 5 groups (Pocket: PD/GM/CAL/BOP · Hygiene: Plaque/PI/GI · Mucogingival: CEJ visibility/Root concavity/KG/GT · Support: Furcation/Mobility/Miller class · Peri-implant: mPI/mBI); a translated-vs-canonical index-name display mode (canonical = a fixed English/Latin scientific name in every UI language; tooltips always stay localized)
 - **Tooth details:** pulp detail level (simple/AAE/practical-Latin, default AAE), wear detail level and discoloration detail level (simple/complex, each default complex), surface notation (simple/full, default full), per-tooth notes toggle
 - **Caries:** ICDAS II scoring toggle, caries-depth toggle, root-caries granularity (simple/severity), secondary/CARS granularity (simple/standard/full), radiographic-depth granularity (off/threeLevel/detailed)
@@ -513,7 +521,7 @@ Opened from the topbar gear icon (`SettingsModalComponent`); a focus-trapped, AR
 | `14.svg` / `14_occl.svg` | 14, 15, 24, 25, 34, 35, 44, 45 (premolars) |
 | `16.svg` / `16_occl.svg` | 16, 17, 18, 26, 27, 28, 36, 37, 38, 46, 47, 48 (molars) |
 
-Templates are rotated 180 degrees for the lower jaw and mirrored horizontally for the left side. A parallel `measured/` subfolder holds the nine literature-measured tooth templates the `measured` anatomy profile renders in a two-arch, per-tooth-width layout (Settings → Odontogram → tooth anatomy).
+Templates are rotated 180 degrees for the lower jaw and mirrored horizontally for the left side. A parallel `measured/` subfolder holds the 40 literature-measured tooth templates the `measured` anatomy profile renders in a two-arch, per-tooth-width layout (Settings → Odontogram → tooth anatomy).
 
 **Icon SVGs** (in `projects/angular-advanced-odontogram/src/lib/core/assets/icon-svgs/`):
 `icon_8.svg` (wisdom), `icon_gum.svg` (bone), `icon_no_selection.svg` (clear), `icon_occl.svg` (occlusal view), `icon_pulp.svg` (pulp)
@@ -584,19 +592,41 @@ export class HostComponent {
 
 **Custom theme:**
 ```ts
+import type { OdontogramThemeConfig } from "angular-advanced-odontogram";
+
 @Component({
   template: `<aao-odontogram-shell [themeConfig]="theme" />`,
 })
 export class ThemedHostComponent {
-  readonly theme = {
+  readonly theme: OdontogramThemeConfig = {
     colors: {
       accent: "#e74c3c",
       background: "#fafafa",
       text: "#222222",
     },
+    // The tooth drawings are themable too. Omitted keys keep the colour the
+    // artwork is drawn in, so this is additive: set nothing and nothing moves.
+    tooth: {
+      // `body` is the tooth's own silhouette, crown AND root. In `classic`
+      // that is the whole tooth; in `measured` it is the outer shell around
+      // `dentin`, which takes its colour unless you set it.
+      body: "#f2f2f2",
+      dentin: "#e6d7bf",
+      outline: "#b9bdc2",
+      gum: "#e8a5a0",
+      bone: "#f6e6c8",
+    },
+    // Any palette token by name, for the surfaces `tooth` does not cover
+    // (per-material restoration colours, gradient stops).
+    tokens: { "--odon-rest-gold": "#d4af37" },
+    // The selection highlight. Applied through the session setters,
+    // not as a CSS custom property.
+    selection: { color: "#3b7bff", borderStyle: "dashed" },
   };
 }
 ```
+
+The drawings carry their colours as CSS custom properties with the shipped colour as the fallback (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …), so omitted keys leave the artwork exactly as drawn and both anatomy profiles follow one setting; an export resolves the tokens before the file leaves the page. `tooth.body` is the whole silhouette (crown and root) — the entire tooth in `classic`, the outer shell around the dentin core in `measured` — and `tooth.dentin` colours that core (`measured` only; left unset it follows the body, so the boundary appears only when you ask for it). Selection is not a CSS variable: `themeConfig.selection` is applied through the same setters as the `selectionColor` / `selectionBorderStyle` inputs (`setSelectionColor()` / `setSelectionBorderStyle()`), and the dedicated inputs win when both are given. Dark mode ships its own artwork palette, so the chart darkens with the rest of the interface — the dentin is deliberately left out of that palette, so it keeps following the body colour. In dark mode the occlusal tiles darken with the side views, and a carious lesion keeps its dark fill while its outline flips to light. The full token table lives in the original project's [`tools/toothgen/palette.py`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/tools/toothgen/palette.py).
 
 **Plugin integration:**
 ```ts
@@ -666,9 +696,16 @@ The shared clinical-engine API is also documented in the original project:
 | `setNotesEnabled(value)` / `getNotesEnabled()` | Enable/disable / query per-tooth notes |
 | `setPulpDetailLevel(level)` / `getPulpDetailLevel()` | Set/get the pulp picker's vocabulary — `"simple"`, `"aae"`, or `"latin"` |
 | `getToothAnatomy()` / `setToothAnatomy(v)` | Get/set the tooth anatomy profile — `"classic"` or `"measured"` |
+| `getNumberingSystem()` | The tooth-numbering system currently active |
+| `getScreenToothSpacing()` / `setScreenToothSpacing(v)` | Get/set the on-screen inter-tooth spacing — `"wide"`, `"normal"` or `"close"` |
+| `getScreenToothNumberSize()` / `setScreenToothNumberSize(v)` | Get/set the tooth-number size — `"small"`, `"normal"` or `"xlarge"` |
+| `getSelectionColor()` / `setSelectionColor(hex)` | Get/set the selection-ring colour (`#rrggbb`) |
+| `getSelectionBorderStyle()` / `setSelectionBorderStyle(v)` | Get/set the selection-ring border style — `"solid"`, `"dashed"` or `"dotted"` |
+| `getToothInfoVisible()` / `setToothInfoVisible(on)` | Get/set whether the tooth-information panel is shown |
 | `getChartMode()` / `setChartMode(mode)` | Get/switch the active chart — `"status"` or `"plan"` (the plan chart is deep-copied from status the first time it's entered) |
 | `getStatusChart()` / `getPlanChart()` / `setPlanChart(payload)` | Read the status/plan chart payloads independently of the active chart, or replace the plan chart's teeth |
 | `getPlanChanges()` | Get the structured status→plan diff (`{ toothNo, axis, from, to }[]`) |
+| `compareExams(before, after)` | Compare two EXPORTED exams of the same mouth — axis-level changes (same shape as `getPlanChanges()`), the periodontal numbers per site (probing depth and attachment level, with what moved by 2 mm or more) and each exam's 2017 classification. Pure: never touches the live chart |
 | `setPerioSite(toothNo, site, patch)` / `getToothPerio(toothNo)` | Set/get periodontal data for one of the six sites (`patch` = `{ pd?, gm?, bop?, sup? }`) |
 | `getToothCal(toothNo)` | Get derived per-site CAL for a tooth |
 | `getPerioSummary()` | Whole-mouth periodontal aggregates: charted-site count, bleeding count, %BOP, worst CAL, max PD |
@@ -686,7 +723,7 @@ The shared clinical-engine API is also documented in the original project:
 | `getDiagnosisCodingPack()` / `setDiagnosisCodingPack(id)` | Get/set the national coding-pack overlay on top of WHO ICD-10 — `"none"`, `"bno10"` (Hungarian NEAK titles) or `"icd10cm"` (US) |
 | `getSnomedEnabled()` / `setSnomedEnabled(v)` | Get/set the opt-in SNOMED CT coding overlay |
 | `getCaseConditions()` / `setCaseCondition(key, laterality)` | Get/set whole-mouth case/regional diagnoses (malocclusion & TMJ, oral cysts, salivary-gland disease, stomatitis & oral mucosa, arch-level developmental anomalies), each with a laterality — `null` clears, or `"left"`/`"right"`/`"bilateral"` |
-| `exportFhir(options?)` | Export the chart as an HL7 FHIR R4 collection Bundle (JSON download); optional `{ subject }` reference |
+| `exportFhir(options?)` | Export the chart as an HL7 FHIR R4 collection Bundle (JSON download); optional `{ subject }` reference; when the plan chart differs from the status chart, also one `ServiceRequest` (`intent: "plan"`) per planned intervention |
 | `importFhirBundle(input)` | Import a FHIR R4 Bundle (object or JSON string) produced by this module |
 | `exportImage(format)` | Download the chart as an image — `"png"` or `"jpg"` |
 | `exportSvg()` | Download the chart as a scalable SVG (vector) |
@@ -878,6 +915,8 @@ Beyond the odontogram's own Status JSON / FHIR / PNG / JPG / SVG export, the **p
   default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'
   ```
 
+- **Patched dependency.** DOMPurify is declared as `^3.4.16` (the patched release) in the library's `package.json`, so a fresh install never resolves an older one.
+
 ### 📖 How to cite
 
 This package has no citation record of its own — it is a port that shares its clinical engine, verbatim, with the original project. If you use this software in research, please cite the original:
@@ -897,5 +936,7 @@ Angular Advanced Odontogram is created and maintained by Zoltan Dul ([@ZoliQua](
 - [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)): the original React implementation this package is a port of — the clinical engine (dental status logic, periodontal charting, diagnosis coding, FHIR export/import, i18n strings, tour, SVG templates) is shared, verbatim.
 
 **Built with** [jsPDF](https://github.com/parallax/jsPDF), [DOMPurify](https://github.com/cure53/DOMPurify), [Angular](https://angular.dev), [Angular CLI](https://angular.dev/tools/cli), [TypeScript](https://www.typescriptlang.org) and [Tailwind CSS](https://tailwindcss.com).
+
+**Licensing.** This project is MIT-licensed, commercial use included — and that covers the tooth drawings, which are original work. The runtime dependencies (jsPDF, DOMPurify, tslib), the embedded PDF fonts and the Angular peer dependencies keep their own, also permissive, terms: see [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md), which also ships inside the npm package.
 
 Contributions are welcome — see [`CONTRIBUTING.md`](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/CONTRIBUTING.md). If this project is useful to you, please [star it on GitHub](https://github.com/ZoliQua/Angular-Advanced-Odontogram).

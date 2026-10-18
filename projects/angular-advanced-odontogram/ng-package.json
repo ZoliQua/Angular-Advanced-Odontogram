@@ -4,7 +4,11 @@
   "lib": {
     "entryFile": "src/public-api.ts"
   },
-  "assets": ["styles.css", "LICENSE"],
+  "assets": [
+    "styles.css",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md"
+  ],
   "allowedNonPeerDependencies": [
     "jspdf",
     "dompurify"

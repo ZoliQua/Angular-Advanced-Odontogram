@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.6.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.7.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 Ez a projekt egy interaktív, böngészőben futó odontogram szerkesztő **Angular + TypeScript** alapon, amely a fogazati státuszrögzítést áttekinthető kezelőfelülettel támogatja. A rendszer rétegzett SVG fogsablonok segítségével jeleníti meg a pótlásokat, szuvasodásokat, endodonciai állapotokat, mobilitást és egyéb klinikai jellemzőket, miközben többfogos kiválasztást, kiválasztási szűrőket és előre definiált státusz mintákat is biztosít.
 
-**Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) hivatalos Angular portja** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Funkcionális paritás a react-advanced-odontogram **v2.6.0** kiadásával (`215c43a` motor commit), payload verzió **2.22** — a JSON és FHIR R4 exportok a két könyvtár között oda-vissza kompatibilisek. A klinikai motor (`projects/angular-advanced-odontogram/src/lib/core/`) szó szerint megosztott — a fogazati státusz logika, a parodontális rögzítés, a diagnóziskódolás, a FHIR export/import, az i18n szövegek, az irányított bemutató túra és az SVG sablonok byte-azonosak a React eredetivel, és minden egyes resync alkalmával egy rögzített upstream commitból kerülnek újramásolásra; kizárólag a komponens váz (`projects/angular-advanced-odontogram/src/lib/components/`) natív Angular. Egy kis, explicit módon dokumentált eltérés-halmaz létezik (kizárólag márka-/identitás-szövegek — lásd a port tervezési specifikációját ebben a repóban). A verziószámozás lépést tart a React modul verziószámozásával.
+**Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) hivatalos Angular portja** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Funkcionális paritás a react-advanced-odontogram **v2.7.0** kiadásával (`ee27435` motor commit), payload verzió **2.22** — a JSON és FHIR R4 exportok a két könyvtár között oda-vissza kompatibilisek. A klinikai motor (`projects/angular-advanced-odontogram/src/lib/core/`) szó szerint megosztott — a fogazati státusz logika, a parodontális rögzítés, a diagnóziskódolás, a FHIR export/import, az i18n szövegek, az irányított bemutató túra és az SVG sablonok byte-azonosak a React eredetivel, és minden egyes resync alkalmával egy rögzített upstream commitból kerülnek újramásolásra; kizárólag a komponens váz (`projects/angular-advanced-odontogram/src/lib/components/`) natív Angular. Egy kis, explicit módon dokumentált eltérés-halmaz létezik (kizárólag márka-/identitás-szövegek — lásd a port tervezési specifikációját ebben a repóban). A verziószámozás lépést tart a React modul verziószámozásával.
 
 ---
 ![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_hu_odontogram.png)
@@ -117,7 +117,7 @@ Az `OdontogramShellComponent` egy vezérelt (controlled) komponens — minden be
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | Fogszámozási rendszer. |
 | `darkMode` | `boolean` | `false` | Sötét téma kapcsoló. |
 | `readOnly` | `boolean` | `false` | Minden szerkesztés letiltása (csak megtekintés). |
-| `themeConfig` | `OdontogramThemeConfig` | — | Téma CSS változók felülírása (`--odon-*`). |
+| `themeConfig` | `OdontogramThemeConfig` | — | Felülírja a téma CSS-változóit (`--odon-*`), a fograjzok palettáját (`tooth`, `tokens`) és a kijelölés kiemelését (`selection`) — lásd: [Integráció](#-integráció). |
 | `plugins` | `OdontogramPlugin[]` | — | Egyedi állapot pluginek / extra rétegek regisztrálása. |
 | `enableNotes` | `boolean` | `false` | Fogankénti megjegyzések engedélyezése. |
 | `enableIcdas` | `boolean` | `false` | ICDAS II caries pontozás engedélyezése. |
@@ -125,6 +125,11 @@ Az `OdontogramShellComponent` egy vezérelt (controlled) komponens — minden be
 | `fillingDefectEnabled` | `boolean` | `true` | Bekapcsolja a tömési defektusok rögzítését a Tömések kártyán. |
 | `fillingMaterialAvailability` | `Record<string, boolean>` | mind elérhető | Elérhető tömőanyagok logikai leképezésként a `amalgam`/`composite`/`gic`/`temporary` kulcsokon (ismeretlen kulcsok figyelmen kívül hagyva). |
 | `fissureSealingEnabled` | `boolean` | `true` | Bekapcsolja a barázdazárást a Tömések kártyán. |
+| `screenToothSpacing` | `"wide" \| "normal" \| "close"` | `"normal"` | A fogak közti távolság a képernyőn. |
+| `screenToothNumberSize` | `"small" \| "normal" \| "xlarge"` | `"normal"` | A fogszámok mérete a képernyős rácson. |
+| `selectionColor` | `string` | `"#3b7bff"` | A kijelölési keret színe (`#rrggbb`); felülírja a `themeConfig.selection.color` értékét. |
+| `selectionBorderStyle` | `"solid" \| "dashed" \| "dotted"` | `"dashed"` | A kijelölési keret stílusa; felülírja a `themeConfig.selection.borderStyle` értékét. |
+| `toothInfo` | `boolean` | `true` | A fogadatok panel megjelenítése. |
 | `languageChange` / `numberingChange` / `darkModeChange` (outputok) | `output<T>` | — | Akkor aktiválódnak, amikor a felhasználó módosítja a beállítást a felületen. |
 | `fillingComplexityChange` / `fillingDefectEnabledChange` / `fillingMaterialAvailabilityChange` / `fissureSealingEnabledChange` (outputok) | `output<T>` | — | Akkor aktiválódnak, amikor a felhasználó módosítja az adott beállítást a Beállítások → Tömések menüben. |
 
@@ -249,7 +254,7 @@ Mindkettő azért létezik, mert a valódi függvények a DOM-ot/canvast/`jsPDF`
 - **A stíluslap külön van** — kötelező egyszer regisztrálnod az `angular-advanced-odontogram/styles.css` fájlt; ez nem töltődik be automatikusan. A stílus globális CSS, amely a `.odontogram-root` alá van skálázva, és `--odon-*` CSS változók vezérlik.
 - **SSR / kizárólag kliensoldali** — a komponens csatoláskor (mount) olvassa a DOM-ot, ezért a böngészőben kell futnia; kizárólag kliensoldalon rendereld.
 - **Az eszközök (assets) önállóak** — a fog- és ikon-SVG-k build időben be vannak ágyazva a bundle-be (generált TypeScript modulok, `npm run gen:assets`); **nincs futásidejű asset lekérés**, amit be kellene állítani, és semmi extrát nem kell átmásolni az alkalmazásod public mappájába.
-- **Igény szerinti betöltés** — csak az angol nyelv és a `classic` fogazatanatómia grafikái szerepelnek a kezdeti bundle-ben; a másik 11 UI-nyelv táblázata és a `measured` anatómia-profil grafikái külön, lazán betöltött (lazy) chunkok, amelyek csak akkor töltődnek le, amikor egy hoszt először vált rájuk (`[language]` / `I18nService.setLanguage()`/a nyelvválasztó menü, illetve `setToothAnatomy("measured")`/Beállítások → Odontogram → fogazatanatómia). Ez a resync-szétválasztás a demó fő chunkját 3,12 MB-ról 1,25 MB-ra, a kezdeti teljes méretet pedig 3,21 MB-ról 1,33 MB-ra csökkentette — a hoszt oldalán nincs mit beállítani.
+- **Igény szerinti betöltés** — csak az angol nyelv és a `classic` fogazatanatómia grafikái szerepelnek a kezdeti bundle-ben; a másik 11 UI-nyelv táblázata és a `measured` anatómia-profil grafikái külön, lazán betöltött (lazy) chunkok, amelyek csak akkor töltődnek le, amikor egy hoszt először vált rájuk (`[language]` / `I18nService.setLanguage()`/a nyelvválasztó menü, illetve `setToothAnatomy("measured")`/Beállítások → Odontogram → Fog anatómia). Ez a resync-szétválasztás a demó fő chunkját 3,12 MB-ról 1,29 MB-ra, a kezdeti teljes méretet pedig 3,21 MB-ról 1,38 MB-ra csökkentette — a hoszt oldalán nincs mit beállítani.
 - **Oldalanként egy példány** ebben a kiadásban — a motor állapota modul-szintű singleton (ugyanúgy, mint a React eredetiben), ezért ha ugyanazon az oldalon két `<aao-odontogram-shell>` példányt renderelsz, azok egyetlen diagram állapotát osztanák meg egymással.
 
 ---
@@ -275,7 +280,7 @@ Mindkettő azért létezik, mert a valódi függvények a DOM-ot/canvast/`jsPDF`
 - 📦 22 előre definiált restaurációs sablon (hidak, kivehető protézisek, bár protézisek implantátumokkal)
 - 💾 Állapot export/import JSON formátumban (2.22 verzió; az importálás továbbra is elfogadja a korábbi 1.4 és 2.0–2.21 verziókat, és automatikusan migrálja, plugin egyedi állapotokkal és fogankénti megjegyzésekkel)
 - 💽 Opcionálisan bekapcsolható localStorage-perzisztencia (`enablePersistence`/`disablePersistence`/`clearPersistedState`/`isPersistenceEnabled`) — alapértelmezetten kikapcsolva; automatikusan menti a státusz-diagramot (és opcionálisan a terv-diagramot) 4 MB-os méretkorláttal, a tárolási/feldolgozási hibákat pedig dobás helyett egy `onError` callbacknek (vagy a `console.warn`-nak) adja tovább
-- 🔗 HL7 FHIR R4 export (collection Bundle fogankénti Observation-ökkel, ISO 3950 fogkódolás a maradó fogazatra **és** a tejfogakra (51–85, veszteségmentes oda-vissza konverzió importáláskor), lokális kódrendszer, plusz egy opcionálisan bekapcsolható SNOMED CT réteg (Beállítások → Általános → SNOMED CT)); egy rögzített súlyosságú caries komponens egy pontozási-rendszer kódolást is hordoz — ICDAS-t egy elsődleges (tömés nélküli) felületen, CARS-t egy szekunder (tömött) felületen
+- 🔗 HL7 FHIR R4 export (collection Bundle fogankénti Observation-ökkel, ISO 3950 fogkódolás a maradó fogazatra **és** a tejfogakra (51–85, veszteségmentes oda-vissza konverzió importáláskor), lokális kódrendszer, plusz egy opcionálisan bekapcsolható SNOMED CT réteg (Beállítások → Általános → SNOMED CT)); egy rögzített súlyosságú caries komponens egy pontozási-rendszer kódolást is hordoz — ICDAS-t egy elsődleges (tömés nélküli) felületen, CARS-t egy szekunder (tömött) felületen — a kezelési terv is vele utazik: ha a terv diagram eltér a státusztól, az `exportFhir()` tervezett beavatkozásonként egy `ServiceRequest`-et (`intent: "plan"`) is kibocsát, az adott fogra szánt klinikai állapot kódjával; a FHIR-import a terv rétegét figyelmen kívül hagyja, az a JSON payloadon keresztül kerül vissza
 - ✚ Kereszt/plusz felület-választó UI (B/M/O/D/L) szuvasodáshoz és tömésekhez — `SurfaceCrossComponent`, exportálva összeállítható elrendezésekhez
 - 🧱 Felületenkénti tömőanyagok (vegyes tömések, pl. bukkális amalgám + disztális kompozit)
 - 🖼️ PNG/JPG/SVG képexport az odontogramról (letölthető; a PNG/JPG vektoros SVG-ből raszterizált)
@@ -312,7 +317,10 @@ Mindkettő azért létezik, mert a valódi függvények a DOM-ot/canvast/`jsPDF`
 - 🔢 Három számozási rendszer (FDI, Universal, Palmer)
 - 🌐 I18n — 12 UI nyelv (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) nyelvváltóval; az arab a felületet jobbról balra rendereli, a fog-/parodontális diagramokat balról jobbra rögzítve; csak az aktív nyelv szerepel a fő bundle-ben — minden más nyelv külön chunk, amely csak az első kiválasztáskor töltődik le
 - 🌗 Sötét mód támogatás váltógombbal (önálló vagy szülő alkalmazás által vezérelt)
-- 🎨 Egyedi téma konfiguráció (`themeConfig` bemenet) CSS custom property-kkel (`--odon-*`)
+- 🎨 Témázható diagram és fograjzok: a `themeConfig` (`colors`, `tooth`, `tokens`, `selection`) a `--odon-*` CSS custom property-ket vezérli — maguknak a fograjzoknak a színeit is (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) —, és beépített sötét paletta tartozik a grafikához
+- 📐 Teljessé tett mért anatómia: a `measured` profil immár mind a 40 fogpozícióhoz szakirodalom alapján bemért sablont tartalmaz, a tejfogak tejfogként vannak megrajzolva, a korona és a gyökér pedig származtatott dentinmagot kap; a grafika külön, lazán betöltött chunk, amely csak az átváltáskor töltődik le (Beállítások → Odontogram → Fog anatómia)
+- ⚖️ `compareExams(before, after)` — ugyanannak a szájnak két exportált vizsgálatát hasonlítja össze: tengelyszintű változások, a periodontális szondázási mélység és tapadásszint pontonkénti elmozdulása (a legalább 2 mm-es változást jelzi), valamint mindkét vizsgálat 2017-es osztályozása; tiszta függvény, az élő diagramhoz nem nyúl
+- 🖥️ A diagram megjelenítési beállításai API-ként: fogtávolság, fogszám-méret, a kijelölés színe és keretstílusa, fogadatok panel (`get…`/`set…` párok és a hozzájuk tartozó shell-bemenetek), valamint a `getNumberingSystem()`
 - 📱 Mobil érintéses UX: koppintásos nagyítós felugró, hosszú nyomás helyi menü, csípéses zoom, WCAG 44px érintési célpontok, fogív navigáció
 - 🔌 Egyedi SVG plugin rendszer: vizuális fedvények, foganként egyedi állapot, JSON export/import támogatás — a plugin `renderSvg()` kimenete DOMPurify-jal (SVG profil) van megtisztítva, mielőtt beszúrásra kerülne az élő diagramba; a pluginok továbbra is megbízható kódként futnak, ezért csak olyan forrásból származó pluginokat tölts be, amelyben megbízol
 - ⚠️ Állapot validáció figyelmeztetésekkel inkompatibilis fogállapot-kombinációkra
@@ -496,12 +504,12 @@ Az `endo` és a `pulpDx` egyetlen összevont "Pulpa / Endo státusz" választón
 A fejléc fogaskerék ikonjával nyitható (`SettingsModalComponent`); egy focus-trapped, ARIA `dialog` 7 fülből álló elrendezéssel (Esc/háttérre kattintás a bezáráshoz, nyílbillentyűk a fülek közti váltáshoz). A modál egy tiszta nézet egy hoszt által biztosított `SettingsState` felett — saját maga nem birtokol semmilyen beállítás-állapotot. Minden beállítás csak munkamenet-szintű UI állapot, hacsak másképp nincs jelezve — egyik sem módosítja a fogankénti adatokat vagy az export payloadot.
 
 - **Általános:** számozási rendszer (FDI/Universal/Palmer), nyelv, sötét/világos téma, formátumonkénti export elérhetőség (PNG/JPG/SVG/PDF — kikapcsolt állapotban elrejti a megfelelő Export menüpontot, és letiltja az Export fület, ha a PDF ki van kapcsolva), forrásonkénti import elérhetőség (Státusz JSON/FHIR), diagnózis kódrendszer (nincs / BNO-10 / ICD-10-CM) és egy opcionálisan bekapcsolható SNOMED CT réteg kapcsoló
-- **Odontogram:** on-screen elrendezés — fogtávolság, fogszám méret, kijelölés szín és keretstílus; fogadatok panel láthatósága; Terv mód elérhetősége; fogazatanatómia-profil (`classic` alapértelmezett / `measured` — kilenc, szakirodalom alapján bemért fogsablon két fogív, fogankénti szélesség elrendezésben, futásidőben váltható; a grafikái külön, lazán betöltött (lazy) chunkban vannak, amely csak akkor töltődik le, amikor átváltasz rá, így az alapértelmezett classic profil semmilyen extra terhelést nem jelent); Státuszok kártya és Ortodoncia kártya láthatósága
-- **Parodontális diagram:** egy elérhetőségi kapcsoló, amely szűkíti a fül többi részét és a parodontális belépési pontokat a shellben; parodontális nézet mód (`toggle`/`popup`); 16 index-szintű mutatás/elrejtés kapcsoló 5 csoportban (Tasak: PD/GM/CAL/BOP · Higiénia: Plakk/PI/GI · Mukogingivális: CEJ láthatóság/gyökér-konkavitás/KG/GT · Tartás: furkáció/mobilitás/Miller-osztály · Peri-implantáris: mPI/mBI); egy fordított-vs-kanonikus index-név megjelenítési mód (kanonikus = egy rögzített angol/latin tudományos név minden UI-nyelven; a tooltipek mindig lokalizáltak maradnak)
-- **Fogadatok:** pulpa részletezettségi szint (simple/AAE/gyakorlati latin, alapértelmezett AAE), kopás részletezettségi szint és elszíneződés részletezettségi szint (egyszerű/összetett, mindkettő alapértelmezetten összetett), felület-jelölés (egyszerű/teljes, alapértelmezett: teljes), fogankénti jegyzetek kapcsoló
+- **Odontogram:** on-screen elrendezés — fogtávolság, fogszám méret, kijelölés szín és keretstílus; fogadatok panel láthatósága; Terv mód elérhetősége; fogazatanatómia-profil (`classic` alapértelmezett / `measured` — 40, szakirodalom alapján bemért fogsablon két fogív, fogankénti szélesség elrendezésben, futásidőben váltható; a grafikái külön, lazán betöltött (lazy) chunkban vannak, amely csak akkor töltődik le, amikor átváltasz rá, így az alapértelmezett classic profil semmilyen extra terhelést nem jelent); Státuszok kártya és Ortodoncia kártya láthatósága
+- **Parodontális térkép:** egy elérhetőségi kapcsoló, amely szűkíti a fül többi részét és a parodontális belépési pontokat a shellben; parodontális nézet mód (`toggle`/`popup`); 16 index-szintű mutatás/elrejtés kapcsoló 5 csoportban (Tasak: PD/GM/CAL/BOP · Higiénia: Plakk/PI/GI · Mukogingivális: CEJ láthatóság/gyökér-konkavitás/KG/GT · Tartás: furkáció/mobilitás/Miller-osztály · Peri-implantáris: mPI/mBI); egy fordított-vs-kanonikus index-név megjelenítési mód (kanonikus = egy rögzített angol/latin tudományos név minden UI-nyelven; a tooltipek mindig lokalizáltak maradnak)
+- **Fog részletek:** pulpa részletezettségi szint (simple/AAE/gyakorlati latin, alapértelmezett AAE), kopás részletezettségi szint és elszíneződés részletezettségi szint (egyszerű/összetett, mindkettő alapértelmezetten összetett), felület-jelölés (egyszerű/teljes, alapértelmezett: teljes), fogankénti jegyzetek kapcsoló
 - **Caries:** ICDAS II pontozás kapcsoló, caries-mélység kapcsoló, gyökér-caries részletezettség (simple/severity), szekunder/CARS részletezettség (simple/standard/full), radiológiai-mélység részletezettség (off/threeLevel/detailed)
 - **Tömések:** tömés komplexitás (complex/simple), tömésdefektus lelet kapcsoló, anyagonkénti elérhetőség (amalgám/kompozit/GIC/ideiglenes), barázdazárás kapcsoló
-- **Export:** a teljes PDF jelentés konfiguráció (`PdfSettings` — lásd az [Export](#-export) szakaszt lentebb) — letiltva (az Általános fül tartalmára esik vissza), amikor a PDF export ki van kapcsolva az Általános fülön
+- **Export beállítások:** a teljes PDF jelentés konfiguráció (`PdfSettings` — lásd az [Export](#-export) szakaszt lentebb) — letiltva (az Általános fül tartalmára esik vissza), amikor a PDF export ki van kapcsolva az Általános fülön
 
 ### 🖼️ SVG sablon rendszer
 
@@ -513,7 +521,7 @@ A fejléc fogaskerék ikonjával nyitható (`SettingsModalComponent`); egy focus
 | `14.svg` / `14_occl.svg` | 14, 15, 24, 25, 34, 35, 44, 45 (kis őrlőfogak) |
 | `16.svg` / `16_occl.svg` | 16, 17, 18, 26, 27, 28, 36, 37, 38, 46, 47, 48 (nagy őrlőfogak) |
 
-A sablonok az alsó állcsontnál 180 fokkal elforgatva, a bal oldalnál vízszintesen tükrözve jelennek meg. Egy párhuzamos `measured/` almappa tartalmazza azt a kilenc, szakirodalom alapján bemért fogsablont, amelyet a `measured` anatómia-profil két fogív, fogankénti szélesség elrendezésben renderel (Beállítások → Odontogram → fogazatanatómia).
+A sablonok az alsó állcsontnál 180 fokkal elforgatva, a bal oldalnál vízszintesen tükrözve jelennek meg. Egy párhuzamos `measured/` almappa tartalmazza azt a 40, szakirodalom alapján bemért fogsablont, amelyet a `measured` anatómia-profil két fogív, fogankénti szélesség elrendezésben renderel (Beállítások → Odontogram → Fog anatómia).
 
 **Ikon SVG-k** (a `projects/angular-advanced-odontogram/src/lib/core/assets/icon-svgs/` mappában):
 `icon_8.svg` (bölcsesség), `icon_gum.svg` (csont), `icon_no_selection.svg` (törlés), `icon_occl.svg` (okkluzális nézet), `icon_pulp.svg` (pulpa)
@@ -584,19 +592,41 @@ export class HostComponent {
 
 **Egyedi téma:**
 ```ts
+import type { OdontogramThemeConfig } from "angular-advanced-odontogram";
+
 @Component({
   template: `<aao-odontogram-shell [themeConfig]="theme" />`,
 })
 export class ThemedHostComponent {
-  readonly theme = {
+  readonly theme: OdontogramThemeConfig = {
     colors: {
       accent: "#e74c3c",
       background: "#fafafa",
       text: "#222222",
     },
+    // The tooth drawings are themable too. Omitted keys keep the colour the
+    // artwork is drawn in, so this is additive: set nothing and nothing moves.
+    tooth: {
+      // `body` is the tooth's own silhouette, crown AND root. In `classic`
+      // that is the whole tooth; in `measured` it is the outer shell around
+      // `dentin`, which takes its colour unless you set it.
+      body: "#f2f2f2",
+      dentin: "#e6d7bf",
+      outline: "#b9bdc2",
+      gum: "#e8a5a0",
+      bone: "#f6e6c8",
+    },
+    // Any palette token by name, for the surfaces `tooth` does not cover
+    // (per-material restoration colours, gradient stops).
+    tokens: { "--odon-rest-gold": "#d4af37" },
+    // The selection highlight. Applied through the session setters,
+    // not as a CSS custom property.
+    selection: { color: "#3b7bff", borderStyle: "dashed" },
   };
 }
 ```
+
+A rajzok a színeiket CSS custom property-ként hordozzák, tartalékként a kiszállított színnel (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …), így a kihagyott kulcsok pontosan úgy hagyják a grafikát, ahogy rajzolva van, és mindkét anatómiaprofil egyetlen beállítást követ; az export a tokeneket feloldja, mielőtt a fájl elhagyná az oldalt. A `tooth.body` a teljes körvonal (korona és gyökér) — `classic` profilban az egész fog, `measured` profilban a dentinmag körüli külső héj —, a `tooth.dentin` pedig ezt a magot színezi (csak `measured`; ha nincs megadva, a testet követi, így a határ csak akkor jelenik meg, ha kéred). A kijelölés nem CSS-változó: a `themeConfig.selection` ugyanazokon a settereken keresztül érvényesül, mint a `selectionColor` / `selectionBorderStyle` bemenetek (`setSelectionColor()` / `setSelectionBorderStyle()`), és ha mindkettő meg van adva, a dedikált bemenetek nyernek. A sötét mód saját grafikapalettával érkezik, így a diagram a felület többi részével együtt sötétedik — a dentin szándékosan kimaradt ebből a palettából, ezért továbbra is a test színét követi. Sötét módban a rágófelszíni csempék az oldalnézetekkel együtt sötétednek, a szuvas elváltozás pedig megtartja sötét kitöltését, miközben a körvonala világosra vált. A teljes tokentábla az eredeti projekt [`tools/toothgen/palette.py`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/tools/toothgen/palette.py) fájljában található.
 
 **Plugin integráció:**
 ```ts
@@ -666,9 +696,16 @@ A megosztott klinikai motor API-ja az eredeti projektben is dokumentálva van:
 | `setNotesEnabled(value)` / `getNotesEnabled()` | Fogankénti megjegyzések be/kikapcsolása / lekérdezése |
 | `setPulpDetailLevel(level)` / `getPulpDetailLevel()` | A pulpa választó terminológiájának beállítása/lekérdezése — `"simple"`, `"aae"` vagy `"latin"` |
 | `getToothAnatomy()` / `setToothAnatomy(v)` | A fogazatanatómia-profil lekérdezése/beállítása — `"classic"` vagy `"measured"` |
+| `getNumberingSystem()` | Az éppen aktív fogszámozási rendszer |
+| `getScreenToothSpacing()` / `setScreenToothSpacing(v)` | A képernyőn látható fogtávolság lekérése/beállítása — `"wide"`, `"normal"` vagy `"close"` |
+| `getScreenToothNumberSize()` / `setScreenToothNumberSize(v)` | A fogszámok méretének lekérése/beállítása — `"small"`, `"normal"` vagy `"xlarge"` |
+| `getSelectionColor()` / `setSelectionColor(hex)` | A kijelölési keret színének lekérése/beállítása (`#rrggbb`) |
+| `getSelectionBorderStyle()` / `setSelectionBorderStyle(v)` | A kijelölési keret stílusának lekérése/beállítása — `"solid"`, `"dashed"` vagy `"dotted"` |
+| `getToothInfoVisible()` / `setToothInfoVisible(on)` | Annak lekérése/beállítása, hogy a fogadatok panel látszik-e |
 | `getChartMode()` / `setChartMode(mode)` | Az aktív diagram lekérdezése/váltása — `"status"` vagy `"plan"` (a terv diagram az első belépéskor mélymásolatként jön létre a státuszból) |
 | `getStatusChart()` / `getPlanChart()` / `setPlanChart(payload)` | A státusz/terv diagram payloadjainak olvasása az aktívtól függetlenül, vagy a terv diagram fogainak cseréje |
 | `getPlanChanges()` | A strukturált státusz→terv eltérés lekérdezése (`{ toothNo, axis, from, to }[]`) |
+| `compareExams(before, after)` | Ugyanannak a szájnak két EXPORTÁLT vizsgálatát hasonlítja össze — tengelyszintű változások (ugyanolyan alakban, mint a `getPlanChanges()`), a periodontális értékek pontonként (szondázási mélység és tapadásszint, azzal együtt, ami legalább 2 mm-t mozdult) és mindkét vizsgálat 2017-es osztályozása. Tiszta: sosem nyúl az élő diagramhoz |
 | `setPerioSite(toothNo, site, patch)` / `getToothPerio(toothNo)` | Parodontális adat beállítása/lekérdezése a hat pont egyikén (`patch` = `{ pd?, gm?, bop?, sup? }`) |
 | `getToothCal(toothNo)` | Egy fog pontonkénti, levezetett CAL értékének lekérdezése |
 | `getPerioSummary()` | Teljes szájüregi parodontális összesítők: rögzített pontok száma, vérzések száma, %BOP, legrosszabb CAL, max PD |
@@ -686,7 +723,7 @@ A megosztott klinikai motor API-ja az eredeti projektben is dokumentálva van:
 | `getDiagnosisCodingPack()` / `setDiagnosisCodingPack(id)` | A WHO ICD-10 fölé rétegzett nemzeti kódolási csomag lekérdezése/beállítása — `"none"`, `"bno10"` (magyar NEAK elnevezések) vagy `"icd10cm"` (amerikai) |
 | `getSnomedEnabled()` / `setSnomedEnabled(v)` | Az opcionálisan bekapcsolható SNOMED CT kódolási réteg lekérdezése/beállítása |
 | `getCaseConditions()` / `setCaseCondition(key, laterality)` | Teljes szájüregre kiterjedő eset-/regionális diagnózisok lekérdezése/beállítása (malokklúzió és TMJ, szájüregi ciszták, nyálmirigy-betegségek, stomatitis és szájnyálkahártya, fogív-szintű fejlődési rendellenességek), mindegyik egy lateralitással — `null` törli, vagy `"left"`/`"right"`/`"bilateral"` |
-| `exportFhir(options?)` | Az odontogram exportálása HL7 FHIR R4 collection Bundle-ként (JSON letöltés); opcionális `{ subject }` referencia |
+| `exportFhir(options?)` | Az odontogram exportálása HL7 FHIR R4 collection Bundle-ként (JSON letöltés); opcionális `{ subject }` referencia; ha a terv diagram eltér a státuszdiagramtól, tervezett beavatkozásonként egy `ServiceRequest`-et (`intent: "plan"`) is kibocsát |
 | `importFhirBundle(input)` | A modul által készített FHIR R4 Bundle importálása (objektum vagy JSON szöveg) |
 | `exportImage(format)` | Az odontogram letöltése képként — `"png"` vagy `"jpg"` |
 | `exportSvg()` | Az odontogram letöltése méretezhető SVG-ként (vektoros) |
@@ -879,6 +916,8 @@ Az odontogram saját Státusz JSON / FHIR / PNG / JPG / SVG exportján túl a **
   default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'
   ```
 
+- **Javított függőség.** A DOMPurify a könyvtár `package.json` fájljában `^3.4.16` (a javított kiadás) tartományként van megadva, így egy friss telepítés sosem old fel régebbit.
+
 ### 📖 Hivatkozás
 
 Ennek a csomagnak nincs saját hivatkozási rekordja — ez egy port, amely szó szerint osztozik a klinikai motorján az eredeti projekttel. Ha ezt a szoftvert felhasználod a kutatásodban, kérlek hivatkozz az eredetire:
@@ -898,5 +937,7 @@ Az Angular Advanced Odontogramot Zoltan Dul ([@ZoliQua](https://github.com/ZoliQ
 - [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)): az eredeti React implementáció, amelynek ez a csomag a portja — a klinikai motor (fogazati státusz logika, parodontális rögzítés, diagnóziskódolás, FHIR export/import, i18n szövegek, túra, SVG sablonok) szó szerint megosztott.
 
 **Felhasznált eszközök:** [jsPDF](https://github.com/parallax/jsPDF), [DOMPurify](https://github.com/cure53/DOMPurify), [Angular](https://angular.dev), [Angular CLI](https://angular.dev/tools/cli), [TypeScript](https://www.typescriptlang.org) és [Tailwind CSS](https://tailwindcss.com).
+
+**Licenc.** A projekt MIT-licencű, a kereskedelmi használatot is beleértve — és ez a fograjzokra is vonatkozik, mert azok saját munkák. A futásidejű függőségek (jsPDF, DOMPurify, tslib), a beágyazott PDF-betűtípusok és az Angular peer függőségek saját, szintén megengedő feltételeik szerint használhatók: lásd a [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) fájlt, amely az npm-csomagban is megtalálható.
 
 A hozzájárulásokat szívesen fogadjuk — lásd a [`CONTRIBUTING.md`](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/CONTRIBUTING.md) fájlt. Ha hasznosnak találod a projektet, kérlek [csillagozd a GitHubon](https://github.com/ZoliQua/Angular-Advanced-Odontogram).

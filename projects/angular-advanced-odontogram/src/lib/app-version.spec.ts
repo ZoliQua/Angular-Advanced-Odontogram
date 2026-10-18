@@ -38,4 +38,14 @@ describe("app-version.ts drift guard", () => {
       pkg.version,
     );
   });
+
+  // ng-packagr can only copy `assets` from inside the library's own folder, so
+  // the repo-root THIRD-PARTY-NOTICES.md (the one linked from the READMEs) has
+  // a shipped twin next to this package's package.json — exactly like LICENSE.
+  // The two must never drift.
+  it("the shipped THIRD-PARTY-NOTICES.md is byte-identical to the repo-root one", () => {
+    const shipped = readFileSync(resolve(here, "../../THIRD-PARTY-NOTICES.md"), "utf8");
+    const root = readFileSync(resolve(here, "../../../../THIRD-PARTY-NOTICES.md"), "utf8");
+    expect(shipped).toBe(root);
+  });
 });
