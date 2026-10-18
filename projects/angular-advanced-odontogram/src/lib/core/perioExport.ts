@@ -35,6 +35,7 @@ import {
   type PerioCurveSite,
   type TemplateDocCache,
 } from "./perioGraphic";
+import { flattenThemeTokens } from "./theme";
 import {
   getCejVisibility, getGingivalIndex, getGingivalThickness, getKeratinizedWidth, getMillerClass, getPeriImplantBleeding, getPeriImplantPlaque, getPerioToothKind, getPlaqueIndex, getRootConcavity, getToothCal, getToothFurcation, getToothMobility, getToothPerio, getToothPlaque, isPerioRowHidden, isToothImplant,
 } from "./state/perio";
@@ -382,7 +383,9 @@ export async function buildPerioSvg(opts: {
   const visible = getPerioRowVisibility();
 
   const buildOneArch = (teeth: readonly number[]) => {
-    const layout = respace(archToothLayout(cache, teeth));
+    // Same kind-aware columns as the on-screen chart and the arch builders
+    // below, so an exported mixed dentition matches what was on screen.
+    const layout = respace(archToothLayout(cache, teeth, undefined, getPerioToothKind));
     if (layout.teeth.length === 0) return;
     maxWidth = Math.max(maxWidth, LABEL_WIDTH + layout.totalWidth);
     const isUpper = isUpperTooth(teeth[0]);
@@ -611,6 +614,12 @@ export async function buildPerioSvg(opts: {
   svg.setAttribute("width", fmt(width));
   svg.setAttribute("height", fmt(height));
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
+  // Same reason as the odontogram export: flatten the artwork's palette
+  // tokens while the host's cascade is still reachable.
+  const serialized = flattenThemeTokens(
+    new XMLSerializer().serializeToString(svg),
+    document.querySelector("#toothGrid, .perio-chart, .tooth-grid"),
+  );
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${serialized}`;
   return { xml, width, height };
 }

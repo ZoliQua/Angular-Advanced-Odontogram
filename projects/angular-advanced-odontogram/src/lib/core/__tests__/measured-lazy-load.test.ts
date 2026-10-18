@@ -32,17 +32,16 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 
 describe("measured anatomy: the code split holds", () => {
   it("no module imports anatomy/measured statically", () => {
-    const offenders: string[] = [];
-    for (const file of sourceFiles(SRC)) {
-      const src = readFileSync(file, "utf8");
-      // a STATIC `import ... from ".../measured"` — `await import(...)` is fine
-      if (/^\s*(?:import|export)\b[^;]*?\bfrom\s*["'][^"']*\/measured["']/m.test(src)) {
-        // the type-only import inside measured.ts's own sibling is not a load
-        if (!/^\s*import\s+type\b/m.test(src.split("\n").find((l) => l.includes('/measured"')) ?? "")) {
-          offenders.push(path.relative(SRC, file));
-        }
-      }
-    }
+    // EVERY static `import`/`export ... from ".../measured"` is an offender —
+    // including a type-only one, which is erased at build time but would still
+    // be a claim that the module may be reached without the loader. (This used
+    // to carry an exemption for `import type`; nothing used it, and the way it
+    // was written it inspected only the FIRST line mentioning the module, so it
+    // could have waved a real import through.) A dynamic `import()` is fine:
+    // it has no `from`.
+    const offenders = sourceFiles(SRC)
+      .filter((file) => /^\s*(?:import|export)\b[^;]*?\bfrom\s*["'][^"']*\/measured["']/m.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(SRC, file));
     expect(offenders, "a static import defeats the code split — use ensureMeasuredProfile()").toEqual([]);
   });
 
@@ -59,6 +58,10 @@ describe("measured anatomy: load ordering", () => {
   it("stays unloaded while the classic profile is selected", () => {
     expect(getToothAnatomy()).toBe("classic");
     expect(activeAnatomyProfile().layout).toBe("uniform16");
+    // The point of the split: nothing fetched the chunk just by rendering.
+    // (Only meaningful on a module instance that has not loaded it — the
+    // ordering cases below share this one, so they run after.)
+    expect(isMeasuredProfileLoaded()).toBe(false);
   });
 
   it("selecting measured loads the chunk, and the flag flips only after it resolved", async () => {
@@ -72,8 +75,8 @@ describe("measured anatomy: load ordering", () => {
     expect(getToothAnatomy()).toBe("measured");
     const p = activeAnatomyProfile();
     expect(p.layout).toBe("twoArch");
-    expect(p.tplNos).toEqual([11, 12, 13, 14, 15, 16, 17, 31, 46]);
-    expect(Object.keys(p.templates)).toHaveLength(9);
+    expect(p.tplNos).toEqual([11, 12, 13, 14, 15, 16, 17, 18, 31, 32, 33, 34, 35, 36, 37, 38]);
+    expect(Object.keys(p.templates)).toHaveLength(16);
     expect(p.occlusalTemplate).toBeDefined();
   });
 

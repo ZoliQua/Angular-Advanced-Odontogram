@@ -6,9 +6,12 @@ import { t, onI18nChange, getI18nLanguage } from "./i18n/useI18n";
 import { toLabel, type NumberingSystem } from "./utils/numbering";
 import { type OdontogramPlugin, getQuadrant, LAYER_Z } from "./plugin";
 import { sanitizePluginSvg } from "./pluginSanitize";
+import { flattenThemeTokens } from "./theme";
 import { buildFhirBundle } from "./fhir/toFhir";
+import { computeFinalClassification, type FinalPerioClassification } from "./fhir/toFhirPerio";
+import { comparePerioExams, type PerioExamComparison } from "./state/examCompare";
 import { parseFhirBundle } from "./fhir/fromFhir";
-import type { FhirExportOptions } from "./fhir/types";
+import type { FhirExportOptions, OdontogramExportPayload } from "./fhir/types";
 import { resolveCodingPack } from "./dx/packs";
 import { DX_CODES, type DiagnosisKey } from "./dx/codes";
 import { deriveDentalDiagnoses, isNaturalPresent } from "./dx/derive";
@@ -49,6 +52,14 @@ export type { PerioSite } from "./state/payload";
 // Active-chart readers the perio chart/export need moved in with the perio API.
 export { isPerioRowHidden, isToothImplant, getPerioToothKind, getToothMobility } from "./state/perio";
 import { getToothMobility } from "./state/perio";
+// ---- Chart display settings (./state/displaySettings) ----
+export {
+  getScreenToothSpacing, setScreenToothSpacing, getScreenToothNumberSize, setScreenToothNumberSize,
+  getSelectionColor, setSelectionColor, getSelectionBorderStyle, setSelectionBorderStyle,
+  getToothInfoVisible, setToothInfoVisible,
+} from "./state/displaySettings";
+export type { ScreenToothSpacing, ScreenToothNumberSize, SelectionBorderStyle } from "./state/displaySettings";
+
 // ---- Perio display settings (extracted to ./state/perioSettings) ----
 // Re-exported so the public API surface is unchanged by the extraction.
 export { getPerioIndexNameMode, getPerioRowVisibility, setPerioIndexNameMode, setPerioRowVisibility } from "./state/perioSettings";
@@ -81,6 +92,11 @@ import { PERIO_SITES, TOOTH_LEVEL_DX_KEYS, VALID_DX_OVERRIDE_VALUE, VALID_MOBILI
 export { TEMPLATES, TOOTH_TEMPLATE };
 export { CLASSIC_CEJ_Y, CLASSIC_IMPLANT_CEJ_Y, CLASSIC_MILKTOOTH_CEJ_Y } from "./anatomy/profiles";
 export type { ToothAnatomy, AnatomyProfile };
+// Types that public signatures here already expose; re-exported so a consumer
+// can name them (and so the generated reference documents them).
+export type { CaseMeta } from "./state/caseMeta";
+export type { PlainPerio, PerioSitePatch } from "./state/perio";
+export type { FinalPerioClassification } from "./fhir/toFhirPerio";
 
 // The profile the most recent setToothAnatomy() call is switching TO, and a
 // monotonic request token. Selecting "measured" awaits a chunk, so a second
@@ -92,10 +108,10 @@ let anatomyTarget: ToothAnatomy | null = null;
 
 /** Switch the tooth-anatomy profile, and rebuild the chart onto it.
  *
- *  ASYNC since 2.6.0: the measured artwork is code-split, so selecting it first
+ *  ASYNC since 2.7.0: the measured artwork is code-split, so selecting it first
  *  awaits its chunk — the profile is always loaded before the flag flips, which
  *  keeps `activeAnatomyProfile()` synchronous for every render path. The grid is
- *  then rebuilt HERE (a no-op until `initOdontogram()`), so the pre-2.6.0
+ *  then rebuilt HERE (a no-op until `initOdontogram()`), so the pre-2.7.0
  *  `setToothAnatomy(v); rebuildGrid();` idiom stays correct without awaiting:
  *  the caller's own rebuild may run early on the old profile, and this one puts
  *  the grid right once the profile is in place.
@@ -182,6 +198,12 @@ function getPeriapicalTypeOptions(){
 // (The former `CARIES_OPTIONS` relabel table was removed with PR 3c — the
 // declarative `CariesCard` owns the caries surface-cross labels/letters now.)
 
+// The engine-wide escape hatch, used for two things only: the live per-tooth
+// state (a plain object mixing Sets, Maps and scalars, whose typed shape lives
+// in `ToothRecord` for the SERIALIZED form) and the DOM helpers below. Typing
+// either properly is a refactor of its own across this file's several thousand
+// call sites, not a rename — so it stays, named and deliberate rather than
+// scattered and silent.
 type Any = any;
 
 // Restoration material -> its SVG wrapper <g> id. Every material lives inside a
@@ -210,7 +232,12 @@ const PROSTHESIS_SUMMARY_KEY: Record<string, string> = {
 
 
 // ---- DOM helpers ----
+// Deliberately untyped (see the `Any` alias above): call sites reach straight
+// for `.value`, `.checked`, `.dataset` and friends on the result, so a generic
+// `Element` would need a cast at every one of them. A caller that cares casts.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const $ = (sel: string, el: ParentNode = document) => el.querySelector(sel) as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const $$ = (sel: string, el: ParentNode = document) => Array.from(el.querySelectorAll(sel)) as any[];
 
 function el(tag: Any, attrs: Any = {}, children: Any[] = []){
@@ -228,6 +255,24 @@ function el(tag: Any, attrs: Any = {}, children: Any[] = []){
 function setActive(node: Any, on: Any){
   if(!node) return;
   node.setAttribute("data-active", on ? "1":"0");
+}
+
+/** Keep each dentin core in step with the silhouette it was derived from.
+ *
+ *  The measured templates carry a `<id>-dentin` path after the silhouettes that
+ *  have an enamel/dentin boundary (`tooth-base`, `tooth-crownprep`,
+ *  `tooth-radix` — see tools/toothgen/dentin.py). A core is meaningless without
+ *  its owner, and exactly one owner is ever shown, so visibility is derived
+ *  rather than decided here: whatever the blocks above settled on, the matching
+ *  core follows. Deriving it also means a template that gains another cored
+ *  silhouette needs no change on this side.
+ *
+ *  A no-op on the classic profile, which has no such layers. */
+function syncDentinLayers(svg: Any){
+  for(const el of $$('[id$="-dentin"]', svg)){
+    const owner = svgGetById(svg, el.id.slice(0, -"-dentin".length));
+    setActive(el, !!owner && owner.getAttribute("data-active") === "1");
+  }
 }
 
 function stripDisplayNoneToDataActive(root: Any){
@@ -329,7 +374,7 @@ const planEditedTeeth = new Set<number>();
 
 /** Deep-copy tooth `toothNo`'s STATUS state into the PLAN chart via the proven
  *  serializeState -> hydrateState round-trip (fresh Maps/Sets, no shared refs —
- *  same guarantee as {@link cloneChart}). Passes `false` for
+ *  same guarantee as `cloneChart`). Passes `false` for
  *  `inferLegacySecondaryCaries`: the source is a live, fully-hydrated in-memory
  *  state whose recurrent-caries severities are already explicit, so no legacy
  *  inference is wanted. A status tooth with no entry mirrors a `defaultState()`
@@ -491,7 +536,7 @@ function syncChartModeUi(): void {
 /**
  * Switch the active chart between "status" (current findings) and "plan"
  * (proposed treatment). The first time "plan" is entered, it is deep-cloned
- * from "status" (see {@link cloneChart}); later switches reuse the existing
+ * from "status" (see `cloneChart`); later switches reuse the existing
  * plan chart untouched. Re-renders every tooth from the newly active chart
  * via the SAME full-repaint mechanism `importStatus()` uses, so no new
  * render path is introduced and SVG output stays byte-identical to the
@@ -564,7 +609,13 @@ export function toggleCollapsedCard(id: string): void {
   notifyStateChange();
 }
 let icdasEnabled = false;
-export function setIcdasEnabled(value: boolean){ icdasEnabled = !!value; if(activeTooth) syncControlsFromState(toothState.get(activeTooth)); }
+export function setIcdasEnabled(value: boolean){
+  const next = !!value;
+  if(next === icdasEnabled) return;
+  icdasEnabled = next;
+  if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
+}
 export function getIcdasEnabled(): boolean { return icdasEnabled; }
 // The pulp-detail level drives how the pulp control presents the pulp
 // diagnosis — "simple" (healthy/pulpitis), "aae" (4 AAE pulpDx values, default)
@@ -591,14 +642,20 @@ export function setPulpDetailLevel(value: PulpDetailLevel){
 export type ToothDetailLevel = "simple" | "complex";
 let wearDetailLevel: ToothDetailLevel = "complex";
 export function setWearDetailLevel(value: ToothDetailLevel){
-  wearDetailLevel = value === "simple" ? "simple" : "complex";
+  const next = value === "simple" ? "simple" : "complex";
+  if(next === wearDetailLevel) return;
+  wearDetailLevel = next;
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
 }
 export function getWearDetailLevel(): ToothDetailLevel { return wearDetailLevel; }
 let discolorationDetailLevel: ToothDetailLevel = "complex";
 export function setDiscolorationDetailLevel(value: ToothDetailLevel){
-  discolorationDetailLevel = value === "simple" ? "simple" : "complex";
+  const next = value === "simple" ? "simple" : "complex";
+  if(next === discolorationDetailLevel) return;
+  discolorationDetailLevel = next;
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
 }
 export function getDiscolorationDetailLevel(): ToothDetailLevel { return discolorationDetailLevel; }
 
@@ -641,29 +698,41 @@ export type RadiographicDepthMode = "off" | "threeLevel" | "detailed";
 
 let secondaryCariesMode: SecondaryCariesMode = "standard";
 export function setSecondaryCariesMode(value: SecondaryCariesMode){
-  secondaryCariesMode = (value === "simple" || value === "full") ? value : "standard";
+  const next = (value === "simple" || value === "full") ? value : "standard";
+  if(next === secondaryCariesMode) return;
+  secondaryCariesMode = next;
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
 }
 export function getSecondaryCariesMode(): SecondaryCariesMode { return secondaryCariesMode; }
 
 let rootCariesMode: RootCariesMode = "simple";
 export function setRootCariesMode(value: RootCariesMode){
-  rootCariesMode = (value === "severity") ? value : "simple";
+  const next = (value === "severity") ? value : "simple";
+  if(next === rootCariesMode) return;
+  rootCariesMode = next;
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
 }
 export function getRootCariesMode(): RootCariesMode { return rootCariesMode; }
 
 let radiographicDepthMode: RadiographicDepthMode = "off";
 export function setRadiographicDepthMode(value: RadiographicDepthMode){
-  radiographicDepthMode = (value === "threeLevel" || value === "detailed") ? value : "off";
+  const next = (value === "threeLevel" || value === "detailed") ? value : "off";
+  if(next === radiographicDepthMode) return;
+  radiographicDepthMode = next;
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
 }
 export function getRadiographicDepthMode(): RadiographicDepthMode { return radiographicDepthMode; }
 
 let cariesDepthEnabled = true;
 export function setCariesDepthEnabled(value: boolean){
-  cariesDepthEnabled = value !== false;
+  const next = value !== false;
+  if(next === cariesDepthEnabled) return;
+  cariesDepthEnabled = next;
   if(activeTooth) syncControlsFromState(toothState.get(activeTooth));
+  notifyStateChange();
 }
 export function getCariesDepthEnabled(): boolean { return cariesDepthEnabled; }
 
@@ -956,7 +1025,7 @@ function syncInflammationModVisibility(container: Element | null, toothSelection
   if(inflLabel) inflLabel.classList.toggle("hidden", hidden);
 }
 
-/** TEST-ONLY: apply {@link syncInflammationModVisibility} to a hand-built
+/** TEST-ONLY: apply `syncInflammationModVisibility` to a hand-built
  *  `#modsChecks` DOM fragment, without requiring a live initOdontogram(). Not
  *  part of the public API. */
 export function __syncInflammationModVisibilityForTest(container: Element, toothSelection: string): void {
@@ -967,7 +1036,7 @@ export function __syncInflammationModVisibilityForTest(container: Element, tooth
  *  parodontal/inflammation mods (they're migrated away for implants — see
  *  hydrateState's implant-mods migration), so show `#periImplantRow` only for
  *  an implant and hide BOTH mod checkboxes' rows there. Composes with
- *  {@link syncInflammationModVisibility} for the `parodontal` checkbox (order
+ *  `syncInflammationModVisibility` for the `parodontal` checkbox (order
  *  doesn't matter there — nothing else touches it). For `inflammation`,
  *  though, this function's blanket implant-only rule (visible for EVERY
  *  non-implant selection, including a present tooth) is deliberately
@@ -986,7 +1055,7 @@ function syncPeriImplantVisibility(periImplantRow: Element | null, modsContainer
   }
 }
 
-/** TEST-ONLY: apply {@link syncPeriImplantVisibility} to hand-built DOM
+/** TEST-ONLY: apply `syncPeriImplantVisibility` to hand-built DOM
  *  fragments, without requiring a live initOdontogram(). Not part of the
  *  public API. */
 export function __syncPeriImplantVisibilityForTest(periImplantRow: Element | null, modsContainer: Element | null, toothSelection: string): void {
@@ -2293,7 +2362,7 @@ export type ToothDiagnosis = {
 };
 
 /** A tooth's EFFECTIVE coded diagnoses (derived − suppressed + added), reused
- *  by both the tooltip ({@link getStateSummary}) and the whole-mouth summary
+ *  by both the tooltip (`getStateSummary`) and the whole-mouth summary
  *  ({@link getOdontogramSummary}). Reads the ACTIVE chart's tooth state (so
  *  it's transparently Status/Plan dual-state aware, like every other per-tooth
  *  getter). A tooth with no state (never touched) has no diagnoses. */
@@ -2473,7 +2542,7 @@ export function removeDiagnosisFromSelection(key: string): void {
  *  validates `key` against {@link TOOTH_LEVEL_DX_KEYS} and `mode` against
  *  {@link VALID_DX_OVERRIDE_VALUE} (or `null`, which clears any existing
  *  override for `key`); anything else is a silent no-op. Routed through
- *  {@link gateToothEditBatch} directly (not `applyToSelected`) since
+ *  `gateToothEditBatch` directly (not `applyToSelected`) since
  *  `dxOverrides` has no SVG/DOM side effect to re-render per tooth. */
 export function setDxOverrideForSelection(key: string, mode: "add" | "suppress" | null): void {
   if(!TOOTH_LEVEL_DX_KEYS.has(key)) return;
@@ -3092,6 +3161,8 @@ function applyStateToSvgSingle(toothNo: Any, svg: Any, state: Any = toothState.g
     setActive(svgGetById(svg, "no-tooth-after-extraction"), true);
   }
 
+  syncDentinLayers(svg);
+
   // Discoloration — tint the shown natural crown's fill. Symmetric: reset
   // BOTH crown paths every render so a reused per-tooth node never keeps a stale
   // tint (permanent<->milk switch, or cleared). Fill isn't fingerprinted (parity-safe).
@@ -3477,7 +3548,14 @@ export function __applyProposedStylingForTest(toothNo: Any, svg: Any): void {
 function applyStateToSvg(toothNo: Any){
   const roots = toothSvgRoot.get(toothNo);
   if(!roots) return;
+  // Which artwork variant this tooth shows, for the profiles that ship a
+  // deciduous set: the permanent drawing unless the tooth is charted as a milk
+  // tooth. Roots without a `data-variant` (every classic tile, and every
+  // position a milk tooth cannot occupy) are left displayed as they are.
+  const wantPrimary = toothState.get(toothNo)?.toothSelection === "milktooth";
   for(const svg of roots){
+    const variant = svg.getAttribute("data-variant");
+    if(variant) svg.style.display = (variant === "primary") === wantPrimary ? "" : "none";
     applyStateToSvgSingle(toothNo, svg);
     applyProposedStyling(toothNo, svg); // dashed+tint plan-only layers (Plan mode only)
   }
@@ -3643,7 +3721,7 @@ export function __planEditedTeethForTest(): number[] {
   return Array.from(planEditedTeeth);
 }
 
-/** TEST-ONLY: invoke {@link mirrorStatusToPlan} directly so the deep-copy
+/** TEST-ONLY: invoke `mirrorStatusToPlan` directly so the deep-copy
  *  behavior can be exercised without going through the gate. Not part of the
  *  public API. */
 export function __mirrorStatusToPlanForTest(toothNo: number): void {
@@ -4281,7 +4359,7 @@ function syncToothDetailControls(state: Any): void {
   ($("#discolorationToggle") as HTMLInputElement).checked = state.discoloration !== "none";
 }
 
-/** TEST-ONLY: apply {@link syncToothDetailControls} to a hand-built DOM
+/** TEST-ONLY: apply `syncToothDetailControls` to a hand-built DOM
  *  fragment (the wear/discoloration select+toggle labels and checkboxes),
  *  without requiring a live initOdontogram(). Mirrors
  *  __syncInflammationModVisibilityForTest. Not part of the public API. */
@@ -4291,12 +4369,12 @@ export function __syncToothDetailControlsForTest(state: Record<string, unknown>)
 
 /**
  * Sync the #perioRow six-site PD/GM/BOP/SUP grid (built once by
- * {@link buildPerioGrid}) + the live derived read-out (per-site CAL, tooth
+ * `buildPerioGrid`) + the live derived read-out (per-site CAL, tooth
  * %BOP) for `toothNo`. Values are read via the SAME public
  * getToothPerio()/getToothCal() API the write path (buildPerioGrid's change
  * listeners) and the FHIR/export paths use — this never re-derives CAL or
  * %BOP itself, it only formats what those functions already return. The row
- * is hidden via {@link perioRowHidden} (missing/implant/under-gum/
+ * is hidden via `perioRowHidden` (missing/implant/under-gum/
  * extraction-socket teeth have no probing site to chart); when hidden (or
  * `toothNo` is unset — e.g. no active tooth yet) the per-input sync is
  * skipped, mirroring syncToothDetailControls' small-standalone-sync shape.
@@ -4343,7 +4421,7 @@ function syncPerioRow(state: Any, toothNo: Any = activeTooth): void {
   }
 }
 
-/** TEST-ONLY: apply {@link syncPerioRow} to a hand-built #perioRow DOM
+/** TEST-ONLY: apply `syncPerioRow` to a hand-built #perioRow DOM
  *  fragment for a given `toothNo`, without requiring a live initOdontogram()
  *  or a real `activeTooth`. Mirrors __syncToothDetailControlsForTest /
  *  __syncInflammationModVisibilityForTest. Not part of the public API. */
@@ -4355,7 +4433,7 @@ export function __syncPerioRowForTest(state: Record<string, unknown>, toothNo: n
  * Build the static 6-site PD/GM/BOP/SUP grid ONCE — site
  * identities never change across teeth, mirroring buildSurfaceCross/
  * buildChecks building their option lists once in wireControls(); per-tooth
- * VALUES are synced separately by {@link syncPerioRow} (called from
+ * VALUES are synced separately by `syncPerioRow` (called from
  * syncControlsFromState on tooth select), exactly like the caries/filling
  * surface checkboxes' `.checked` is synced from state while the surface list
  * itself is built once. Two site-group rows in PERIO_SITES' own canonical
@@ -4424,7 +4502,7 @@ function buildPerioGrid(container: Any): void {
   buildSiteRow(PERIO_SITES.slice(3, 6), "perio-lingual-row");
 }
 
-/** TEST-ONLY: apply {@link buildPerioGrid} to a hand-built container, without
+/** TEST-ONLY: apply `buildPerioGrid` to a hand-built container, without
  *  requiring a live initOdontogram() (there is no full-DOM mount harness for
  *  the tooth panel). Lets a test verify the real grid-building DOM shape
  *  (ids/data-attributes/types) that
@@ -4511,7 +4589,7 @@ function resetToothGated(toothNo: number): void {
 }
 
 /** Reset a SET of selected teeth to `defaultState()`,
- *  routed through {@link gateToothEditBatch} — one confirm covers the whole set
+ *  routed through `gateToothEditBatch` — one confirm covers the whole set
  *  when it touches a plan-edited tooth; un-planned teeth mirror status->plan.
  *  The `edentulous` flip + render + control-sync all live INSIDE the gated
  *  closure so on the deferred-confirm path they take effect only on Accept
@@ -4791,10 +4869,12 @@ function showZoomPopover(toothNo: number){
   hideZoomPopover();
   hideContextMenu();
   const svgs = toothSvgRoot.get(toothNo);
-  const sideSvg = svgs?.find((_s: Any, i: number) => {
-    const tiles = toothTile.get(toothNo);
-    return tiles?.[i]?.classList.contains("side-view");
-  }) || svgs?.[0];
+  // Find the root through the DOM rather than by position: a tooth with a
+  // deciduous variant has two roots per tile, so the svg and tile registries
+  // are not index-aligned, and only one of the two roots is displayed.
+  const sideSvg = svgs?.find((s: Any) =>
+    s.closest?.(".tooth-tile")?.classList.contains("side-view") && s.style.display !== "none"
+  ) || svgs?.[0];
   if(!sideSvg) return;
 
   const overlay = el("div", { class: "odon-zoom-overlay" });
@@ -4988,19 +5068,19 @@ function showNoteEditor(toothNo: number){
 
   const actions = el("div", { class: "odon-note-actions" });
   const saveBtn = el("button", { class: "odon-zoom-btn", text: t("note.save") });
-  saveBtn.addEventListener("click", () => {
-    state.note = textarea.value.trim();
+  // The note is part of the export payload, so a real change must notify
+  // (autosave + hosts persisting the chart) like any other tooth edit.
+  const commitNote = (next: string) => {
+    const changed = next !== (state.note || "");
+    state.note = next;
     updateToothTooltip(toothNo);
     updateToothLabelNoteIcon(toothNo);
     hideNoteEditor();
-  });
+    if(changed) notifyStateChange();
+  };
+  saveBtn.addEventListener("click", () => commitNote(textarea.value.trim()));
   const deleteBtn = el("button", { class: "odon-zoom-btn danger", text: t("note.delete") });
-  deleteBtn.addEventListener("click", () => {
-    state.note = "";
-    updateToothTooltip(toothNo);
-    updateToothLabelNoteIcon(toothNo);
-    hideNoteEditor();
-  });
+  deleteBtn.addEventListener("click", () => commitNote(""));
   actions.appendChild(saveBtn);
   actions.appendChild(deleteBtn);
 
@@ -5063,7 +5143,7 @@ function hideCariesDepthPopup(){
  *  mesial -> "M", distal -> "D", subcrown -> "SC" always.
  *
  *  SIMPLE: always the tooth-independent B/M/O/D/L/SC set, regardless of
- *  position. Exported so both {@link summarySurfaceLetter} and the live
+ *  position. Exported so both `summarySurfaceLetter` and the live
  *  surface-cross UI (buildSurfaceCross/refreshCheckLabels) share one source
  *  of truth. */
 export function surfaceLetter(surface: string, toothNo?: number | null): string {
@@ -5872,7 +5952,7 @@ const DIFF_AXES: { key: string; labelKey: string; label: (s: Any) => string }[] 
 
 /**
  * Compare the "status" chart against the "plan" chart, tooth by tooth and
- * axis by axis (see {@link DIFF_AXES}), and report every axis whose label
+ * axis by axis (see `DIFF_AXES`), and report every axis whose label
  * differs. Pure and read-only: never mutates either chart, never touches the
  * DOM, never renders — a `parity.test.ts`-safe addition.
  *
@@ -5888,17 +5968,78 @@ const DIFF_AXES: { key: string; labelKey: string; label: (s: Any) => string }[] 
  */
 export function getPlanChanges(): PlanChange[] {
   if(!planInitialized) return [];
+  return diffChartsByAxis(
+    (toothNo) => charts.status.get(toothNo) ?? defaultState(),
+    (toothNo) => charts.plan.get(toothNo) ?? defaultState(),
+  );
+}
+
+/** The axis-level diff itself, over any two sources of tooth state. Shared by
+ *  {@link getPlanChanges} (the two charts of one exam) and {@link compareExams}
+ *  (the same chart on two different days), so both produce identical entries —
+ *  same axes, same labels, same tooth order. */
+function diffChartsByAxis(before: (toothNo: number) => Any, after: (toothNo: number) => Any): PlanChange[] {
   const out: PlanChange[] = [];
   for(const toothNo of ALL_TEETH){
-    const st = charts.status.get(toothNo) ?? defaultState();
-    const pl = charts.plan.get(toothNo) ?? defaultState();
+    const a = before(toothNo);
+    const b = after(toothNo);
     for(const axis of DIFF_AXES){
-      const from = axis.label(st);
-      const to = axis.label(pl);
+      const from = axis.label(a);
+      const to = axis.label(b);
       if(from !== to) out.push({ toothNo, axis: axis.key, from, to });
     }
   }
   return out;
+}
+
+/** What {@link compareExams} answers: the same mouth, charted twice. */
+export interface ExamComparison {
+  /** Axis-level changes, exactly the shape and labels `getPlanChanges()` uses —
+   *  `from` is the earlier exam, `to` the later one. */
+  changes: PlanChange[];
+  /** The periodontal measurements, where the change is numeric rather than a
+   *  label: per-site probing depth and attachment level, and what moved by a
+   *  clinically meaningful amount. */
+  perio: PerioExamComparison;
+  /** The 2017 classification of each exam (derived, with the clinician's own
+   *  per-axis overrides applied), so a stage or grade that moved is visible. */
+  classification: { from: FinalPerioClassification; to: FinalPerioClassification };
+}
+
+/**
+ * Compare two EXPORTED exams of the same mouth — `before` as charted then,
+ * `after` as charted now.
+ *
+ * `getPlanChanges()` diffs the two charts of ONE exam (what the clinician plans
+ * to change); this diffs one chart across TWO exams (what actually changed
+ * since last time), which is the question a recall appointment asks. A host
+ * keeping a timeline of exports holds both payloads; nothing else is needed.
+ *
+ * Pure and read-only: it never touches the live charts, so it can be called
+ * while the clinician is working, and the active chart is irrelevant to the
+ * result. Each payload is hydrated under ITS OWN version rule (the same one
+ * `importStatus()` applies), so an old export compares faithfully. Tolerant of
+ * a malformed or empty payload — an unreadable tooth compares as the clinical
+ * default rather than throwing.
+ */
+export function compareExams(before: Any, after: Any): ExamComparison {
+  const reader = (payload: Any) => {
+    const teeth = (payload && typeof payload === "object" && payload.teeth && typeof payload.teeth === "object")
+      ? payload.teeth as Record<string, Any> : {};
+    const legacy = isLegacyPayloadVersion(payload?.version);
+    return (toothNo: number) => {
+      const raw = teeth[String(toothNo)];
+      return raw && typeof raw === "object" ? hydrateState(raw, legacy) : defaultState();
+    };
+  };
+  return {
+    changes: diffChartsByAxis(reader(before), reader(after)),
+    perio: comparePerioExams(before, after),
+    classification: {
+      from: computeFinalClassification(before as OdontogramExportPayload),
+      to: computeFinalClassification(after as OdontogramExportPayload),
+    },
+  };
 }
 
 
@@ -6372,7 +6513,10 @@ function buildOdontogramSvgMeasured(grid: HTMLElement, opts: { labelFontScale?: 
     bg.setAttribute("width", String(outW));
   }
 
-  const xml = new XMLSerializer().serializeToString(out);
+  // Resolve the artwork's palette tokens against the LIVE chart before the
+  // markup leaves the document — a standalone SVG is rendered in an isolated
+  // context where the host's --odon-* values do not reach it.
+  const xml = flattenThemeTokens(new XMLSerializer().serializeToString(out), grid ?? null);
   return { xml: `<?xml version="1.0" encoding="UTF-8"?>\n${xml}`, width: outW, height: H };
 }
 
@@ -6461,7 +6605,7 @@ export async function exportSvg(){
  * callers can encode it as PNG or JPEG at whatever quality they need.
  * Extracted out of `exportImage`/`exportPerioImage`'s previously-duplicated
  * raster paths (DRY) — behavior is unchanged, only factored out. The new
- * `exportPdf()` raster path reuses it too, via {@link rasterizeSvgToPng}.
+ * `exportPdf()` raster path reuses it too, via `rasterizeSvgToPng`.
  */
 async function rasterizeSvgToCanvas(xml: string, width: number, height: number, scale = 2): Promise<HTMLCanvasElement> {
   const svgUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
@@ -6483,7 +6627,7 @@ async function rasterizeSvgToCanvas(xml: string, width: number, height: number, 
 }
 
 /**
- * SVG → PNG data URL, built on {@link rasterizeSvgToCanvas}.
+ * SVG → PNG data URL, built on `rasterizeSvgToCanvas`.
  * Used by `exportImage`'s/`exportPerioImage`'s PNG branch AND by
  * `exportPdf`'s chart-embedding path (jsPDF `.addImage` needs a PNG/JPEG
  * data URL, never raw SVG — see the module doc comment on `exportPdf`).
@@ -6545,7 +6689,7 @@ export async function exportPerioSvg(): Promise<void> {
 }
 
 /** Export the full perio chart as PNG/JPG (SVG → canvas @2×, via the
- *  shared {@link rasterizeSvgToCanvas} raster core). */
+ *  shared `rasterizeSvgToCanvas` raster core). */
 export async function exportPerioImage(format: "png" | "jpg" = "png"): Promise<void> {
   if(exportInProgress) return;
   exportInProgress = true;
@@ -6753,7 +6897,7 @@ function pdfPatientRows(
     { label: t("pdf.field.examDate"), value: formatPdfDate(examIso, settings.dateFormat) },
   ];
 }
-/** Test seam for {@link pdfPatientRows} (a real `exportPdf` needs jsPDF and a canvas). */
+/** Test seam for `pdfPatientRows` (a real `exportPdf` needs jsPDF and a canvas). */
 export const __pdfPatientRowsForTest = pdfPatientRows;
 
 // Odontogram PDF-setting → concrete value maps.
@@ -6809,7 +6953,7 @@ function buildPerioAbbreviations(): { term: string; desc: string }[] {
   return out;
 }
 
-/** Test seam for {@link buildPerioAbbreviations} (the fn is module-private; the
+/** Test seam for `buildPerioAbbreviations` (the fn is module-private; the
  *  real caller `exportPdf` can't run under jsdom — jsPDF needs canvas). */
 export function __buildPerioAbbreviationsForTest(): { term: string; desc: string }[] {
   return buildPerioAbbreviations();
@@ -6818,7 +6962,7 @@ export function __buildPerioAbbreviationsForTest(): { term: string; desc: string
 /**
  * Assemble a printable PDF report (jsPDF-native — vector text + raster chart
  * PNGs, no svg2pdf.js). Gathers all `data` (SVG→PNG
- * rasterization via {@link rasterizeSvgToPng}, summary/classification text,
+ * rasterization via `rasterizeSvgToPng`, summary/classification text,
  * `hasAnyPerioData()`), drives the export-progress overlay, then hands off
  * to the PURE `assemblePdf()` (`src/perioPdf.ts`), which decides section
  * layout from `opts`/`data` alone.
@@ -7373,8 +7517,16 @@ async function buildGrid(token: number){
   // preload SVG templates in parallel
   const tplCache = new Map();
   const occlCache = new Map();
+  // The deciduous set is OPTIONAL — only a profile that draws milk teeth as
+  // their own templates populates it, and then only for the positions a milk
+  // tooth can occupy. Both caches stay empty for a profile without one, and
+  // every lookup below then simply finds nothing.
+  const primaryTplCache = new Map();
+  const primaryOcclCache = new Map();
   const tplNos = profile.tplNos;
   const occlNos = profile.occlNos;
+  const primaryTemplates = profile.primaryTemplates;
+  const primaryTemplatesOccl = profile.primaryTemplatesOccl;
   await Promise.all([
     ...tplNos.map(async (tplNo) => {
       tplCache.set(tplNo, await loadSvg(profile.templates[tplNo]));
@@ -7382,16 +7534,29 @@ async function buildGrid(token: number){
     ...occlNos.map(async (tplNo) => {
       occlCache.set(tplNo, await loadSvg(profile.templatesOccl[tplNo]));
     }),
+    ...(primaryTemplates ? (profile.primaryTplNos ?? []).map(async (tplNo) => {
+      primaryTplCache.set(tplNo, await loadSvg(primaryTemplates[tplNo]));
+    }) : []),
+    ...(primaryTemplatesOccl ? (profile.primaryOcclNos ?? []).map(async (tplNo) => {
+      primaryOcclCache.set(tplNo, await loadSvg(primaryTemplatesOccl[tplNo]));
+    }) : []),
   ]);
   if(!initialized || token !== initToken) return;
 
-  function addTile({toothNo, tplNo, rot, mirror, view, clickable}: Any){
-    if(!initialized || token !== initToken) return;
-    const tpl = view === "occl" ? occlCache.get(tplNo) : tplCache.get(tplNo);
-    if(!tpl) return;
+  /** Clone one cached template into an oriented, tile-ready svg node. */
+  function instantiate(cache: Any, tplNo: Any, rot: Any, mirror: Any){
+    const tpl = cache.get(tplNo);
+    if(!tpl) return null;
     const svg = tpl.cloneNode(true);
     if(rot === 180) rotate180(svg);
     if(mirror) mirrorVertical(svg);
+    return svg;
+  }
+
+  function addTile({toothNo, tplNo, rot, mirror, view, clickable}: Any){
+    if(!initialized || token !== initToken) return;
+    const svg = instantiate(view === "occl" ? occlCache : tplCache, tplNo, rot, mirror);
+    if(!svg) return;
 
     const tileClasses = [
       "tooth-tile",
@@ -7405,6 +7570,31 @@ async function buildGrid(token: number){
       el("div", { class:"tooth-svg" })
     ]);
     $(".tooth-svg", tile).appendChild(svg);
+
+    // A position that can carry a milk tooth gets its DECIDUOUS drawing as a
+    // second root in the SAME tile, and `applyStateToSvg` displays exactly one
+    // of the two. Both are painted from the same state, so switching a tooth
+    // to or from `milktooth` is an instant flip that touches no DOM structure:
+    // the tile, its listeners, its selection/focus state and its registry
+    // entries all survive, which a per-tooth rebuild would have to reconstruct.
+    // Profiles without a deciduous set (classic) produce exactly one root and
+    // no `data-variant` attribute, so nothing about them changes.
+    const roots = [svg];
+    const primaryMap = view === "occl"
+      ? profile.primaryOcclusalTemplate?.get(toothNo)
+      : profile.primaryToothTemplate?.get(toothNo);
+    if(primaryMap){
+      const primarySvg = instantiate(
+        view === "occl" ? primaryOcclCache : primaryTplCache,
+        primaryMap.tpl, primaryMap.rot, primaryMap.mirror,
+      );
+      if(primarySvg){
+        svg.setAttribute("data-variant", "permanent");
+        primarySvg.setAttribute("data-variant", "primary");
+        $(".tooth-svg", tile).appendChild(primarySvg);
+        roots.push(primarySvg);
+      }
+    }
 
     if(clickable){
       tile.addEventListener("click", (e)=>onToothClick(toothNo, e));
@@ -7427,7 +7617,10 @@ async function buildGrid(token: number){
     appendTarget.appendChild(tile);
 
     if(!toothSvgRoot.has(toothNo)) toothSvgRoot.set(toothNo, []);
-    toothSvgRoot.get(toothNo).push(svg);
+    // Note: a tile with a deciduous variant contributes TWO svg roots but ONE
+    // tile, so the two registries are no longer index-aligned. Nothing may zip
+    // them by position — find a root's tile through the DOM instead.
+    for(const root of roots) toothSvgRoot.get(toothNo).push(root);
     if(!toothTile.has(toothNo)) toothTile.set(toothNo, []);
     toothTile.get(toothNo).push(tile);
 
@@ -7531,6 +7724,13 @@ async function buildGrid(token: number){
     addRowOccl(lowerSide, lowerOcclPlaceholders);
     addRowSide(lowerSide);
     addLabelRow(lowerSide, toothLabelLower);
+  }
+
+  // addTile() repainted each tooth from state; the label cells are fresh, so
+  // a rebuild (re-init, anatomy change, perio round-trip) must restore the
+  // note icons the same way, or a charted note shows up with no badge.
+  for(const toothNo of ALL_TEETH){
+    updateToothLabelNoteIcon(toothNo);
   }
 
   // ARIA on grid container
@@ -7815,10 +8015,14 @@ function wireControls(){
  * Switch the displayed tooth numbering system and re-render all tooth labels.
  * @param system - The target {@link NumberingSystem}.
  */
+/** The numbering system currently displayed. Defaults to `"FDI"`. */
+export function getNumberingSystem(): NumberingSystem { return numberingSystem; }
+
 export function setNumberingSystem(system: NumberingSystem){
   if(!applyNumberingSystem(system)) return;
   updateAllToothTileNumbers();
   updateActiveLabel();
+  notifyStateChange();
 }
 
 /**
@@ -8549,12 +8753,15 @@ export function getReadOnly(): boolean{
  * @param value - `true` to enable notes, `false` to disable.
  */
 export function setNotesEnabled(value: boolean){
-  notesEnabled = value;
+  const next = !!value;
+  if(next === notesEnabled) return;
+  notesEnabled = next;
   // Refresh tooltips and label icons for all teeth
   for(const toothNo of ALL_TEETH){
     updateToothTooltip(toothNo);
     updateToothLabelNoteIcon(toothNo);
   }
+  notifyStateChange();
 }
 
 /**

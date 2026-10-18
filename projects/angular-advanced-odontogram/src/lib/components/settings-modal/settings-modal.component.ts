@@ -69,7 +69,10 @@ import type {
   PulpDetailLevel,
   RadiographicDepthMode,
   RootCariesMode,
+  ScreenToothNumberSize,
+  ScreenToothSpacing,
   SecondaryCariesMode,
+  SelectionBorderStyle,
   SurfaceNotation,
   ToothAnatomy,
   ToothDetailLevel,
@@ -83,10 +86,10 @@ import type { PdfColorTheme } from "../../core/perioPdf";
  *  equivalents). Spacing = inter-tooth gap in the live grid; number size = the
  *  tooth-number font size. Session-only, pure CSS via data-attributes on the
  *  `#toothGrid` element. */
-export type ScreenToothSpacing = "wide" | "normal" | "close";
-export type ScreenToothNumberSize = "small" | "normal" | "xlarge";
-/** Selection-ring border style (default dashed). */
-export type SelectionBorderStyle = "solid" | "dashed" | "dotted";
+// Phase 12 (2.7.0): ScreenToothSpacing / ScreenToothNumberSize /
+// SelectionBorderStyle now come from the core (`state/displaySettings.ts`,
+// re-exported by core/odontogram) — declaring them here as well would collide
+// with public-api.ts's `export *` of the core (TS2308).
 /** Fillings card complexity — "complex" = per-surface grid (default), "simple"
  *  = one filled/not-filled toggle for the whole tooth. */
 export type FillingComplexity = "complex" | "simple";

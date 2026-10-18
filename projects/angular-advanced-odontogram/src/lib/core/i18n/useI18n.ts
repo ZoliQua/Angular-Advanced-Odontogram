@@ -8,13 +8,13 @@ let currentLanguage: Language = FALLBACK_LANGUAGE;
 const listeners = new Set<(lang: Language) => void>();
 
 /** Parameter map for template placeholders (`{{key}}`). */
-type Params = Record<string, string | number>;
+export type Params = Record<string, string | number>;
 
 /**
  * Resolve a translation key to a localised string.
  *
  * @param key - Dot-delimited translation key (e.g. `"app.title"`).
- * @param langOverride - Explicit {@link Language} code **or** a {@link Params} object
+ * @param langOverride - Explicit {@link Language} code **or** a `Params` object
  *   (when called with two arguments where the second is an object, it is treated as params).
  * @param params - Optional template parameters that replace `{{placeholder}}` tokens.
  * @returns The resolved string, or the key itself if no translation is found.
@@ -95,3 +95,8 @@ export function onI18nChange(listener: (lang: Language) => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+export type UseI18nOptions = {
+  language?: Language;
+  onLanguageChange?: (lang: Language) => void;
+};

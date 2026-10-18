@@ -1,6 +1,6 @@
 {
   "name": "angular-advanced-odontogram",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "license": "MIT",
   "description": "Interactive, SVG-based dental odontogram (dental chart) editor for Angular — multi-surface caries/filling charting, endodontic/prosthetic/periodontal states, FDI/Universal/Palmer numbering, HL7 FHIR R4 export/import, and ICDAS scoring.",
   "keywords": [
@@ -34,7 +34,7 @@
   "dependencies": {
     "tslib": "^2.3.0",
     "jspdf": "^4.2.1",
-    "dompurify": "^3.4.13"
+    "dompurify": "^3.4.16"
   },
   "exports": {
     "./styles.css": {

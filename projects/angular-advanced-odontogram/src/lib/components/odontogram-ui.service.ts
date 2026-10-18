@@ -119,15 +119,15 @@ import {
   type SurfaceNotation,
   type ToothAnatomy,
   type ToothDetailLevel,
+  type ScreenToothNumberSize,
+  type ScreenToothSpacing,
+  type SelectionBorderStyle,
 } from "../core/odontogram";
 import { I18nService } from "../i18n/i18n.service";
 import { ODONTOGRAM_ENGINE_LIFECYCLE } from "./odontogram-engine-lifecycle";
 import { ODONTOGRAM_I18N_LOADER } from "./odontogram-i18n-loader";
 import type {
   FillingComplexity,
-  ScreenToothNumberSize,
-  ScreenToothSpacing,
-  SelectionBorderStyle,
   SettingsState,
 } from "./settings-modal/settings-modal.component";
 

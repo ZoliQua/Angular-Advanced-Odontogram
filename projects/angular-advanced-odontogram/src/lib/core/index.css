@@ -289,21 +289,21 @@ select:focus{
 }
 .tooth-grid[data-anatomy="measured"] .upper-arch{
   grid-template-columns:
-    minmax(28px, 63px) minmax(28px, 63px) minmax(28px, 72px)
-    minmax(28px, 51px) minmax(28px, 52px) minmax(28px, 54px)
+    minmax(28px, 62px) minmax(28px, 65px) minmax(28px, 72px)
+    minmax(28px, 49px) minmax(28px, 52px) minmax(28px, 55px)
     minmax(28px, 49px) minmax(28px, 62px)
     minmax(28px, 62px) minmax(28px, 49px)
-    minmax(28px, 54px) minmax(28px, 52px) minmax(28px, 51px)
-    minmax(28px, 72px) minmax(28px, 63px) minmax(28px, 63px);
+    minmax(28px, 55px) minmax(28px, 52px) minmax(28px, 49px)
+    minmax(28px, 72px) minmax(28px, 65px) minmax(28px, 62px);
 }
 .tooth-grid[data-anatomy="measured"] .lower-arch{
   grid-template-columns:
-    minmax(28px, 75px) minmax(28px, 75px) minmax(28px, 75px)
-    minmax(28px, 51px) minmax(28px, 51px) minmax(28px, 54px)
-    minmax(28px, 40px) minmax(28px, 40px)
-    minmax(28px, 40px) minmax(28px, 40px)
-    minmax(28px, 54px) minmax(28px, 51px) minmax(28px, 51px)
-    minmax(28px, 75px) minmax(28px, 75px) minmax(28px, 75px);
+    minmax(28px, 72px) minmax(28px, 75px) minmax(28px, 78px)
+    minmax(28px, 53px) minmax(28px, 52px) minmax(28px, 52px)
+    minmax(28px, 42px) minmax(28px, 39px)
+    minmax(28px, 39px) minmax(28px, 42px)
+    minmax(28px, 52px) minmax(28px, 52px) minmax(28px, 53px)
+    minmax(28px, 78px) minmax(28px, 75px) minmax(28px, 72px);
 }
 /* Round 2 (Stage 3): on-screen tooth spacing — inter-tooth gap in the live grid
    (distinct from the PDF/export spacing). "normal" keeps the default 4px gap. */
@@ -805,6 +805,102 @@ select:focus{
 }
 .dark body{
   background: var(--bg);
+}
+
+/* ── Dark mode: tooth artwork ──────────────────────────────────────────────
+   The drawings paint through palette tokens (see tools/toothgen/palette.py),
+   so dark mode is a matter of redeclaring the handful that carry large light
+   fields. A host's own `themeConfig` still wins: it sets the property on the
+   chart element, which is nearer than this rule on <html>.
+
+   These values were chosen by measuring the LIGHT-mode relationships and
+   reproducing them, not by eye. The guiding number is a surprising one: in
+   light mode the crown sits at only 1.10:1 against the page — a tooth is read
+   from its outline and its internal structure, NOT from contrast with the
+   background. Leaving the artwork alone in dark mode would have put it at
+   14.98:1, which is the glare this block removes.
+
+       relationship                light    dark
+       enamel      vs page          1.10    1.36
+       dentin      vs enamel        1.00    1.00   (follows the body)
+       occl. light vs enamel        1.04    1.04
+       occl. shade vs enamel        1.22    1.21
+       outline     vs enamel        1.39    1.49
+       highlight   vs enamel        1.18    1.19
+       milktooth   vs enamel        1.19    1.16
+       cusp        vs enamel        1.06    1.09
+       groove      vs cusp          2.86    2.62
+       gum         vs page          1.87    2.51
+       bone        vs page          1.08    1.46
+       caries      vs enamel       16.01    1.45   (the rim carries it:
+       caries rim  vs enamel        1.00   10.27    dark-on-light needs none)
+       wear        vs enamel        1.19    1.16
+
+   Three values deliberately do NOT match: the outlines that are near-black on
+   light enamel (caries outline, the shared dark outline, the restoration
+   outline) have to flip to light-on-dark, and their light-mode ratios of
+   16-18:1 are unreachable — pure white against this enamel tops out at
+   13.13:1. They are set near that ceiling instead. A hairline does not need
+   the ratio a filled area does, and pushing it to white would make it harsher
+   than the black line it replaces.
+
+   Clinical SIGNAL colours are deliberately untouched: the materials (amalgam,
+   composite, gold, zircon, …), inflamed pulp, calculus, fracture, leakage,
+   mobility, the plan markers, the endo and ortho colours. They are saturated
+   hues chosen to be recognised at a glance, they read on either background,
+   and shifting them risks changing what a clinician thinks they are seeing. */
+.dark{
+  /* tooth structure */
+  --odon-tooth-body: #273140;
+  /* --odon-tooth-dentin is deliberately NOT declared here. The rule this block
+     follows is to reproduce the light-mode relationships, and in light mode the
+     dentin core is the same colour as the body: ratio 1.00, no visible
+     boundary. Its default is var(--odon-tooth-body, …), so it follows the line
+     above on its own and dark mode draws the tooth exactly as light mode does.
+     Giving it a value here would introduce a boundary in one mode only. */
+  --odon-tooth-outline: #3e4b61;
+  --odon-tooth-highlight: #313d4f;
+  --odon-milktooth-body: #2f3b4c;
+  --odon-milktooth-highlight: #2a3545;
+  --odon-tooth-cusp: #2d3744;
+  --odon-tooth-groove: #6b7686;
+  /* The occlusal view paints its crown with gradients whose stops were still
+     literal: every occlusal tile kept a near-white #f0eff0 field at 15.57:1
+     against this page while the side views sat at 1.36:1. Same derivation as
+     the rest — the light stop keeps its 1.04 relationship to the crown, the
+     shaded stop its 1.22, and the shade stays warm against the light. */
+  --odon-tooth-occlusal-light: #2a3443;
+  --odon-tooth-occlusal-shade: #403d37;
+  /* soft tissue and bone */
+  --odon-gum: #7e4a46;
+  --odon-bone: #3b3526;
+  --odon-pulp-healthy: #8a5952;
+  /* Caries stays DARK, and its outline carries the visibility.
+     This block first inverted the lesion to a light fill, reasoning that a
+     dark lesion disappears into a dark crown. The measurement is real — a
+     near-black lesion can reach only 1.45:1 against this crown, against
+     16.01:1 in light mode — but a clinician reads "caries = dark" before they
+     read any contrast ratio, and a white blob on a tooth is a different
+     glyph. So the fill keeps its polarity and the rim does the work: the
+     outline flips to light at 10.27:1 against the crown and 14.93:1 against
+     the lesion it encloses, which is what makes the shape legible. Reported
+     by a host integrator (issue #28). */
+  --odon-caries: #0a1018;
+  --odon-caries-highlight: #9aa6b5;
+  --odon-caries-outline: #dfe4ea;
+  /* surfaces that are white on a light crown, kept as faint as they are there */
+  --odon-wear: #2f3b4c;
+  --odon-wear-outline: #5d6a7d;
+  --odon-extraction-socket: #2f3b4c;
+  --odon-extraction-socket-outline: #9c5f5c;
+  --odon-contact-point: #5d6a7d;
+  --odon-fill-temporary: #2f3b4c;
+  --odon-fill-temporary-outline: #5d6a7d;
+  --odon-rest-temporary: #2f3b4c;
+  --odon-endo-medical-filling: #2f3b4c;
+  /* shared outlines, flipped (see the ceiling note above) */
+  --odon-outline-dark: #dfe4ea;
+  --odon-rest-outline: #a3dfa6;
 }
 .dark .topbar{
   background: rgba(15,23,42,.92);
