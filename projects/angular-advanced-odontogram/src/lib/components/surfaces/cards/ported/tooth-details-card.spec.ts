@@ -124,15 +124,14 @@ describe("PR 3f: <ToothDetailsCard/> renders declaratively (Angular port)", () =
   });
 
   it("simple detail level: the toggles are shown, the selects hidden; the toggle writes the canonical value", async () => {
-    // setWearDetailLevel/setDiscolorationDetailLevel don't call
-    // notifyStateChange() (mirrors the corpus's own fresh-render-after-level-
-    // change pattern) — seed the level BEFORE mount so the component's
-    // engineState() signal reads it at construction.
-    setWearDetailLevel("simple");
-    setDiscolorationDetailLevel("simple");
+    // Since 2.7.0 the detail-level setters notify, so the shell's mount-time
+    // default push would overwrite engine seeding done before mount. Pass the
+    // levels as shell inputs instead (as upstream's own test does).
     __setToothStateForTest(11, { toothSelection: "tooth-base" });
     __setSelectionForTest([11]);
     const f = TestBed.createComponent(OdontogramShellComponent);
+    f.componentRef.setInput("wearDetailLevel", "simple");
+    f.componentRef.setInput("discolorationDetailLevel", "simple");
     await f.whenStable();
 
     expect(f.nativeElement.querySelector("#wearEdgeSelectLabel").classList.contains("hidden")).toBe(true);

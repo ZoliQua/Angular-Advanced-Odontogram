@@ -48,6 +48,7 @@
 // `.hidden`" strategy for all of it instead — see the surface components'
 // own header comments for the full rationale (recorded in the Task 2 report).
 import {
+  InjectionToken,
   Injectable,
   PendingTasks,
   Signal,
@@ -212,12 +213,22 @@ export interface OdontogramUiConfig {
   onFissureSealingEnabledChange?: (enabled: boolean) => void;
 }
 
+/** Internal seam (NOT exported from the public API) over the core's async
+ *  `setToothAnatomy()`. The core swallows a failed lazy chunk load and returns
+ *  without notifying; tests substitute this to force that path, because
+ *  `vi.mock` is unavailable under the Angular test builder. */
+export const ODONTOGRAM_SET_TOOTH_ANATOMY = new InjectionToken<(v: ToothAnatomy) => Promise<void>>(
+  "ODONTOGRAM_SET_TOOTH_ANATOMY",
+  { providedIn: "root", factory: () => setToothAnatomy },
+);
+
 @Injectable()
 export class OdontogramUiService {
   private readonly i18n = inject(I18nService);
   private readonly engineLifecycle = inject(ODONTOGRAM_ENGINE_LIFECYCLE);
   private readonly i18nLoader = inject(ODONTOGRAM_I18N_LOADER);
   private readonly pendingTasks = inject(PendingTasks);
+  private readonly setAnatomy = inject(ODONTOGRAM_SET_TOOTH_ANATOMY);
   private cfg: OdontogramUiConfig | null = null;
 
   // ---------------------------------------------------------------------
@@ -330,6 +341,12 @@ export class OdontogramUiService {
   // `data-anatomy` attribute AND the Settings-modal picker
   // (`settingsState.toothAnatomy`/`onToothAnatomy`, wired below).
   readonly toothAnatomy = signal<ToothAnatomy>(getToothAnatomy());
+  // Bumped when an anatomy request settles with the engine NOT on the
+  // requested profile (a failed lazy chunk load: the core returns without
+  // notifying). The picker reads it so it re-asserts the true value — React's
+  // controlled <select> snaps back on its own; Angular's skipped-binding
+  // semantics would leave the DOM showing the rejected pick.
+  private readonly anatomyRevision = signal(0);
 
   // App.tsx's `isPerioView` (OdontogramContext.tsx 452) — only true in
   // toggle-mode dentalChart.
@@ -484,7 +501,15 @@ export class OdontogramUiService {
   // `whenStable()` reason as `I18nService.setLanguage()`.
   private readonly onToothAnatomy = (v: ToothAnatomy): void => {
     const done = this.pendingTasks.add();
-    setToothAnatomy(v).finally(done);
+    this.setAnatomy(v)
+      .catch(() => undefined)
+      .finally(() => {
+        if (getToothAnatomy() !== v) {
+          this.toothAnatomy.set(getToothAnatomy());
+          this.anatomyRevision.update((n) => n + 1);
+        }
+        done();
+      });
   };
   private readonly onShowStatusCard = (v: boolean): void => this.showStatusCard.set(v);
   private readonly onShowOrthoCard = (v: boolean): void => this.showOrthoCard.set(v);
@@ -593,6 +618,7 @@ export class OdontogramUiService {
     onScreenToothNumberSize: this.onScreenToothNumberSize,
     toothAnatomy: this.toothAnatomy(),
     onToothAnatomy: this.onToothAnatomy,
+    toothAnatomyRevision: this.anatomyRevision(),
     showStatusCard: this.showStatusCard(),
     onShowStatusCard: this.onShowStatusCard,
     showOrthoCard: this.showOrthoCard(),

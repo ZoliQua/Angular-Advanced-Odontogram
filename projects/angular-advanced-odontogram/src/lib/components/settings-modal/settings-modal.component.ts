@@ -51,6 +51,7 @@ import {
   viewChild,
 } from "@angular/core";
 import { I18nService } from "../../i18n/i18n.service";
+import { ForceValueDirective } from "../surfaces/cards/force-value.directive";
 import { focusFirst, nextDialogTitleId, trapTabKey } from "../shared/dialog-focus";
 import type { Language } from "../../core/i18n/languages";
 import type { NumberingSystem } from "../../core/utils/numbering";
@@ -181,6 +182,9 @@ export interface SettingsState {
   // (v2.4.0/1.2.0 resync, SettingsModal.tsx delta).
   toothAnatomy: ToothAnatomy;
   onToothAnatomy: (value: ToothAnatomy) => void;
+  /** Bumped by the host when an anatomy request settled without taking effect
+   *  (failed lazy chunk load), so the picker re-asserts the engine's value. */
+  toothAnatomyRevision?: number;
   showStatusCard: boolean;
   onShowStatusCard: (value: boolean) => void;
   showOrthoCard: boolean;
@@ -401,6 +405,7 @@ const TABLIST_NAV_KEYS = ["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Ho
 @Component({
   selector: "aao-settings-modal",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ForceValueDirective],
   template: `
     @if (open()) {
       <div class="odon-settings-backdrop" (mousedown)="onBackdropMouseDown($event)">
@@ -770,6 +775,7 @@ const TABLIST_NAV_KEYS = ["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Ho
                       <select
                         class="odon-settings-select"
                         [attr.aria-label]="i18n.t('settings.toothAnatomy')"
+                        [aaoForceValue]="anatomyValue"
                         (change)="settings().onToothAnatomy($any($event.target).value)"
                       >
                         @for (opt of toothAnatomyOptions; track opt.value) {
@@ -1821,6 +1827,13 @@ export class SettingsModalComponent {
   protected readonly screenSpacingOptions = SCREEN_SPACING_OPTIONS;
   protected readonly screenNumberSizeOptions = SCREEN_NUMBER_SIZE_OPTIONS;
   protected readonly toothAnatomyOptions = TOOTH_ANATOMY_OPTIONS;
+  // Reads the snapshot (and its revision) so the force directive re-asserts the
+  // engine's profile after a rejected pick, where nothing else would change.
+  protected readonly anatomyValue = (): string => {
+    const s = this.settings();
+    void s.toothAnatomyRevision;
+    return s.toothAnatomy;
+  };
   protected readonly selectionBorderOptions = SELECTION_BORDER_OPTIONS;
   protected readonly fillingComplexityOptions = FILLING_COMPLEXITY_OPTIONS;
   protected readonly fillingMaterialKeys = FILLING_MATERIAL_KEYS;
