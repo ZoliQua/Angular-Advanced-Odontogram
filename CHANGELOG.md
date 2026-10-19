@@ -35,9 +35,10 @@ plan.
   following the body colour. In dark mode the occlusal tiles darken with the
   side views.
 - **Completed measured anatomy**: one literature-measured template per tooth
-  position — the measured asset set grows from 13 to 40 templates (the new
-  18/18 occlusal, 17 occlusal, 15 occlusal, 32–38 and their occlusals;
-  `46.svg` removed, `46_occl.svg` renamed to `38_occl.svg`), primary teeth are
+  position — the measured asset set grows from 13 to 40 templates: 26 side
+  views (permanent 11–18 and 31–38, primary 51–55 and 71–75) and 14 occlusal
+  views (14–18, 34–38, 54, 55, 74 and 75; `46.svg` removed, `46_occl.svg`
+  renamed to `38_occl.svg`), primary teeth are
   finally drawn as primary teeth (20 primary templates), and the crown and
   root carry a derived dentin core. The measured artwork stays a lazy chunk,
   fetched only when a host switches to it.
