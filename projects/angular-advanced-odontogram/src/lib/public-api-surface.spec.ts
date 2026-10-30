@@ -19,6 +19,7 @@
 // lazy-i18n code split for every published version until it was found here).
 import { describe, it, expect } from "vitest";
 import * as PublicApi from "../public-api";
+import type { TemplateRejection, ToothTemplateOverrides, ToothTemplateSet } from "../public-api";
 
 type Surface = Record<string, unknown>;
 
@@ -89,6 +90,18 @@ describe("public API surface — public-api.ts (this package's npm entry point)"
     const requests = planned.entry.map((e) => e.resource).filter((r) => r.resourceType === "ServiceRequest");
     expect(requests.length).toBeGreaterThan(0);
     expect(requests.every((r) => r.intent === "plan")).toBe(true);
+  });
+
+  it("exports the v2.8.0 tooth-template API and its three types", () => {
+    for (const name of ["setToothTemplateOverrides", "getToothTemplateRejections"] as const) {
+      expect(typeof (PublicApi as Surface)[name], `${name} should be a function`).toBe("function");
+    }
+    // Type-level: this fails to COMPILE if any of the three stops being exported.
+    const set: ToothTemplateSet = { templates: { 11: "<svg/>" } };
+    const overrides: ToothTemplateOverrides = { classic: set, measured: { primaryTemplates: {} } };
+    const none: TemplateRejection[] = [...PublicApi.getToothTemplateRejections()];
+    expect(overrides.classic).toBe(set);
+    expect(none).toEqual([]);
   });
 
   it("does NOT re-export the raw i18n translations record (would inline all 12 languages into the FESM — see public-api.ts's own header comment and task-2-report.md §5)", () => {

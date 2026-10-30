@@ -87,6 +87,7 @@ import {
   setToothInfoVisible,
   setSnomedEnabled,
   setToothAnatomy,
+  setToothTemplateOverrides,
   setWearDetailLevel,
   setDiscolorationDetailLevel,
   type PerioRowId,
@@ -195,6 +196,19 @@ export async function resetEngineStateForTest(): Promise<void> {
   // regardless) — awaited so the flag (and the grid rebuild + notify inside
   // it) has actually settled back to classic before the next spec runs,
   // instead of leaving a floating promise that could resolve mid-test.
+  // v2.8.0 resync (Phase 13 Task 3): host-supplied tooth drawings
+  // (`core/anatomy/profiles.ts`'s `toothTemplateOverrides`, its per-profile
+  // `resolvedOverrides` cache and the `templateRejections` log) are three
+  // module-level singletons with ONE reset seam: `null` clears the overrides,
+  // the resolved-profile cache AND the rejection log together, and drops the
+  // perio template cache. Done BEFORE the anatomy reset below so the profile
+  // we return to is the factory object, not a stale resolved one.
+  // Audit of the rest of the 2.8.0 module state: `core/theme.ts` has no
+  // module-level state at all (outlineWidth / implant tint+fill are CSS custom
+  // properties on the host element, owned by the component), and the lazy
+  // `measuredProfile`/`measuredLoad` in profiles.ts are monotonic load caches
+  // like the i18n loader's (nothing to reset, same reasoning as above).
+  setToothTemplateOverrides(null);
   await setToothAnatomy("classic");
   // v2.4.0 resync (Task 3 fold-in, ledgered leak-class item): the Tooth
   // details -> Notes toggle's module-level singleton

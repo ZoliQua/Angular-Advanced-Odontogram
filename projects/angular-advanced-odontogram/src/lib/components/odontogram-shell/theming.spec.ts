@@ -92,6 +92,36 @@ describe("themeConfig: tooth tokens reach the artwork", () => {
   });
 });
 
+describe("themeConfig: the 2.8.0 contour width and implant tokens", () => {
+  beforeEach(installDomStubs);
+
+  it("tooth.outlineWidth becomes --odon-tooth-outline-width on the root", async () => {
+    const f = mountFaked();
+    f.componentRef.setInput("themeConfig", { tooth: { outlineWidth: "1.6" } });
+    await f.whenStable();
+    expect(root(f).style.getPropertyValue("--odon-tooth-outline-width")).toBe("1.6");
+    f.componentRef.setInput("themeConfig", undefined);
+    await f.whenStable();
+    expect(root(f).style.getPropertyValue("--odon-tooth-outline-width"), "unset restores the SVG's own width").toBe("");
+  });
+
+  it("--odon-implant-tint and --odon-implant-fill pass through tokens and resolve in the artwork", async () => {
+    const f = mountFaked();
+    f.componentRef.setInput("themeConfig", {
+      tokens: { "--odon-implant-tint": "hue-rotate(205deg) saturate(.85)", "--odon-implant-fill": "#8fa6b8" },
+    });
+    await f.whenStable();
+    const el = root(f);
+    expect(el.style.getPropertyValue("--odon-implant-tint")).toBe("hue-rotate(205deg) saturate(.85)");
+    expect(el.style.getPropertyValue("--odon-implant-fill")).toBe("#8fa6b8");
+    // The artwork reads them through var(): an export flattens them to the themed values.
+    const xml = '<g style="filter: var(--odon-implant-tint, none);"><path style="fill: var(--odon-implant-fill, #b7c0c3);"/></g>';
+    expect(flattenThemeTokens(xml, el)).toBe(
+      '<g style="filter: hue-rotate(205deg) saturate(.85);"><path style="fill: #8fa6b8;"/></g>',
+    );
+  });
+});
+
 describe("themeConfig.selection: through the setters, never a CSS variable", () => {
   beforeEach(installDomStubs);
 

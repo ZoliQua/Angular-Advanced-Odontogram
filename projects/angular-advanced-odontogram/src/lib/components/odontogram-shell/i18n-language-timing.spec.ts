@@ -12,8 +12,9 @@
 // grid and keeps the clinician's focus, (4) every grid control is refocusable.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
-import { provideZonelessChangeDetection } from "@angular/core";
+import { Component, provideZonelessChangeDetection } from "@angular/core";
 import { ODONTOGRAM_ENGINE_LIFECYCLE, OdontogramShellComponent } from "./odontogram-shell.component";
+import { PerioChartComponent } from "../perio-chart/perio-chart.component";
 import { hideInfoPopover } from "../perio-chart/perio-grid-dom";
 import { getI18nLanguage, setI18nLanguage, t } from "../../core/i18n/useI18n";
 import type { Language } from "../../core/i18n/languages";
@@ -160,5 +161,47 @@ describe("a language change after mount relabels the periodontal chart (#38, sec
     f.componentRef.setInput("language", "es");
     await f.whenStable();
     expect(document.activeElement?.id).toBe(id);
+  });
+
+});
+
+@Component({
+  imports: [PerioChartComponent],
+  template: `<div id="host-a"><aao-perio-chart [inline]="true" /></div>
+    <div id="host-b"><aao-perio-chart [inline]="true" /></div>`,
+})
+class TwoChartsHost {}
+
+describe("focus restoration is scoped to the chart's own container", () => {
+  // Two charts on one page (a host showing two odontograms) build the SAME
+  // locator ids. A document-global getElementById returns the first match,
+  // the container.contains guard then rejects it, and the second chart would
+  // silently skip the restore.
+  it("the second of two charts gets its own cell back, not the first one's", async () => {
+    TestBed.configureTestingModule({
+      imports: [TwoChartsHost],
+      providers: [provideZonelessChangeDetection()],
+    });
+    const f = TestBed.createComponent(TwoChartsHost);
+    await f.whenStable();
+    const root = f.nativeElement as HTMLElement;
+    const cellIn = (host: string) =>
+      root.querySelector<HTMLInputElement>(`#${host} [id="perio-fg-pd-11-MB"]`);
+    const own = cellIn("host-b");
+    expect(cellIn("host-a"), "the first chart is not built").not.toBeNull();
+    expect(own, "the second chart is not built").not.toBeNull();
+    own!.focus();
+    expect(document.activeElement).toBe(own);
+
+    await setI18nLanguage("es");
+    await f.whenStable();
+
+    const rebuilt = cellIn("host-b");
+    expect(rebuilt, "the second chart's cell is gone").not.toBeNull();
+    expect(rebuilt).not.toBe(own);
+    expect(
+      document.activeElement,
+      "focus was not restored inside the second chart (document-global lookup)",
+    ).toBe(rebuilt);
   });
 });

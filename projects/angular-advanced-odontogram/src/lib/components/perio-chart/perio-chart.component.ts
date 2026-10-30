@@ -380,11 +380,11 @@ export class PerioChartComponent {
           previous instanceof HTMLElement && container.contains(previous) ? previous.id : "";
         buildGrid();
         if (!restoreId) return;
-        // By id lookup rather than `querySelector("#" + CSS.escape(id))`: the
-        // ids are unique per document and need no escaping this way (and
-        // `CSS.escape` is absent from some non-browser DOMs).
-        const found = document.getElementById(restoreId);
-        const again = found && container.contains(found) ? found : null;
+        // Scoped to THIS chart's container, never the document: with two
+        // shells on one page `document.getElementById` returns the first
+        // match, which belongs to the other instance. Our ids are
+        // [A-Za-z0-9-] only, so the attribute selector needs no escaping.
+        const again = container.querySelector<HTMLElement>(`[id="${restoreId}"]`);
         // A row the rebuild removed, or a cell it disabled, has nowhere to put
         // focus back — leave it where the browser put it rather than guessing.
         if (again && !(again as HTMLInputElement).disabled) again.focus();
