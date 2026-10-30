@@ -76,6 +76,21 @@ export type OdontogramThemeConfig = {
     dentin?: string;
     /** Crown and root outline. */
     outline?: string;
+    /** The width of that outline, as a CSS length in SVG user units
+     *  (`"1"`, `"1.4"`, `"0.75"`). Not a colour — it is here because it is
+     *  the other half of `outline` above.
+     *
+     *  It rides every layer that is the tooth's own silhouette, so the
+     *  contour keeps one thickness whatever the tooth is charted as: a
+     *  natural or deciduous crown, a root remnant, a prepared crown, a tooth
+     *  under the gum, any of the seven fracture states, or the occlusal
+     *  projection — whose tiles sit in the same chart grid as the side views
+     *  and therefore widen with them. The occlusal grooves are deliberately
+     *  not included and stay hairlines.
+     *
+     *  Unset, the drawings declare no width at all and stroke at the SVG
+     *  initial value of `1`. */
+    outlineWidth?: string;
     /** Crown sheen (the "beauty" layer). */
     highlight?: string;
     /** The deciduous tooth's silhouette. */
@@ -116,8 +131,29 @@ export type OdontogramThemeConfig = {
    * Keys must start with `--odon-`; anything else is ignored, so this cannot
    * be used to set unrelated custom properties on the host's element.
    *
+   * Not every token is a colour. `--odon-implant-tint` is a **CSS filter**
+   * over the implant fixture as a whole: the drawing's ~65 metal greys encode
+   * a light source, so they are deliberately not themable one by one, and a
+   * filter shifts them together instead of flattening the shading. It is
+   * `none` unless set, and it does not touch the peri-implant bone-loss
+   * overlay, which sits outside the filtered group.
+   *
+   * `--odon-implant-fill` is the **flat** counterpart of that tint, for a
+   * palette that wants one solid colour rather than shaded metal. It is a
+   * colour, and it replaces the fill of every shape in the fixture at once.
+   * Each of those shapes falls back to the grey it is drawn in, so unset it
+   * changes nothing at all — there is no single default to state. The two
+   * compose: the fill flattens the fixture, the filter then shifts it. It
+   * leaves the peri-implant bone-loss overlay alone for the same reason the
+   * tint does, and the occlusal screw-hole rims keep their outline, because
+   * only `fill` is affected.
+   *
    * @example
    * { tokens: { "--odon-rest-gold": "#d4af37", "--odon-fill-composite": "#eae0c8" } }
+   * @example
+   * { tokens: { "--odon-implant-tint": "hue-rotate(205deg) saturate(.85)" } }
+   * @example
+   * { tokens: { "--odon-implant-fill": "#8fa6b8" } }
    */
   tokens?: Record<string, string>;
   /**
@@ -162,6 +198,13 @@ const TOOTH_COLOR_MAP: Record<string, string> = {
   calculus: '--odon-calculus',
   restorationOutline: '--odon-rest-outline',
   outlineDark: '--odon-outline-dark',
+};
+
+/** Curated tooth-artwork fields that are NOT colours. Kept apart from
+ *  {@link TOOTH_COLOR_MAP} so that map's name stays true; both are applied
+ *  the same way, since a custom property does not care what it carries. */
+const TOOTH_SCALAR_MAP: Record<string, string> = {
+  outlineWidth: '--odon-tooth-outline-width',
 };
 
 /** Prefix every settable token shares. `tokens` entries outside it are
@@ -226,7 +269,10 @@ export function applyThemeConfig(
   }
 
   if (config.tooth) {
-    for (const [key, cssVar] of Object.entries(TOOTH_COLOR_MAP)) {
+    for (const [key, cssVar] of [
+      ...Object.entries(TOOTH_COLOR_MAP),
+      ...Object.entries(TOOTH_SCALAR_MAP),
+    ]) {
       const value = config.tooth[key as keyof NonNullable<OdontogramThemeConfig['tooth']>];
       if (value) set(cssVar, value);
     }

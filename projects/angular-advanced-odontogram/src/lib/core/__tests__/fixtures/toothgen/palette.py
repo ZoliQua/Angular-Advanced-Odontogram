@@ -32,7 +32,15 @@ from __future__ import annotations
 # drawn lighter in a milk tooth). Unset, each keeps its own colour exactly;
 # set, they unify. That is the intended trade: one knob per surface, not one
 # knob per shade.
+#
+# A token listed with SELF_FALLBACK has no single default at all: it is a
+# SELF rule (see below), where every declaration it touches falls back to the
+# literal that declaration already carried. The sentinel keeps such a token in
+# the inventory — it is part of the published API — while making it an error
+# to render one default for it.
 # --------------------------------------------------------------------------
+
+SELF_FALLBACK = "<self>"
 
 TOKENS: dict[str, tuple[str, str]] = {
     # -- tooth structure ---------------------------------------------------
@@ -45,6 +53,16 @@ TOKENS: dict[str, tuple[str, str]] = {
         "dentin core inside the crown and root; follows the body unless set",
     ),
     "--odon-tooth-outline": ("#c8c9c9", "crown and root outline"),
+    # Not a colour: the WIDTH of that outline, in user units. The drawings
+    # declare no stroke-width at all, so they render at the SVG initial value
+    # — hence the `1` default, which is what every contour strokes at today.
+    # It rides every layer that IS the tooth's own silhouette — including the
+    # occlusal one — so the contour keeps one width when a tooth is charted as
+    # a root remnant, a prepared crown or any of the seven fracture states, and
+    # the occlusal row of the chart widens with the side views instead of
+    # staying a hairline beside them. See ENSURE below for the exact list and
+    # for the grooves deliberately left out.
+    "--odon-tooth-outline-width": ("1", "crown and root outline width (not a colour)"),
     "--odon-tooth-highlight": ("#fefefe", "crown sheen (the 'beauty' layer)"),
     "--odon-tooth-cusp": ("#f4f1e8", "occlusal cusp field"),
     # The occlusal view paints its crown with gradients, and a gradient stop
@@ -110,6 +128,19 @@ TOKENS: dict[str, tuple[str, str]] = {
     "--odon-rest-denture-tooth": ("#a8ddb9", "denture tooth"),
     "--odon-rest-denture-base": ("#f9ae94", "denture base"),
     "--odon-rest-denture-gum": ("#ffa46a", "denture gum over an implant"),
+    # Not a colour: a FILTER over the whole implant fixture. The fixture is
+    # deliberately left untokenized (see UNTOKENIZED_BY_DESIGN below) because
+    # its ~65 greys encode a light source, and recolouring them one by one
+    # would destroy the shading. One filter over the group moves every grey
+    # together and keeps their relationships intact, which is what a host
+    # asking to bring the fixture "toward our palette" actually wants.
+    "--odon-implant-tint": ("none", "implant fixture tint (a filter, not a colour)"),
+    # The flat-palette counterpart of the tint, for a host that does not want
+    # a shaded fixture at all. Every one of the fixture's greys falls back to
+    # ITSELF (see SELF below), so this token has no single default: unset, the
+    # drawing is exactly what it always was, and set, the whole fixture goes
+    # one flat colour. `css()` therefore refuses to render it.
+    "--odon-implant-fill": (SELF_FALLBACK, "implant fixture flat fill (each grey falls back to itself)"),
     # e.max and metal-ceramic are drawn with a nine-stop gradient each; the
     # stops are individually themable so a host can retune the ramp.
     **{f"--odon-rest-emax-{i}": (c, f"e.max gradient stop {i}") for i, c in enumerate(
@@ -292,6 +323,117 @@ UNTOKENIZED_BY_DESIGN: tuple[str, ...] = (
     "specials/parapulpal-pin",
 )
 
+# --------------------------------------------------------------------------
+# Self-fallback rules.
+#
+# The third and last kind. A RULE maps one known literal to one token, so the
+# token's default is that literal. A SELF rule maps EVERY literal on a layer
+# to one token, each keeping its own literal as the fallback:
+#
+#     fill: #bbc3c6   ->   fill: var(--odon-implant-fill, #bbc3c6)
+#     fill: #a0a4a5   ->   fill: var(--odon-implant-fill, #a0a4a5)
+#
+# Unset, every element renders exactly as before — this cannot be expressed
+# with one shared default, which is why it is its own rule kind. Set, the
+# whole layer collapses to one flat colour.
+#
+# Matched on the EXACT layer path, which covers the layer and its ANONYMOUS
+# descendants (they inherit the id chain), and nothing else.
+#
+# It overrides UNTOKENIZED_BY_DESIGN deliberately, and the two do not
+# conflict. That list keeps the implant fixture out of the per-colour table
+# because its ~58 greys encode a light source and tokenizing them one by one
+# would let a host destroy the shading by halves. A SELF rule is one token:
+# the fixture is either entirely as drawn or entirely flat. For a host with a
+# flat clinical palette, flat IS the intent — issue #40.
+# --------------------------------------------------------------------------
+
+Self = tuple[str, str, str]  # (exact layer path, property, token)
+
+SELF: tuple[Self, ...] = (
+    ("restorations/implant/implant-base", "fill", "--odon-implant-fill"),
+)
+
+# --------------------------------------------------------------------------
+# Ensured declarations.
+#
+# RULES rewrite a literal the drawing already carries. These do the opposite:
+# they ADD a declaration the artwork does not have at all, so a host has
+# something to override. The fallback is what the drawing renders at today,
+# so an unthemed chart is unchanged and the parity goldens cannot move.
+#
+# Matched on the EXACT layer path, not as a prefix: a declaration is inserted
+# on one element, and a prefix match would scatter it over every descendant.
+#
+# Each rule also names the ELEMENT TYPES it may land on, because the same
+# layer id is not always the same kind of element. `tooth-base` is a painted
+# `<path>` in the 30 lateral drawings but a `<g>` in the 16 occlusal ones,
+# where the silhouette is drawn by `background-cusp` inside it. That matters
+# for an INHERITED property: `stroke-width` put on the group would flow down
+# into `fissure`, `cusps` and the anonymous stroked paths, widening lines the
+# width token is explicitly not meant to touch. `filter` is not inherited and
+# the implant rule wants the group, so each rule states its own target.
+#
+# UNTOKENIZED_BY_DESIGN deliberately does not apply here. That list exists
+# because recolouring the implant's greys individually would wreck the
+# shading — which is precisely why the fixture gets a single filter hook over
+# the whole group instead of per-colour tokens. The two rules agree.
+# --------------------------------------------------------------------------
+
+# (exact layer path, property, token, fallback, element types it may land on)
+Ensure = tuple[str, str, str, str, tuple[str, ...]]
+
+PAINTED = ("path",)
+"""Element types the outline-width rules target: the ones that actually
+stroke the silhouette. Every one of the 455 elements below is a `<path>`;
+the 41 cases where one of these ids is a `<g>` are skipped on purpose."""
+
+# The tooth's own contour, in every state a tooth can be charted in — a
+# natural crown, a deciduous crown, a root remnant, a prepared crown, a tooth
+# under the gum, and the seven fracture patterns. One width for all of them,
+# so the contour does not change thickness when the clinical state changes.
+#
+# `tooth-crownprep-outer`/`-inner` are in: they are the prepared crown drawn
+# twice, and a width that differed between the two views of one tooth would
+# read as a bug.
+#
+# `background-cusp`/`background-cusp1` are in, and the name is why they nearly
+# were not: despite reading as shading, each is the single outer shape of the
+# OCCLUSAL projection — filled with the crown gradient, stroked with
+# `--odon-tooth-outline`, with the cusps drawn inside it. The occlusal tiles
+# sit in the same chart grid as the side views, so leaving them out kept one
+# row at a hairline while the other widened (issue #39).
+#
+# NOT in, by the requester's explicit decision (issue #39): `fissure` and
+# `fissure1`. Those are the occlusal grooves — decoration, not contour, and
+# hairlines by intent, like the dedicated groove paths that pin `.65px`.
+_OUTLINE_WIDTH_LAYERS: tuple[str, ...] = (
+    "tooth/tooth-base",
+    "tooth/tooth-base/background-cusp",
+    "milktooth/milktooth-base",
+    "milktooth/milktooth-base/background-cusp1",
+    "tooth-variants/tooth-radix",
+    "tooth-variants/tooth-crownprep",
+    "tooth-variants/tooth-crownprep/tooth-crownprep-outer",
+    "tooth-variants/tooth-crownprep/tooth-crownprep-inner",
+    "tooth-variants/tooth-under-gum",
+    "tooth-variants/tooth-broken-mesial",
+    "tooth-variants/tooth-broken-distal",
+    "tooth-variants/tooth-broken-incisal",
+    "tooth-variants/tooth-broken-mesial-distal",
+    "tooth-variants/tooth-broken-mesial-incisal",
+    "tooth-variants/tooth-broken-distal-incisal",
+    "tooth-variants/tooth-broken-mesial-distal-incisal",
+)
+
+ENSURE: tuple[Ensure, ...] = (
+    ("restorations/implant/implant-base", "filter", "--odon-implant-tint", "none", ("g",)),
+    *(
+        (path, "stroke-width", "--odon-tooth-outline-width", "1", PAINTED)
+        for path in _OUTLINE_WIDTH_LAYERS
+    ),
+)
+
 # Colours the generator synthesizes itself rather than copying from a source
 # drawing (see occlusal.py); listed here so the table stays the single
 # inventory even though the substitution happens in Python.
@@ -310,6 +452,12 @@ DERIVED: tuple[str, ...] = ("--odon-tooth-dentin",)
 def css(token: str) -> str:
     """Render a token as a CSS value with its default as the fallback."""
     default, _ = TOKENS[token]
+    if default == SELF_FALLBACK:
+        raise ValueError(
+            f"{token} is a SELF rule: its fallback is whatever literal the "
+            "declaration already carries, so there is no one value to render "
+            "here. Let the tokenizer rewrite the declaration instead."
+        )
     return f"var({token}, {default})"
 
 
@@ -321,6 +469,12 @@ def lookup(path: str, prop: str, colour: str) -> str | None:
     `surfaces/fillings/defect` beats one on `surfaces/`.
     """
     colour = colour.strip().lower()
+    # SELF rules are checked first: they match any literal, and the layers
+    # they name are exactly the ones UNTOKENIZED_BY_DESIGN excludes from the
+    # per-colour table (see the SELF comment for why that is not a conflict).
+    for self_path, self_prop, token in SELF:
+        if prop == self_prop and path == self_path:
+            return token
     if any(path.startswith(skip) for skip in UNTOKENIZED_BY_DESIGN):
         return None
     best: tuple[int, str] | None = None
@@ -332,3 +486,18 @@ def lookup(path: str, prop: str, colour: str) -> str | None:
         if best is None or len(prefix) > best[0]:
             best = (len(prefix), token)
     return best[1] if best else None
+
+
+def lookup_ensure(path: str, tag: str) -> tuple[Ensure, ...]:
+    """The declarations that must be present on this exact layer.
+
+    Unlike :func:`lookup`, which answers "what token replaces this literal",
+    this answers "what declaration does this layer have to carry even though
+    the drawing never had one".
+
+    `tag` is the element's type. A rule applies only to the types it names:
+    the same layer id can be a painted shape in one drawing and a wrapping
+    `<g>` in another, and an inherited property on the wrapper would reach
+    descendants the rule is not about.
+    """
+    return tuple(e for e in ENSURE if path == e[0] and tag in e[4])
