@@ -29,6 +29,7 @@
           "options": {
             "tsConfig": "projects/angular-advanced-odontogram/tsconfig.spec.json",
             "include": ["**/*.spec.ts"],
+            "runnerConfig": "vitest.ng.config.ts",
             "setupFiles": ["projects/angular-advanced-odontogram/src/lib/testing/reset-engine-state.ts"]
           }
         }
