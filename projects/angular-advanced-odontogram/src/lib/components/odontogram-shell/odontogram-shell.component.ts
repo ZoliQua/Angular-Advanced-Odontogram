@@ -45,6 +45,7 @@ import {
   closePerioOverlay,
   openPerioOverlay,
   type PulpDetailLevel,
+  type ToothTemplateOverrides,
   type RadiographicDepthMode,
   type RootCariesMode,
   type SecondaryCariesMode,
@@ -220,6 +221,9 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
   /** Whether the tooth-information panel is shown. Setter-backed; omitted = engine value stays. */
   readonly toothInfo = input<boolean>();
   readonly plugins = input<OdontogramPlugin[]>();
+  /** Host-supplied tooth drawings per anatomy profile; vetted by the core, a
+   *  refused template keeps the factory one. Omitted = factory artwork. */
+  readonly toothTemplates = input<ToothTemplateOverrides>();
   readonly readOnly = input<boolean>();
   readonly enableNotes = input<boolean>();
   readonly enableIcdas = input<boolean>();
@@ -283,6 +287,7 @@ export class OdontogramShellComponent implements AfterViewInit, OnDestroy {
       toothInfo: this.toothInfo,
       themeRoot: computed(() => this.rootRef()?.nativeElement ?? null),
       plugins: this.plugins,
+      toothTemplates: this.toothTemplates,
       readOnly: this.readOnly,
       enableNotes: this.enableNotes,
       enableIcdas: this.enableIcdas,

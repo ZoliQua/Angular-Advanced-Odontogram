@@ -185,6 +185,15 @@ describe("mkEl", () => {
   });
 });
 
+describe("row-label info button ids (2.8.0)", () => {
+  it("derives a stable id from the info key, suffixed with the scope when given", () => {
+    expect(mkRowLabelCell("L", "perio.info.miller").querySelector(".perio-info-btn")!.id).toBe("perio-fg-info-miller");
+    expect(mkRowLabelCell("L", "perio.info.pd", "upper-buccal").querySelector(".perio-info-btn")!.id).toBe(
+      "perio-fg-info-pd-upper-buccal",
+    );
+  });
+});
+
 describe("mkRowLabelCell", () => {
   it("renders the label text with no info button when infoKey is omitted", () => {
     const cell = mkRowLabelCell("Header");

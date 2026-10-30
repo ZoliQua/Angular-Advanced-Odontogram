@@ -38,6 +38,7 @@ import {
 } from "@angular/core";
 import { NgTemplateOutlet } from "@angular/common";
 import { I18nService } from "../../i18n/i18n.service";
+import { getI18nLanguage, onI18nChange } from "../../core/i18n/useI18n";
 import { PerioSidebarComponent } from "../perio-sidebar/perio-sidebar.component";
 import { focusFirst, nextDialogTitleId, trapTabKey } from "../shared/dialog-focus";
 import {
@@ -325,6 +326,12 @@ export class PerioChartComponent {
         JSON.stringify([
           getPerioRowVisibility(),
           getPerioIndexNameMode(),
+          // The row LABELS are resolved by `buildArch` through the module-level
+          // `t()`, which reads the global language — so a language switch
+          // changes the grid's text exactly the way a row-visibility flag
+          // changes its rows, and takes the same rebuild (issue #38). Part of
+          // the signature so one comparison decides every reason to rebuild.
+          getI18nLanguage(),
           [...UPPER_ARCH, ...LOWER_ARCH].filter((n) => isToothImplant(n)).join(","),
         ]);
       let lastVisibilitySig: string | null = null;
@@ -361,6 +368,28 @@ export class PerioChartComponent {
         }
       };
 
+      // A rebuild replaces every control in the grid, so whatever had focus is
+      // a detached node by the time it returns (a host's language toggle can
+      // sit in its header, so the switch can land mid-entry). Restores by
+      // `id`: every control the grid builds carries a stable one. Only when
+      // focus was INSIDE the grid — a rebuild triggered from the Settings
+      // modal must not pull focus into the chart behind it.
+      const rebuildGrid = () => {
+        const previous = document.activeElement;
+        const restoreId =
+          previous instanceof HTMLElement && container.contains(previous) ? previous.id : "";
+        buildGrid();
+        if (!restoreId) return;
+        // By id lookup rather than `querySelector("#" + CSS.escape(id))`: the
+        // ids are unique per document and need no escaping this way (and
+        // `CSS.escape` is absent from some non-browser DOMs).
+        const found = document.getElementById(restoreId);
+        const again = found && container.contains(found) ? found : null;
+        // A row the rebuild removed, or a cell it disabled, has nowhere to put
+        // focus back — leave it where the browser put it rather than guessing.
+        if (again && !(again as HTMLInputElement).disabled) again.focus();
+      };
+
       buildGrid();
       this.fullResync();
       container.addEventListener("keydown", this.handleGridKeyDown);
@@ -368,7 +397,17 @@ export class PerioChartComponent {
 
       const unsubscribe = onStateChange(() => {
         if (this.suppressResync) return;
-        if (visibilitySig() !== lastVisibilitySig) buildGrid();
+        if (visibilitySig() !== lastVisibilitySig) rebuildGrid();
+        this.fullResync();
+      });
+      // A language switch does not go through `notifyStateChange()`, so the
+      // subscription above never sees one — hence a second one (issue #38).
+      // NOT gated on `suppressResync`: that flag skips a redundant resync
+      // triggered by the grid's OWN edit, and a language change is never that.
+      // `onI18nChange` fires only once the strings have arrived.
+      const unsubscribeI18n = onI18nChange(() => {
+        if (visibilitySig() === lastVisibilitySig) return;
+        rebuildGrid();
         this.fullResync();
       });
 
@@ -376,6 +415,7 @@ export class PerioChartComponent {
         container.removeEventListener("keydown", this.handleGridKeyDown);
         container.removeEventListener("focusout", this.handleGridFocusOut);
         unsubscribe();
+        unsubscribeI18n();
         // The info popover is appended to document.body (outside `container`),
         // so it would otherwise be orphaned when the grid is torn down.
         hideInfoPopover();

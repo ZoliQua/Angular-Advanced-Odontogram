@@ -91,6 +91,9 @@ import {
   isPerioOverlayOpen,
   onStateChange,
   registerPlugins,
+  setToothTemplateOverrides,
+  rebuildGrid,
+  type ToothTemplateOverrides,
   setCariesDepthEnabled,
   setChartMode,
   setDiagnosisCodingPack,
@@ -184,6 +187,11 @@ export interface OdontogramUiConfig {
   screenToothNumberSize?: Signal<ScreenToothNumberSize | undefined>;
   toothInfo?: Signal<boolean | undefined>;
   plugins?: Signal<OdontogramPlugin[] | undefined>;
+  /** Tooth drawings (SVG text) that replace the factory ones, per anatomy
+   *  profile (OdontogramContext.tsx 2.8.0 `toothTemplates`). Vetted by the core;
+   *  a refused template keeps the factory one (`getToothTemplateRejections()`).
+   *  Omitted: the factory artwork. */
+  toothTemplates?: Signal<ToothTemplateOverrides | undefined>;
   readOnly?: Signal<boolean | undefined>;
   enableNotes?: Signal<boolean | undefined>;
   enableIcdas?: Signal<boolean | undefined>;
@@ -705,6 +713,21 @@ export class OdontogramUiService {
         done();
       };
       this.i18nLoader.loadLanguage(initialLanguage).then(open, open);
+    });
+
+    // Host-supplied tooth templates (OdontogramContext.tsx 2.8.0). Registered
+    // BEFORE the engine's init (which runs from the shell's ngAfterViewInit,
+    // after this effect's first run) so the first grid is built with them; a
+    // LATER change rebuilds the grid (the core does not). Nothing is touched
+    // while the input was never given.
+    let firstTemplates = true;
+    effect(() => {
+      const templates = cfg.toothTemplates?.();
+      const first = firstTemplates;
+      firstTemplates = false;
+      if (first && !templates) return;
+      setToothTemplateOverrides(templates ?? null);
+      if (!first) void rebuildGrid();
     });
 
     // Language: push the effective language into the core i18n bus whenever
