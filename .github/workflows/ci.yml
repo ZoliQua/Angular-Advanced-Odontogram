@@ -25,6 +25,12 @@ jobs:
       - run: npm ci
       - name: Test (engine corpus + Angular specs)
         run: npm test
+        env:
+          # parity.test.ts alone peaks at ~3 GB of V8 heap (jsdom-parsing 500+
+          # SVG fingerprints in one test); the default cap (~4 GB) leaves too
+          # little room once other files share the worker. 6 GB fits the
+          # 16 GB runner and is only reached by the process that needs it.
+          NODE_OPTIONS: --max-old-space-size=6144
       - name: Library build
         run: npm run build:styles && npx ng build angular-advanced-odontogram
       - name: Demo build
