@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.7.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 Este proyecto es un editor de odontograma interactivo basado en navegador para **Angular + TypeScript** que permite un registro rápido del estado dental con una interfaz limpia. Renderiza plantillas SVG de dientes en capas para representar restauraciones, caries, estado endodóntico, movilidad y otros detalles clínicos, además de ofrecer selección múltiple, filtros de selección y estados predefinidos.
 
-**Este es el port oficial a Angular de [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Paridad de funcionalidades con react-advanced-odontogram **v2.7.0** (commit del motor `ee27435`), versión del payload **2.22** — las exportaciones JSON y FHIR R4 son intercambiables entre ambas bibliotecas. El motor clínico (`projects/angular-advanced-odontogram/src/lib/core/`) se comparte de forma literal — la lógica del estado dental, el registro periodontal, la codificación de diagnósticos, la exportación/importación FHIR, las cadenas i18n, el tour guiado y las plantillas SVG son idénticos byte a byte al original de React, y se vuelven a copiar desde un commit ascendente fijado en cada resincronización; solo la capa de componentes (`projects/angular-advanced-odontogram/src/lib/components/`) es nativa de Angular. Existe un pequeño conjunto de desviaciones, explícitamente documentado (solo cadenas de marca/identidad — ver la especificación de diseño del port en este repositorio). El versionado avanza en paralelo (lockstep) con el del módulo de React.
+**Este es el port oficial a Angular de [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Paridad de funcionalidades con react-advanced-odontogram **v2.8.0** (commit del motor `a11468d`), versión del payload **2.22** — las exportaciones JSON y FHIR R4 son intercambiables entre ambas bibliotecas. El motor clínico (`projects/angular-advanced-odontogram/src/lib/core/`) se comparte de forma literal — la lógica del estado dental, el registro periodontal, la codificación de diagnósticos, la exportación/importación FHIR, las cadenas i18n, el tour guiado y las plantillas SVG son idénticos byte a byte al original de React, y se vuelven a copiar desde un commit ascendente fijado en cada resincronización; solo la capa de componentes (`projects/angular-advanced-odontogram/src/lib/components/`) es nativa de Angular. Existe un pequeño conjunto de desviaciones, explícitamente documentado (solo cadenas de marca/identidad — ver la especificación de diseño del port en este repositorio). El versionado avanza en paralelo (lockstep) con el del módulo de React.
 
 ---
 ![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_es_odontogram.png)
@@ -66,7 +66,7 @@ El odontograma se publica como una biblioteca de componentes Angular autoconteni
 #### Requisitos
 - **Angular 21.2+** (declarado como dependencia peer — la proporciona tu aplicación).
 - Un **bundler** que entienda el campo `exports` y ESM — el Angular CLI (`@angular/build`) cumple esto de forma nativa. El paquete es **solo ESM**.
-- Node **≥ 20** para las herramientas.
+- Node **≥ 20.19.0** para las herramientas — la biblioteca declara `engines.node >= 20.19.0`, por lo que un Node anterior muestra una advertencia de motor durante la instalación (un error con `engine-strict`). Esto afecta solo a las herramientas de compilación; el componente en sí se ejecuta en el navegador.
 
 #### Instalación
 
@@ -119,6 +119,7 @@ export class ChartComponent {}
 | `readOnly` | `boolean` | `false` | Desactiva toda edición (solo lectura). |
 | `themeConfig` | `OdontogramThemeConfig` | — | Sobrescribe las variables CSS del tema (`--odon-*`), la paleta de las ilustraciones dentales (`tooth`, `tokens`) y el resaltado de selección (`selection`) — véase [Integración](#-integración). |
 | `plugins` | `OdontogramPlugin[]` | — | Registra plugins de estado personalizados / capas adicionales. |
+| `toothTemplates` | `ToothTemplateOverrides` | — | Dibujos dentales proporcionados por la aplicación anfitriona (texto SVG) en lugar de los de fábrica, resueltos por perfil de anatomía — la forma idiomática de usar `setToothTemplateOverrides()` desde una plantilla. Cada plantilla se verifica; una rechazada conserva el dibujo de fábrica y aparece listada en `getToothTemplateRejections()`. |
 | `enableNotes` | `boolean` | `false` | Habilita las notas por diente. |
 | `enableIcdas` | `boolean` | `false` | Habilita la puntuación de caries ICDAS II. |
 | `fillingComplexity` | `"complex" \| "simple"` | `"complex"` | Complejidad de la tarjeta de Obturaciones: `"simple"` (un material por diente) o `"complex"` (materiales por superficie). |
@@ -254,8 +255,9 @@ Ambos existen porque las funciones reales tocan internamente el DOM/canvas/`jsPD
 - **La hoja de estilos es aparte** — **debes** registrar `angular-advanced-odontogram/styles.css` una vez; no se inyecta automáticamente. Los estilos son CSS global, delimitados bajo `.odontogram-root` y gobernados por variables CSS `--odon-*`.
 - **SSR / solo cliente** — el componente lee el DOM al montarse, por lo que debe ejecutarse en el navegador; renderízalo solo del lado del cliente.
 - **Los recursos son autocontenidos** — los SVG de dientes e iconos se incrustan en el bundle en tiempo de compilación (módulos TypeScript generados, `npm run gen:assets`); **no hay ninguna descarga de recursos en tiempo de ejecución** que configurar y nada extra que copiar a la carpeta pública de tu aplicación.
-- **Carga bajo demanda** — solo el inglés y las ilustraciones de la anatomía dental `classic` se incluyen en el bundle inicial; las tablas de los otros 11 idiomas de interfaz y las ilustraciones del perfil de anatomía `measured` son chunks perezosos independientes, que se descargan la primera vez que un host cambia a ellos (`[language]` / `I18nService.setLanguage()`/el menú de idioma, y `setToothAnatomy("measured")`/Ajustes → Odontograma → anatomía dental, respectivamente). La división de la 2.6.0 redujo el chunk principal de la demo de 3.12 MB a 1.25 MB y el total inicial de 3.21 MB a 1.33 MB; en la 2.7.0 el arte pintado con tokens los aumenta ligeramente a 1.29 MB y 1.38 MB, mientras que el chunk diferido de la anatomía medida crece de 1.2 MB a 4.0 MB con la anatomía completada — nada que configurar del lado del host.
+- **Carga bajo demanda** — solo el inglés y las ilustraciones de la anatomía dental `classic` se incluyen en el bundle inicial; las tablas de los otros 11 idiomas de interfaz y las ilustraciones del perfil de anatomía `measured` son chunks perezosos independientes, que se descargan la primera vez que un host cambia a ellos (`[language]` / `I18nService.setLanguage()`/el menú de idioma, y `setToothAnatomy("measured")`/Ajustes → Odontograma → anatomía dental, respectivamente). La división de la 2.6.0 redujo el chunk principal de la demo de 3.12 MB a 1.25 MB y el total inicial de 3.21 MB a 1.33 MB; en la 2.7.0 el arte pintado con tokens los aumenta ligeramente a 1.29 MB y 1.38 MB, mientras que el chunk diferido de la anatomía medida crece de 1.2 MB a 4.0 MB con la anatomía completada — nada que configurar del lado del host. En 2.8.0 ocupan 1.30 MB y 1.39 MB, y el fragmento measured de carga diferida 3.9 MB.
 - **Una instancia por página** en esta versión — el estado del motor es un singleton a nivel de módulo (igual que el original de React), por lo que renderizar dos instancias de `<aao-odontogram-shell>` en la misma página haría que compartieran el estado de un único odontograma.
+- **Sustituciones de plantillas dentales y gráfico periodontal abierto** — la entrada `toothTemplates` se aplica antes de que se inicialice el motor y reconstruye la cuadrícula principal cuando cambia más adelante; llamar a `setToothTemplateOverrides()` de forma imperativa sobre un gráfico ya dibujado **no** lo vuelve a dibujar, así que llámala antes de montar el gráfico o usa la entrada. Un gráfico periodontal **ya abierto** no se reconstruye cuando cambia `toothTemplates`: conserva las ilustraciones dentales anteriores hasta que se reabra o cambie el perfil de anatomía (esto coincide con el original de React).
 
 ---
 
@@ -318,6 +320,9 @@ Ambos existen porque las funciones reales tocan internamente el DOM/canvas/`jsPD
 - 🌐 I18n — 12 idiomas de interfaz (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) con selector de idioma; el árabe renderiza la interfaz de derecha a izquierda, con los odontogramas dental/periodontal fijados de izquierda a derecha; solo el idioma activo se incluye en el bundle principal — cada otro idioma es un chunk independiente, que se descarga la primera vez que se selecciona
 - 🌗 Soporte de modo oscuro con botón de alternancia (independiente o controlado por la aplicación principal)
 - 🎨 Gráfico e ilustraciones dentales personalizables con temas: `themeConfig` (`colors`, `tooth`, `tokens`, `selection`) controla las propiedades CSS personalizadas `--odon-*` — incluidos los propios dibujos de los dientes (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) — y se incluye una paleta oscura para las ilustraciones
+- 🎨 Temas para implantes y contornos: `--odon-implant-tint` desplaza todo el implante con un único filtro CSS, `--odon-implant-fill` lo pinta de un solo color plano, y el grosor del contorno del diente es personalizable (`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`), con la silueta oclusal siguiendo ese grosor
+- 🖌️ Dibujos dentales proporcionados por la aplicación anfitriona: `setToothTemplateOverrides()` y la entrada `toothTemplates` reemplazan el SVG de fábrica por perfil de anatomía, sin necesidad de bifurcar el proyecto — cada plantilla se verifica antes de poder dibujarse (se rechaza, nunca se limpia en silencio), y `getToothTemplateRejections()` informa de qué se rechazó y por qué
+- 🩺 Correcciones del gráfico periodontal: la celda enfocada sobrevive a la reconstrucción de la cuadrícula, de modo que el clínico que registra con el teclado no pierde su posición, y la cuadrícula se vuelve a etiquetar sola cuando cambia el idioma de la interfaz
 - 📐 Anatomía medida completada: el perfil `measured` incorpora ahora una plantilla medida según la literatura para cada una de las 40 posiciones dentales, los dientes temporales se dibujan como dientes temporales, y la corona y la raíz tienen un núcleo de dentina derivado; las ilustraciones son un chunk perezoso independiente, que solo se descarga al cambiar a este perfil (Ajustes → Odontograma → Anatomía dental)
 - ⚖️ `compareExams(before, after)` — compara dos exámenes exportados de la misma boca: cambios a nivel de eje, la variación por sitio de la profundidad de sondaje y del nivel de inserción (se señalan los cambios de 2 mm o más) y la clasificación de 2017 de cada examen; es pura, nunca toca el gráfico en vivo
 - 🖥️ Ajustes de visualización del gráfico como API: espaciado de dientes, tamaño de los números de diente, color y estilo de borde de la selección y panel de información dental (pares `get…`/`set…` y las entradas equivalentes del shell), además de `getNumberingSystem()`
@@ -528,6 +533,41 @@ Las plantillas se rotan 180 grados para la mandíbula inferior y se reflejan hor
 
 Ambas carpetas se compilan en módulos TypeScript generados (`core/generated/teeth-svgs.ts`, `core/generated/icon-svgs.ts`) mediante `npm run gen:assets` — ejecuta esto tras editar un SVG de origen para mantener sincronizadas las cadenas en línea incrustadas.
 
+**Dibujos proporcionados por la aplicación anfitriona.** Una aplicación anfitriona puede reemplazar cualquiera de estas plantillas por su propio SVG, sin bifurcar la biblioteca, mediante la entrada `toothTemplates` de `OdontogramShellComponent` (la forma idiomática) o el método imperativo `setToothTemplateOverrides()`. Las sustituciones se indexan **por perfil de anatomía**, porque la plantilla número N es un dibujo distinto en `classic` y en `measured`:
+
+```ts
+import { Component } from "@angular/core";
+import {
+  OdontogramShellComponent,
+  setToothTemplateOverrides,
+  getToothTemplateRejections,
+} from "angular-advanced-odontogram";
+import type { ToothTemplateOverrides } from "angular-advanced-odontogram";
+
+@Component({
+  selector: "app-custom-teeth",
+  imports: [OdontogramShellComponent],
+  // The idiomatic way: bind the input. It is applied before the engine
+  // initialises, so the first grid is already drawn with your templates.
+  template: `<aao-odontogram-shell [toothTemplates]="teeth" />`,
+})
+export class CustomTeethComponent {
+  readonly teeth: ToothTemplateOverrides = {
+    classic:  { templates: { 11: myIncisorSvg }, templatesOccl: { 16: myMolarOcclusalSvg } },
+    measured: { templates: { 11: myMeasuredIncisorSvg } },
+  };
+}
+
+// Imperative alternative — call it before the chart mounts:
+setToothTemplateOverrides({ classic: { templates: { 11: myIncisorSvg } } });
+getToothTemplateRejections(); // [] — everything was accepted
+setToothTemplateOverrides(null); // back to the factory artwork
+```
+
+Cada perfil acepta cuatro mapas — `templates`, `templatesOccl` y, para un perfil que dibuja los dientes de leche como ilustraciones propias (`measured`), `primaryTemplates` y `primaryTemplatesOccl`. Una sustitución sobrevive a un cambio de perfil de anatomía (cada perfil resuelve la suya), `null` restaura la ilustración de fábrica, y si no se proporciona nada el motor sirve exactamente los dibujos de siempre.
+
+Una plantilla es marcado no confiable que acaba en el DOM activo, por lo que se **verifica antes de poder dibujarse** — consulta las notas de seguridad más abajo. Una plantilla rechazada aparece listada por `getToothTemplateRejections()` como `{ profile, set, key, reason }[]` y el dibujo de fábrica permanece en su lugar: el gráfico nunca se queda sin un diente.
+
 ### 🔢 Sistemas de numeración
 
 **FDI (ISO 3950):** Dientes adultos 11-18, 21-28, 31-38, 41-48. Dientes primarios 51-55, 61-65, 71-75, 81-85. Valor: `"FDI"`.
@@ -613,12 +653,20 @@ export class ThemedHostComponent {
       body: "#f2f2f2",
       dentin: "#e6d7bf",
       outline: "#b9bdc2",
+      // Not a colour: the width of that outline, in SVG user units.
+      outlineWidth: "1.4",
       gum: "#e8a5a0",
       bone: "#f6e6c8",
     },
     // Any palette token by name, for the surfaces `tooth` does not cover
     // (per-material restoration colours, gradient stops).
-    tokens: { "--odon-rest-gold": "#d4af37" },
+    tokens: {
+      "--odon-rest-gold": "#d4af37",
+      // Not a colour: a CSS filter over the implant fixture as a whole.
+      "--odon-implant-tint": "hue-rotate(205deg) saturate(.85)",
+      // …or one flat colour over the whole fixture, instead of the tint.
+      "--odon-implant-fill": "#8fa6b8",
+    },
     // The selection highlight. Applied through the session setters,
     // not as a CSS custom property.
     selection: { color: "#3b7bff", borderStyle: "dashed" },
@@ -627,6 +675,12 @@ export class ThemedHostComponent {
 ```
 
 Los dibujos llevan sus colores como propiedades CSS personalizadas, con el color original como valor de respaldo (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …), de modo que las claves omitidas dejan las ilustraciones exactamente como están dibujadas y ambos perfiles de anatomía siguen un único ajuste; una exportación resuelve los tokens antes de que el archivo salga de la página. `tooth.body` es toda la silueta (corona y raíz) — el diente entero en `classic`, la capa exterior que rodea el núcleo de dentina en `measured` — y `tooth.dentin` colorea ese núcleo (solo `measured`; si no se define, sigue al cuerpo, así que el límite solo aparece cuando lo pides). La selección no es una variable CSS: `themeConfig.selection` se aplica a través de los mismos setters que las entradas `selectionColor` / `selectionBorderStyle` (`setSelectionColor()` / `setSelectionBorderStyle()`), y las entradas dedicadas prevalecen cuando se indican ambas. El modo oscuro incluye su propia paleta de ilustraciones, así que el gráfico se oscurece junto con el resto de la interfaz — la dentina queda deliberadamente fuera de esa paleta, por lo que sigue el color del cuerpo. En modo oscuro las celdas oclusales se oscurecen con las vistas laterales, y una lesión de caries conserva su relleno oscuro mientras su contorno pasa a ser claro. La tabla completa de tokens está en [`tools/toothgen/palette.py`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/tools/toothgen/palette.py) del proyecto original.
+
+**El implante se tiñe, no se recolorea.** Su dibujo contiene unos 65 grises metálicos casi idénticos que codifican una fuente de luz, por lo que deliberadamente no se pueden personalizar uno por uno: ajustarlos individualmente aplanaría el sombreado en lugar de cambiar su tema. `--odon-implant-tint` (defínelo en `themeConfig.tokens`) es un filtro CSS aplicado al implante en su conjunto, de modo que todos los grises se mueven juntos y se conservan las relaciones entre ellos — `hue-rotate(205deg) saturate(.85)`, o un filtro `url(#…)` propio. Vale `none` salvo que lo definas, y no afecta a la superposición de pérdida ósea periimplantaria: esa capa queda fuera del grupo filtrado, de modo que un ajuste cosmético nunca puede alterar una señal clínica.
+
+**…o plano, si eso es lo que pide tu paleta.** `--odon-implant-fill` reemplaza el relleno de todas las formas del implante a la vez, de modo que una paleta clínica plana no necesita un filtro propio. Cada forma recurre al gris con el que está dibujada, así que con el token sin definir el implante es exactamente el dibujo de siempre. Ambos se combinan: el relleno aplana y el tinte después lo desplaza. Solo se ve afectado `fill`, de modo que los bordes de los orificios del tornillo oclusal conservan su contorno, y la superposición de pérdida ósea periimplantaria se deja intacta, igual que con el tinte.
+
+**El grosor del contorno también es personalizable.** Los dibujos no declaran ningún `stroke-width`, por lo que trazan con el valor inicial de SVG de `1`; `themeConfig.tooth.outlineWidth` — o `--odon-tooth-outline-width` — lo cambia. Se aplica a todas las capas que son la silueta propia del diente: las coronas naturales y temporales, el resto radicular, la corona tallada, el diente bajo la encía, los siete estados de fractura y la proyección oclusal. Así, el contorno mantiene un único grosor sea cual sea el estado con el que se registre el diente, y las losetas oclusales se ensanchan junto con las vistas laterales que tienen al lado. Solo los surcos oclusales conservan un ancho fijo.
 
 **Integración de plugins:**
 ```ts
@@ -696,6 +750,8 @@ La API del núcleo clínico compartido también está documentada en el proyecto
 | `setNotesEnabled(value)` / `getNotesEnabled()` | Activar/desactivar / consultar las notas por diente |
 | `setPulpDetailLevel(level)` / `getPulpDetailLevel()` | Definir/obtener el vocabulario del selector de pulpa — `"simple"`, `"aae"` o `"latin"` |
 | `getToothAnatomy()` / `setToothAnatomy(v)` | Obtener/definir el perfil de anatomía dental — `"classic"` o `"measured"` |
+| `setToothTemplateOverrides(overrides)` | Reemplaza los dibujos dentales de fábrica por SVG proporcionado por la aplicación anfitriona, por perfil de anatomía; `null` restaura la ilustración de fábrica. El marcado se verifica y una plantilla rechazada conserva el dibujo de fábrica. No vuelve a dibujar una cuadrícula ya construida — prefiere la entrada `toothTemplates`, o llámalo antes de montar |
+| `getToothTemplateRejections()` | Las plantillas de la aplicación anfitriona rechazadas hasta ahora, y por qué — `{ profile, set, key, reason }[]` |
 | `getNumberingSystem()` | El sistema de numeración dental activo en ese momento |
 | `getScreenToothSpacing()` / `setScreenToothSpacing(v)` | Obtiene/establece el espaciado entre dientes en pantalla — `"wide"`, `"normal"` o `"close"` |
 | `getScreenToothNumberSize()` / `setScreenToothNumberSize(v)` | Obtiene/establece el tamaño de los números de diente — `"small"`, `"normal"` o `"xlarge"` |
@@ -910,6 +966,7 @@ Más allá de la propia exportación de Estado JSON / FHIR / PNG / JPG / SVG del
 ### 🔒 Notas de seguridad
 
 - **Los plugins se ejecutan como código de confianza.** El valor devuelto por el `renderSvg()` de un plugin se inyecta en el SVG del odontograma en vivo. Esa salida se sanea con [DOMPurify](https://github.com/cure53/DOMPurify) (perfil SVG, más `svgFilters`) antes de insertarse — `<script>`, `<iframe>`, `<object>`, `<embed>` y `<foreignObject>` están prohibidos por completo, y una salida totalmente maliciosa se descarta en lugar de renderizarse parcialmente. Esto reduce el radio de impacto de un plugin comprometido o con errores, pero los plugins solo deben cargarse desde fuentes de confianza — el saneamiento es una red de seguridad, no un sustituto de la verificación.
+- **Las plantillas dentales proporcionadas por la aplicación anfitriona se rechazan, no se limpian.** Un dibujo pasado a `setToothTemplateOverrides()` (o a la entrada `toothTemplates`) se verifica antes de poder dibujarse: una única raíz `<svg>`; DOMPurify (perfil SVG, con `<script>`, `<iframe>`, `<object>`, `<embed>`, `<foreignObject>`, `<image>`, `<a>` y los elementos de animación prohibidos) — y si DOMPurify tiene que eliminar *cualquier cosa*, la plantilla completa se **rechaza** en lugar de sanearse discretamente, de modo que una aplicación anfitriona nunca dibuja un marcado distinto del que proporcionó; `href` solo hacia un fragmento `#id`, y sin `url(` ni `@import` en un elemento `<style>` ni en un atributo `style`, de modo que nada de lo que contenga una plantilla pueda llegar a la red; y debe incluir cada id de capa del dibujo de fábrica que reemplaza, porque el motor activa y desactiva las capas por id. Una plantilla rechazada se informa mediante `getToothTemplateRejections()` y se conserva el dibujo de fábrica.
 - **Content-Security-Policy.** Este paquete no inyecta su propia CSP cuando se integra como biblioteca. Las aplicaciones host que renderizan `OdontogramShellComponent` deben establecer su propia CSP adecuada a su despliegue; una base razonable refleja la política de la demo del proyecto original de React:
 
   ```
@@ -922,7 +979,7 @@ Más allá de la propia exportación de Estado JSON / FHIR / PNG / JPG / SVG del
 
 Este paquete no tiene un registro de citación propio — es un port que comparte su motor clínico, de forma literal, con el proyecto original. Si utilizas este software en tu investigación, cita el original:
 
-> Dul, Z. (2026). *React Advanced Odontogram* (v2.4.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
+> Dul, Z. (2026). *React Advanced Odontogram* (v2.8.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
 
 **Todas las versiones (DOI de concepto):** https://doi.org/10.5281/zenodo.21156787
 

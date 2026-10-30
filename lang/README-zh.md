@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.7.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -48,7 +48,7 @@
 
 本项目是一款面向 **Angular + TypeScript** 的交互式、基于浏览器的牙位图（口腔检查图）编辑器，界面简洁，支持快速的牙科病历记录。它通过分层渲染 SVG 牙齿模板来表现修复体、龋齿、牙髓治疗状态、松动度及其他临床细节，同时提供多选、选择过滤器和预设状态模板。
 
-**这是 [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)（npm 包：[`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)）的官方 Angular 移植版本。** 与 react-advanced-odontogram **v2.7.0**（引擎提交 `ee27435`）保持功能对等，数据版本为 **2.22**——JSON 与 FHIR R4 导出可在两个库之间无损互通。临床引擎（`projects/angular-advanced-odontogram/src/lib/core/`）为逐字节共享——牙位状态逻辑、牙周记录、诊断编码、FHIR 导出/导入、i18n 文本、引导式导览以及 SVG 模板均与 React 原版逐字节一致，并在每次同步时从锁定的上游提交重新复制；只有组件外壳（`projects/angular-advanced-odontogram/src/lib/components/`）是 Angular 原生实现。存在一小部分明确记录在案的差异（仅限品牌/标识文本——详见本仓库中的移植设计说明文档）。版本号与 React 模块保持同步（lockstep）。
+**这是 [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)（npm 包：[`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)）的官方 Angular 移植版本。** 与 react-advanced-odontogram **v2.8.0**（引擎提交 `a11468d`）保持功能对等，数据版本为 **2.22**——JSON 与 FHIR R4 导出可在两个库之间无损互通。临床引擎（`projects/angular-advanced-odontogram/src/lib/core/`）为逐字节共享——牙位状态逻辑、牙周记录、诊断编码、FHIR 导出/导入、i18n 文本、引导式导览以及 SVG 模板均与 React 原版逐字节一致，并在每次同步时从锁定的上游提交重新复制；只有组件外壳（`projects/angular-advanced-odontogram/src/lib/components/`）是 Angular 原生实现。存在一小部分明确记录在案的差异（仅限品牌/标识文本——详见本仓库中的移植设计说明文档）。版本号与 React 模块保持同步（lockstep）。
 
 ---
 ![牙位图编辑器预览](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
@@ -66,7 +66,7 @@
 #### 环境要求
 - **Angular 21.2 及以上版本**（声明为 peer dependency——由你的应用提供）。
 - 一个能理解 `exports` 字段和 ESM 的**打包工具**——Angular CLI（`@angular/build`）开箱即用即可满足要求。该包**仅支持 ESM**。
-- 工具链需要 Node **≥ 20**。
+- 构建工具需要 Node **≥ 20.19.0**——库声明了 `engines.node >= 20.19.0`，因此较旧的 Node 在安装时会收到引擎警告（在 `engine-strict` 下则为错误）。这仅涉及构建工具；组件本身运行在浏览器中。
 
 #### 安装
 
@@ -119,6 +119,7 @@ export class ChartComponent {}
 | `readOnly` | `boolean` | `false` | 禁用所有编辑（仅查看）。 |
 | `themeConfig` | `OdontogramThemeConfig` | — | 覆盖主题 CSS 变量（`--odon-*`）、牙齿美术配色（`tooth`、`tokens`）以及选中高亮（`selection`）——参见[集成](#-集成)。 |
 | `plugins` | `OdontogramPlugin[]` | — | 注册自定义状态插件 / 额外图层。 |
+| `toothTemplates` | `ToothTemplateOverrides` | — | 由宿主提供的牙齿图形（SVG 文本），按解剖轮廓取代出厂图形——在模板中使用 `setToothTemplateOverrides()` 的惯用方式。每个模板都会经过审查；被拒绝的模板保留出厂图形，并由 `getToothTemplateRejections()` 列出。 |
 | `enableNotes` | `boolean` | `false` | 启用逐牙备注。 |
 | `enableIcdas` | `boolean` | `false` | 启用 ICDAS II 龋齿评分。 |
 | `fillingComplexity` | `"complex" \| "simple"` | `"complex"` | 充填卡片复杂度：`"simple"`（每颗牙一种材料）或 `"complex"`（按牙面选择材料）。 |
@@ -254,8 +255,9 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - **样式表是独立的**——你**必须**注册一次 `angular-advanced-odontogram/styles.css`；它不会被自动注入。样式为全局 CSS，作用域限定在 `.odontogram-root` 下，并由 `--odon-*` CSS 变量驱动。
 - **SSR / 仅限客户端**——该组件在挂载时会读取 DOM，因此必须在浏览器中运行；请仅在浏览器端渲染它。
 - **资源是自包含的**——牙齿和图标的 SVG 在构建时被内联到包中（生成的 TypeScript 模块，`npm run gen:assets`）；**无需配置任何运行时资源请求**，也无需向你的应用 public 文件夹额外复制任何文件。
-- **按需加载**——初始包中只包含英语和 `classic` 牙齿解剖美术资源；另外 11 种界面语言的语言表以及 `measured` 解剖轮廓的美术资源均为独立的懒加载分片，仅在宿主首次切换到它们时才会被获取（分别对应 `[language]` / `I18nService.setLanguage()`/语言菜单，以及 `setToothAnatomy("measured")`/设置 → 牙位图 → 牙齿解剖）。2.6.0 的拆分将演示应用的主分片从 3.12 MB 降至 1.25 MB，初始总体积从 3.21 MB 降至 1.33 MB；2.7.0 中由令牌着色的图形使二者略增至 1.29 MB 和 1.38 MB，而按需加载的实测解剖分片随解剖补全从 1.2 MB 增至 4.0 MB——宿主端无需任何额外配置。
+- **按需加载**——初始包中只包含英语和 `classic` 牙齿解剖美术资源；另外 11 种界面语言的语言表以及 `measured` 解剖轮廓的美术资源均为独立的懒加载分片，仅在宿主首次切换到它们时才会被获取（分别对应 `[language]` / `I18nService.setLanguage()`/语言菜单，以及 `setToothAnatomy("measured")`/设置 → 牙位图 → 牙齿解剖）。2.6.0 的拆分将演示应用的主分片从 3.12 MB 降至 1.25 MB，初始总体积从 3.21 MB 降至 1.33 MB；2.7.0 中由令牌着色的图形使二者略增至 1.29 MB 和 1.38 MB，而按需加载的实测解剖分片随解剖补全从 1.2 MB 增至 4.0 MB——宿主端无需任何额外配置。 在 2.8.0 中它们分别为 1.30 MB 和 1.39 MB，按需加载的 measured 分块为 3.9 MB。
 - **本版本中每个页面仅限一个实例**——引擎状态是模块级单例（与 React 原版相同），因此在同一页面渲染两个 `<aao-odontogram-shell>` 实例会导致它们共享同一份图表状态。
+- **牙齿模板覆盖与已打开的牙周图** — `toothTemplates` 输入会在引擎初始化之前应用，并在其后变化时重建主网格；对已绘制的图表以命令式方式调用 `setToothTemplateOverrides()` **不会**重绘，因此请在图表挂载之前调用，或改用该输入。**已打开**的牙周图在 `toothTemplates` 变化时不会被重建：在重新打开或解剖轮廓变化之前，它会沿用之前的牙齿图形（这与 React 原版一致）。
 
 ---
 
@@ -318,6 +320,9 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🌐 国际化——12 种界面语言（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR），支持语言切换；阿拉伯语界面从右到左渲染，同时牙位图/牙周图表固定保持从左到右；主包中只包含当前使用的语言——其余每种语言都是一个独立分片，仅在首次被选中时才会加载
 - 🌗 支持深色模式，附带切换按钮（独立控制或由父应用控制）
 - 🎨 可主题化的图表与牙齿美术：`themeConfig`（`colors`、`tooth`、`tokens`、`selection`）驱动 `--odon-*` CSS 自定义属性——包括牙齿图形本身（`--odon-tooth-body`、`--odon-milktooth-body`、`--odon-tooth-dentin` 等）——并内置了深色美术配色
+- 🎨 种植体与轮廓主题化：`--odon-implant-tint` 通过一个 CSS 滤镜整体偏移种植体固定体的色调，`--odon-implant-fill` 将其涂成单一纯色，牙齿轮廓线宽也可主题化（`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`），咬合面轮廓会跟随该线宽
+- 🖌️ 宿主提供的牙齿图形：`setToothTemplateOverrides()` 与 `toothTemplates` 输入可按解剖轮廓取代出厂 SVG，无需派生分支——每个模板在绘制前都会经过审查（直接拒绝，绝不悄悄清理），`getToothTemplateRejections()` 会报告哪些被拒绝及原因
+- 🩺 牙周图修复：重建网格后，获得焦点的单元格得以保留，因此通过键盘录入的临床医生不会丢失当前位置，且界面语言变化时网格会自动重新标注
 - 📐 补全的测量解剖：`measured` 轮廓现在为全部 40 个牙位各提供一个依据文献测量的模板，乳牙按乳牙绘制，牙冠与牙根带有推导出的牙本质内核；美术资源是独立的懒加载分片，仅在切换到它时才会获取（设置 → 牙位图 → 牙齿解剖）
 - ⚖️ `compareExams(before, after)`——比较同一口腔的两次已导出检查：轴级变化、逐位点的牙周探诊深度与附着水平变化（变化达到 2 mm 及以上会被标记），以及每次检查的 2017 分类；纯函数，绝不触碰实时图表
 - 🖥️ 以 API 形式提供的图表显示设置：牙间距、牙位号大小、选中颜色与边框样式、牙齿信息面板（`get…`/`set…` 成对函数及对应的 shell 输入），以及 `getNumberingSystem()`
@@ -528,6 +533,41 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 
 这两个文件夹都会通过 `npm run gen:assets` 编译为生成的 TypeScript 模块（`core/generated/teeth-svgs.ts`、`core/generated/icon-svgs.ts`）——编辑源 SVG 后请运行此命令，以使打包的内联字符串保持同步。
 
+**宿主提供的图形。** 宿主应用可以通过 `OdontogramShellComponent` 的 `toothTemplates` 输入（惯用方式）或命令式的 `setToothTemplateOverrides()`，用自己的 SVG 取代其中任何模板，无需派生本库。覆盖按**解剖轮廓**区分，因为编号为 N 的模板在 `classic` 与 `measured` 中是不同的图形：
+
+```ts
+import { Component } from "@angular/core";
+import {
+  OdontogramShellComponent,
+  setToothTemplateOverrides,
+  getToothTemplateRejections,
+} from "angular-advanced-odontogram";
+import type { ToothTemplateOverrides } from "angular-advanced-odontogram";
+
+@Component({
+  selector: "app-custom-teeth",
+  imports: [OdontogramShellComponent],
+  // The idiomatic way: bind the input. It is applied before the engine
+  // initialises, so the first grid is already drawn with your templates.
+  template: `<aao-odontogram-shell [toothTemplates]="teeth" />`,
+})
+export class CustomTeethComponent {
+  readonly teeth: ToothTemplateOverrides = {
+    classic:  { templates: { 11: myIncisorSvg }, templatesOccl: { 16: myMolarOcclusalSvg } },
+    measured: { templates: { 11: myMeasuredIncisorSvg } },
+  };
+}
+
+// Imperative alternative — call it before the chart mounts:
+setToothTemplateOverrides({ classic: { templates: { 11: myIncisorSvg } } });
+getToothTemplateRejections(); // [] — everything was accepted
+setToothTemplateOverrides(null); // back to the factory artwork
+```
+
+每个轮廓接受四个映射——`templates`、`templatesOccl`，以及对于把乳牙绘制为独立图形的轮廓（`measured`）的 `primaryTemplates` 和 `primaryTemplatesOccl`。覆盖在解剖轮廓切换后依然有效（每个轮廓各自解析），`null` 恢复出厂图形，未提供任何内容时，引擎提供的图形与以往完全相同。
+
+模板是最终进入实时 DOM 的不受信任标记，因此它会**在绘制前经过审查**——参见下文的安全说明。被拒绝的模板会由 `getToothTemplateRejections()` 以 `{ profile, set, key, reason }[]` 的形式列出，并保留出厂图形：图表绝不会缺少任何一颗牙齿。
+
 ### 🔢 编号系统
 
 **FDI（ISO 3950）：** 恒牙 11-18、21-28、31-38、41-48。乳牙 51-55、61-65、71-75、81-85。取值：`"FDI"`。
@@ -613,12 +653,20 @@ export class ThemedHostComponent {
       body: "#f2f2f2",
       dentin: "#e6d7bf",
       outline: "#b9bdc2",
+      // Not a colour: the width of that outline, in SVG user units.
+      outlineWidth: "1.4",
       gum: "#e8a5a0",
       bone: "#f6e6c8",
     },
     // Any palette token by name, for the surfaces `tooth` does not cover
     // (per-material restoration colours, gradient stops).
-    tokens: { "--odon-rest-gold": "#d4af37" },
+    tokens: {
+      "--odon-rest-gold": "#d4af37",
+      // Not a colour: a CSS filter over the implant fixture as a whole.
+      "--odon-implant-tint": "hue-rotate(205deg) saturate(.85)",
+      // …or one flat colour over the whole fixture, instead of the tint.
+      "--odon-implant-fill": "#8fa6b8",
+    },
     // The selection highlight. Applied through the session setters,
     // not as a CSS custom property.
     selection: { color: "#3b7bff", borderStyle: "dashed" },
@@ -627,6 +675,12 @@ export class ThemedHostComponent {
 ```
 
 这些图形以 CSS 自定义属性携带颜色，并以出厂颜色作为回退值（`--odon-tooth-body`、`--odon-milktooth-body`、`--odon-tooth-dentin` 等），因此省略的键会让美术保持原样，两种解剖轮廓也遵循同一项设置；导出时会先解析这些令牌，文件才离开页面。`tooth.body` 是整个轮廓（牙冠与牙根）——在 `classic` 中是整颗牙，在 `measured` 中是包裹牙本质内核的外壳——而 `tooth.dentin` 为该内核着色（仅 `measured`；未设置时跟随 body，因此只有在你需要时才会出现分界）。选中不是 CSS 变量：`themeConfig.selection` 通过与 `selectionColor` / `selectionBorderStyle` 输入相同的 setter 生效（`setSelectionColor()` / `setSelectionBorderStyle()`），两者同时给出时以专用输入为准。深色模式自带一套美术配色，因此图表会与界面其余部分一同变暗——牙本质被有意排除在该配色之外，所以它仍然跟随 body 的颜色。在深色模式下，咬合面图块会与侧视图一同变暗，龋损保持深色填充，而其轮廓则变为浅色。完整的令牌表位于原项目的 [`tools/toothgen/palette.py`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/tools/toothgen/palette.py)。
+
+**种植体固定体是被着色，而非被重新上色。** 其图形包含约 65 种几乎相同的金属灰色，它们编码了光源，因此刻意不支持逐一主题化：单独设置会抹平明暗层次，而不是重新赋予主题。`--odon-implant-tint`（在 `themeConfig.tokens` 下设置）是作用于整个固定体的 CSS 滤镜，所有灰色会一同变化，彼此之间的关系得以保留——例如 `hue-rotate(205deg) saturate(.85)`，或你自己的 `url(#…)` 滤镜。除非你设置，否则它为 `none`，并且不会影响种植体周骨吸收叠加层：该图层位于被滤镜作用的分组之外，因此纯外观设置绝不会改变临床信号。
+
+**……或者在你的配色需要时将其变为纯色。** `--odon-implant-fill` 会一次性替换固定体中每个形状的填充色，因此扁平的临床配色无需自备滤镜。每个形状都会回退到其原本绘制时的灰色，因此未设置该令牌时，固定体与以往的图形完全一致。两者可以组合：先由填充变为纯色，再由色调偏移。仅 `fill` 受影响，所以咬合面螺丝孔的边缘仍保留轮廓线，种植体周骨吸收叠加层也与色调设置一样不受影响。
+
+**轮廓线宽同样可以主题化。** 这些图形完全没有声明 `stroke-width`，因此以 SVG 初始值 `1` 描边；`themeConfig.tooth.outlineWidth`——或 `--odon-tooth-outline-width`——可改变该值。它作用于所有属于牙齿自身轮廓的图层：天然牙与乳牙牙冠、残根、预备后的牙冠、龈下牙、全部七种折裂状态以及咬合面投影。因此无论牙齿被记录为何种状态，轮廓都保持同一粗细，咬合面图块也会与其相邻的侧视图一同加宽。只有咬合面沟裂保持固定宽度。
 
 **插件集成：**
 ```ts
@@ -696,6 +750,8 @@ npm run docs           # Generate TypeDoc docs in docs/api/
 | `setNotesEnabled(value)` / `getNotesEnabled()` | 启用/禁用 / 查询每颗牙齿的备注功能 |
 | `setPulpDetailLevel(level)` / `getPulpDetailLevel()` | 设置/获取牙髓选择器的术语级别——`"simple"`、`"aae"` 或 `"latin"` |
 | `getToothAnatomy()` / `setToothAnatomy(v)` | 获取/设置牙齿解剖轮廓——`"classic"` 或 `"measured"` |
+| `setToothTemplateOverrides(overrides)` | 按解剖轮廓以宿主提供的 SVG 取代出厂牙齿图形；`null` 恢复出厂图形。标记会经过审查，被拒绝的模板保留出厂图形。不会重绘已构建的网格——请优先使用 `toothTemplates` 输入，或在挂载之前调用 |
+| `getToothTemplateRejections()` | 迄今为止被拒绝的宿主模板及原因——`{ profile, set, key, reason }[]` |
 | `getNumberingSystem()` | 当前生效的牙位编号系统 |
 | `getScreenToothSpacing()` / `setScreenToothSpacing(v)` | 获取/设置屏幕上的牙间距——`"wide"`、`"normal"` 或 `"close"` |
 | `getScreenToothNumberSize()` / `setScreenToothNumberSize(v)` | 获取/设置牙位号大小——`"small"`、`"normal"` 或 `"xlarge"` |
@@ -909,6 +965,7 @@ enablePersistence({
 ### 🔒 安全说明
 
 - **插件作为受信任代码运行。** 插件 `renderSvg()` 的返回值会被注入到实时图表的 SVG 中。该输出在插入前会经过 [DOMPurify](https://github.com/cure53/DOMPurify)（SVG 配置文件，含 `svgFilters`）净化——`<script>`、`<iframe>`、`<object>`、`<embed>` 及 `<foreignObject>` 一律被禁止，完全恶意的输出会被整体丢弃，而非部分渲染。此举降低了因插件被攻破或存在缺陷而带来的影响范围，但插件仍应仅从可信来源加载——净化是一道安全防线，而非审查把关的替代品。
+- **宿主提供的牙齿模板是被拒绝，而非被清理。** 传给 `setToothTemplateOverrides()`（或 `toothTemplates` 输入）的图形在绘制前会经过审查：必须是单一的 `<svg>` 根元素；经过 DOMPurify（SVG 配置文件，禁止 `<script>`、`<iframe>`、`<object>`、`<embed>`、`<foreignObject>`、`<image>`、`<a>` 以及动画元素）——并且只要 DOMPurify 需要移除*任何内容*，整个模板就会被**拒绝**，而不是悄悄净化，因此宿主绝不会绘制与其所提供内容不同的标记；`href` 只能指向 `#id` 片段，且 `<style>` 元素或 `style` 属性中不得出现 `url(` 或 `@import`，所以模板中的任何内容都无法访问网络；此外它必须包含其所取代的出厂图形的每一个图层 id，因为引擎是按 id 切换图层的。被拒绝的模板会由 `getToothTemplateRejections()` 报告，并保留出厂图形。
 - **内容安全策略（CSP）。** 本包作为库嵌入时不会自行注入 CSP。渲染 `OdontogramShellComponent` 的宿主应用应根据自身部署环境设置相应的 CSP；一个合理的基线可参照原始 React 项目演示站点的策略：
 
   ```
@@ -921,7 +978,7 @@ enablePersistence({
 
 本包没有自己的引用记录——它是一个与原始项目逐字节共享临床引擎的移植版本。如果您在研究中使用本软件，请引用原始项目：
 
-> Dul, Z. (2026). *React Advanced Odontogram* (v2.4.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
+> Dul, Z. (2026). *React Advanced Odontogram* (v2.8.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
 
 **所有版本（概念 DOI）：** https://doi.org/10.5281/zenodo.21156787
 

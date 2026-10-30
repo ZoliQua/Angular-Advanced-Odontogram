@@ -77,6 +77,11 @@ afterEach(async () => {
   await setToothAnatomy("classic");
 });
 
+// Per-test timeout, NOT a global bump and NOT describe-scoped (a describe-level
+// timeout leaks into every `it` nested under it). Each test here switches the anatomy profile live and re-parses every template;
+// under CI load (two Node matrix legs) the default 5000 ms is not enough.
+const PERIO_BUILD_TIMEOUT_MS = 30_000;
+
 describe("perio chart: a live anatomy switch re-parses the templates", () => {
   it("draws from the profile that is active, not the one that was active on mount", async () => {
     expect(getToothAnatomy()).toBe("classic");
@@ -105,5 +110,5 @@ describe("perio chart: a live anatomy switch re-parses the templates", () => {
     await setToothAnatomy("classic");
     await f.whenStable();
     expect(mountedArch(root)).toBe(await freshArch());
-  });
+  }, PERIO_BUILD_TIMEOUT_MS);
 });

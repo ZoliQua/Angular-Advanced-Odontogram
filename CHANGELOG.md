@@ -6,6 +6,96 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-10-30
+
+Resync to `react-advanced-odontogram` v2.8.0 (engine commit `a11468d`,
+payload version stays 2.22 — no migration) — 18 upstream commits past the
+previous `ee27435` pin. Upstream tagged a 2.8.1 release commit and reverted it
+again; `a11468d` is that revert, so the effective version at the pin is 2.8.0.
+See `docs/superpowers/specs/2.8.0-acceptance.md` for the acceptance evidence
+and `docs/superpowers/plans/2026-10-30-phase13-resync-280.md` for the resync
+plan.
+
+### Added
+- **Host-supplied tooth drawings**: `setToothTemplateOverrides()` replaces the
+  factory tooth SVG per anatomy profile (`classic` / `measured`; the four maps
+  `templates`, `templatesOccl`, `primaryTemplates`, `primaryTemplatesOccl`).
+  Every template is vetted before it can be drawn — a single `<svg>` root,
+  DOMPurify with script-capable and external-fetching elements forbidden,
+  fragment-only `href`, no `url(` / `@import`, every factory layer id present —
+  and a template that fails is rejected as a whole, never quietly sanitized.
+  `getToothTemplateRejections()` reports what was refused and why
+  (`{ profile, set, key, reason }[]`), and the factory drawing stays in place.
+  `null` restores the factory artwork. Both functions and the
+  `ToothTemplateOverrides` / `ToothTemplateSet` / `TemplateRejection` types are
+  public.
+- **`toothTemplates` input** on `OdontogramShellComponent`: the idiomatic way
+  to supply the overrides. It is applied before the engine initialises, so the
+  first grid is already drawn with them, and a later change rebuilds the grid.
+- **Implant theming**: `--odon-implant-tint` (one CSS filter over the whole
+  implant fixture) and `--odon-implant-fill` (one flat colour for every shape
+  of it), settable under `themeConfig.tokens`. The peri-implant bone-loss
+  overlay sits outside the filtered group and is never affected.
+- **Themable tooth contour width**: `themeConfig.tooth.outlineWidth` →
+  `--odon-tooth-outline-width`, applied to every layer that is the tooth's own
+  silhouette (crowns, root remnant, prepared crown, tooth under the gum, the
+  seven fracture states) and to the occlusal projection, which now follows the
+  same width.
+- **`engines.node >= 20.19.0`** on the published library, and a `.nvmrc`
+  (Node 24) for the repository.
+
+### Changed
+- All 46 tooth SVGs (6 classic, 40 measured) re-copied from the pinned source
+  and the generated modules regenerated; each generated string is checked
+  byte-for-byte against its source by the `generated-assets` guard. The
+  measured artwork stays behind the dynamic-import boundary.
+- Core and corpus resynced to `a11468d` (theme tokens, profile resolution, the
+  override module and the matching upstream tests). The core stays verbatim
+  under the documented deviations.
+- Demo bundle: main 1.30 MB / initial total 1.39 MB (2.7.0: 1.29 / 1.38 MB);
+  the measured chunk (3.9 MB) and the 11 non-English language chunks remain
+  lazy.
+- Workflows modernised to `actions/checkout@v7` and `actions/setup-node@v7`.
+  CI now runs on a Node 22 + 24 matrix (`fail-fast: false`); the publish
+  workflow stays pinned to a single Node line (24).
+
+### Fixed
+- **Periodontal chart, focus**: the focused cell survives a grid rebuild — the
+  rebuild restores focus by cell id, so a clinician charting by keyboard keeps
+  their place. The info-button ids are now stable and scoped per arch
+  (`perio-fg-info-<key>-<scope>`), and the focus lookup is scoped to the
+  chart's own container.
+- **Periodontal chart, language**: the grid relabels itself when the UI
+  language changes (the language-change subscription is not gated by the
+  state-resync suppression, and the language is part of the chart's visibility
+  signature).
+- **i18n ordering (upstream issue #38)**: upstream's perio chart painted the
+  English fallback under a non-English provider, fixed inside the React-only
+  hook. First paint was already correct in the Angular shell, because the
+  language is applied before the chart can be opened, so that half of the bug
+  never existed here; the later-switch path (changing the language while a
+  perio chart is open) genuinely was broken and is fixed by the two items
+  above, with regression specs mirroring upstream's.
+
+### Documentation
+- All 13 documents (`README.md` and the 12 `lang/README-*.md`) and the
+  npm-facing README: version 2.8.0 and the parity statement
+  (v2.8.0, engine `a11468d`, payload 2.22); the override API and the
+  `toothTemplates` input; the implant and contour tokens; the periodontal
+  fixes; the Node floor; the 2.8.0 bundle numbers; and a plain note that an
+  already-open perio chart keeps its previous artwork when `toothTemplates`
+  changes until it is reopened or the anatomy profile changes (matching the
+  React original).
+
+### Tests
+- New specs for the override API (all nine rejection reasons, per-profile
+  resolution, the reset path), the `toothTemplates` input, `outlineWidth`, the
+  implant tokens, perio focus restoration (including two charts on one page)
+  and the language relabel.
+- The `perio-chart-anatomy-switch` and `ui3a-diamond-tiles` specs time out at
+  the 5000 ms default on a loaded machine; each test in those two files now
+  carries its own 30 s timeout (per-test, not a global or describe-level bump).
+
 ## [2.7.0] - 2026-10-18
 
 Resync to `react-advanced-odontogram` v2.7.0 (engine commit `ee27435`,
@@ -584,7 +674,8 @@ acceptance evidence.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.1...v2.6.0
 [2.4.1]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.0...v2.4.1

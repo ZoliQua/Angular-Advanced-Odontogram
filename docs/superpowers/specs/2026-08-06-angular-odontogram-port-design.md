@@ -227,7 +227,11 @@ the delivered scope. **Resynced again (Phase 12, 2026-10-18): 2.7.0 resyncs to
 `$ENGINE` main @ `ee27435`** (33 commits past `215c43a`; payload stays 2.22 —
 themable tooth artwork, the completed 40-template measured anatomy,
 `compareExams()`, the chart display settings + `getNumberingSystem()` and the
-FHIR `ServiceRequest` plan export) — see §8 item 8 and §10.
+FHIR `ServiceRequest` plan export) — see §8 item 8 and §10. **Resynced again
+(Phase 13, 2026-10-30): 2.8.0 resyncs to `$ENGINE` main @ `a11468d`** (18
+commits past `ee27435`; payload stays 2.22 — `setToothTemplateOverrides()` +
+the `toothTemplates` input, implant tint/fill tokens, the themable contour
+width, the periodontal focus and language fixes) — see §8 item 9 and §10.
 
 ## 3. Target workspace
 
@@ -505,6 +509,23 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
    task reports (`.superpowers/sdd/2026-10-18-phase12-resync-270/`) for
    evidence. The release itself (tag, GitHub release, npm publish) is
    deliberately left to the owner.
+9. **2.8.0 upstream resync — DELIVERED (Phase 13, 2026-10-30).** Resync to
+   `react-advanced-odontogram` v2.8.0 (`$ENGINE` @ `a11468d`, payload 2.22
+   unchanged, 18 commits past the `ee27435` pin; upstream's 2.8.1 release
+   commit was reverted at the pin, so the effective version is 2.8.0). Core +
+   corpus re-copied under the six sanctioned deviations (Task 1) — the new
+   `anatomy/templateOverrides.ts`, the implant tint/fill and contour-width
+   theme tokens, and all 46 teeth SVGs regenerated and proven byte-identical.
+   Shell work (Task 2): the `toothTemplates` input (applied before init,
+   rebuilding the grid on later change), the perio chart's focus-restoring
+   `rebuildGrid` by id, the language-change relabel, and the proof that the
+   i18n ordering bug upstream fixed in a React-only hook never affected first
+   paint here while the later-switch path did. Surface specs, the CI Node
+   22 + 24 matrix and the v7 actions (Task 3). This documentation refresh,
+   the version cut to 2.8.0, the per-test timeout hardening of two perio specs
+   and the acceptance sheet `docs/superpowers/specs/2.8.0-acceptance.md`
+   (Task 4). Known limitation, matching upstream: an already-open perio chart
+   is not rebuilt when `toothTemplates` changes.
 
 ## 9. Risks & mitigations
 
@@ -569,9 +590,19 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
   landed in full as part of the 215c43a pin the 2.6.0 resync copied from.
   `$ENGINE` will keep advancing past `215c43a` too; a further resync beyond
   this pin will be due in a future release.
+- **2.8.0 — DELIVERED (Phase 13, 2026-10-30):** resync to
+  `react-advanced-odontogram` v2.8.0 (`$ENGINE` @ engine commit `a11468d`,
+  payload 2.22, 18 commits past `ee27435` — host-supplied tooth templates,
+  implant tint/fill, the themable contour width and the periodontal fixes).
+  Closes the 2.7.0 drift note below. See §8 item 9 and
+  `docs/superpowers/specs/2.8.0-acceptance.md`.
 - **Drift note (CLOSED by the 2.7.0 resync above):** the `215c43a` pin was
   superseded — the 2.7.0 resync copied from `ee27435`. `$ENGINE` will keep
   advancing past `ee27435` too; a further resync beyond this pin will be due
+  in a future release.
+- **Drift note (CLOSED by the 2.8.0 resync above):** the `ee27435` pin was
+  superseded — the 2.8.0 resync copied from `a11468d`. `$ENGINE` will keep
+  advancing past `a11468d` too; a further resync beyond this pin will be due
   in a future release.
 - Persistence demo wiring: the new opt-in `enablePersistence` API is not
   wired into the `demo` app shell (upstream doesn't wire it into its shell

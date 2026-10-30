@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.7.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -15,7 +15,7 @@
 
 An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angular + TypeScript** — with a full **periodontal charting module**, multi-surface caries/restorations, endodontic/prosthetic states, FDI/Universal/Palmer numbering, **HL7 FHIR R4** export/import, optional ICDAS scoring, and a 12-language UI.
 
-> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Feature parity with react-advanced-odontogram **v2.7.0** (engine `ee27435`), payload **2.22** — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim; only the component shell is Angular-native. Versioned in lockstep with the React module.
+> **This is the official Angular port of [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Feature parity with react-advanced-odontogram **v2.8.0** (engine `a11468d`), payload **2.22** — JSON and FHIR R4 exports round-trip between the two libraries. The clinical engine is shared, verbatim; only the component shell is Angular-native. Versioned in lockstep with the React module.
 
 🔗 **Live demo:** https://angular-advanced-odontogram.vercel.app/ \
 ⚛️ **Original React project:** https://github.com/ZoliQua/React-Advanced-Odontogram
@@ -29,7 +29,7 @@ An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angu
 npm install angular-advanced-odontogram
 ```
 
-**Requirements:** Angular **21.2+** (peer dependency); a bundler that supports the `exports` field and ESM (the Angular CLI qualifies out of the box). The package is **ESM-only**.
+**Requirements:** Angular **21.2+** (peer dependency); a bundler that supports the `exports` field and ESM (the Angular CLI qualifies out of the box). The package is **ESM-only**. The library declares `engines.node >= 20.19.0` (Node **≥ 20.19.0** for tooling).
 
 ## 🚀 Quick start
 
@@ -65,6 +65,9 @@ export class ChartComponent {}
 - 🧱 **Composable UI** — beyond the all-in-one shell, `OdontogramUiService`, the four presentational surfaces and all eight declarative control cards are individually exported for custom host layouts
 - 🦴 Selectable **tooth anatomy profile** — `classic` (default) or `measured`: one literature-measured template for every one of the 40 tooth positions (permanent and primary, primary teeth drawn as primary teeth, with a derived dentin core), switchable at runtime; both the 11 non-English UI languages and the `measured` artwork load on demand, not in the main bundle
 - 🎨 **Themable tooth artwork** — every colour in the drawings is a CSS custom property with the shipped colour as its fallback, set through `themeConfig.tooth` / `themeConfig.tokens` (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …); the selection highlight through `themeConfig.selection`; a dark artwork palette is built in
+- 🖌️ **Host-supplied tooth drawings** — `setToothTemplateOverrides()` and the `toothTemplates` input replace the factory SVG per anatomy profile, without forking; every template is vetted before it can be drawn (rejected, never silently cleaned) and `getToothTemplateRejections()` reports what was refused and why. An **already-open** periodontal chart is not rebuilt when `toothTemplates` changes — it keeps the previous artwork until it is reopened or the anatomy profile changes (as in the React original)
+- 🎚️ **Implant and contour theming** — `--odon-implant-tint` (one CSS filter over the whole implant fixture), `--odon-implant-fill` (one flat colour) and a themable tooth contour width (`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`) that the occlusal silhouette follows
+- 🩺 **Periodontal chart fixes** — the focused cell survives a grid rebuild, and the grid relabels itself when the UI language changes
 - ⚖️ **Exam comparison and display settings** — `compareExams()` diffs two exported exams of the same mouth; the chart display settings (tooth spacing, tooth-number size, selection colour and border style, tooth-information panel) and `getNumberingSystem()` are part of the public API
 - 💾 Opt-in **localStorage persistence** API (host-wired, off by default)
 - 🔢 FDI / Universal / Palmer numbering · 🌐 12 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, Arabic RTL) · 🎨 theming via `--odon-*` CSS variables · 🧩 plugin system · ⌨️ keyboard accessibility

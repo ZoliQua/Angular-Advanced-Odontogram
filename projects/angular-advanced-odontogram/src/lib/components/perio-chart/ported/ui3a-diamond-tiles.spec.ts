@@ -61,6 +61,11 @@ function piBtn(toothNo: number, surface: string): HTMLButtonElement {
   return el as HTMLButtonElement;
 }
 
+// Per-test timeout, NOT a global bump and NOT describe-scoped (a describe-level
+// timeout leaks into every `it` nested under it). Each test here mounts a full perio chart per test;
+// under CI load (two Node matrix legs) the default 5000 ms is not enough.
+const PERIO_BUILD_TIMEOUT_MS = 30_000;
+
 describe("UI-3a Task 3: diamond layout for 4-surface plaque/grade cells", () => {
   it("plaque cell: buccal top, mesial+distal middle, lingual bottom (by grid-area)", async () => {
     const f = openGrid();
@@ -76,7 +81,7 @@ describe("UI-3a Task 3: diamond layout for 4-surface plaque/grade cells", () => 
     expect(["mes", "dis"]).toContain(mesial.style.gridArea);
     expect(["mes", "dis"]).toContain(distal.style.gridArea);
     expect(mesial.style.gridArea).not.toBe(distal.style.gridArea);
-  });
+  }, PERIO_BUILD_TIMEOUT_MS);
 
   it("grade cell (PI): same diamond grid-area shape as plaque", async () => {
     const f = openGrid();
@@ -91,7 +96,7 @@ describe("UI-3a Task 3: diamond layout for 4-surface plaque/grade cells", () => 
     expect(["mes", "dis"]).toContain(mesial.style.gridArea);
     expect(["mes", "dis"]).toContain(distal.style.gridArea);
     expect(mesial.style.gridArea).not.toBe(distal.style.gridArea);
-  });
+  }, PERIO_BUILD_TIMEOUT_MS);
 
   it("button surface/data wiring is unchanged regardless of visual position", async () => {
     const f = openGrid();
@@ -102,7 +107,7 @@ describe("UI-3a Task 3: diamond layout for 4-surface plaque/grade cells", () => 
       expect(piBtn(16, surface).dataset["gradeSurface"]).toBe(surface);
       expect(piBtn(26, surface).dataset["gradeSurface"]).toBe(surface);
     }
-  });
+  }, PERIO_BUILD_TIMEOUT_MS);
 
   it("mesial/distal visual columns swap between a RIGHT-quadrant tooth (16) and a LEFT-quadrant tooth (26), mesial toward the midline", async () => {
     const f = openGrid();
@@ -124,14 +129,14 @@ describe("UI-3a Task 3: diamond layout for 4-surface plaque/grade cells", () => 
     // Distal is the mirror image of mesial on both teeth.
     expect(plaqueBtn(16, "distal").style.gridArea).toBe("mes");
     expect(plaqueBtn(26, "distal").style.gridArea).toBe("dis");
-  });
+  }, PERIO_BUILD_TIMEOUT_MS);
 
   it("mesial/distal swap also applies to the graded (PI) cells", async () => {
     const f = openGrid();
     await f.whenStable();
     expect(piBtn(16, "mesial").style.gridArea).toBe("dis");
     expect(piBtn(26, "mesial").style.gridArea).toBe("mes");
-  });
+  }, PERIO_BUILD_TIMEOUT_MS);
 
   it("buccal/lingual visual position never swaps by quadrant", async () => {
     const f = openGrid();
@@ -140,7 +145,7 @@ describe("UI-3a Task 3: diamond layout for 4-surface plaque/grade cells", () => 
     expect(plaqueBtn(26, "buccal").style.gridArea).toBe("buc");
     expect(plaqueBtn(16, "lingual").style.gridArea).toBe("lin");
     expect(plaqueBtn(26, "lingual").style.gridArea).toBe("lin");
-  });
+  }, PERIO_BUILD_TIMEOUT_MS);
 
   it("lower-arch quadrants (3x/4x) follow the same mesial-toward-midline rule", async () => {
     const f = openGrid();
@@ -149,5 +154,5 @@ describe("UI-3a Task 3: diamond layout for 4-surface plaque/grade cells", () => 
     // Tooth 36 = FDI quadrant 3 (screen-right half, left quadrant) -> mesial left.
     expect(plaqueBtn(46, "mesial").style.gridArea).toBe("dis");
     expect(plaqueBtn(36, "mesial").style.gridArea).toBe("mes");
-  });
+  }, PERIO_BUILD_TIMEOUT_MS);
 });
