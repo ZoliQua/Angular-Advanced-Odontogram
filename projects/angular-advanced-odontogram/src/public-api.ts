@@ -23,7 +23,7 @@ export * from "./lib/core/perioClassification";
 export * from "./lib/core/utils/numbering";
 export type * from "./lib/core/fhir/types";
 // v2.6.0 resync: `core/i18n/translations.ts` is now a TEST-ONLY aggregator
-// that statically imports all 12 locale tables (see its own header comment) —
+// that statically imports all 14 locale tables (see its own header comment) —
 // re-exporting it here (as this line did pre-resync, when translations.ts WAS
 // the single runtime i18n module) would pull every UI language back into the
 // main bundle for every consumer, exactly the regression the lazy `loader.ts`

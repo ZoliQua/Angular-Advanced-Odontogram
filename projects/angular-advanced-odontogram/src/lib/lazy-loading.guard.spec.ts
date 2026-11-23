@@ -4,11 +4,15 @@
 // The upstream guard tests themselves don't run here: `measured-lazy-load
 // .test.ts` is framework-free and already runs VERBATIM in `test:corpus`
 // (core/__tests__/) — it proves the SOURCE-level split holds for `lib/core/`.
-// `i18n-lazy-load.test.tsx` mixes its two static-analysis guards with React
+// `i18n-lazy-load.test.tsx` mixes its static-analysis guards with React
 // render assertions in one file, so the whole file is excluded from
-// `test:corpus` (React-dependent); its two framework-free guards were
-// manually re-run once against our copied core tree (Task 1 report §6) but
-// that was a one-off check, not a standing automated one.
+// `test:corpus` (React-dependent). Its framework-free guards therefore live
+// HERE, as standing automated checks under `test:ng`: the two static-import
+// scans below, and — since 2.9.0 added Japanese and Korean — the
+// registry-derived "the loader reaches every other language through a literal
+// dynamic import" guard, which is what proves a NEW language is code-split
+// rather than silently bundled. Before that guard was ported, nothing
+// executed in this repo checked that claim for any language.
 //
 // This file is the ANGULAR half those upstream guards don't reach: (a) that
 // nothing under `src/` OUTSIDE `lib/core/` (which carries its own
@@ -37,7 +41,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { TestBed } from "@angular/core/testing";
-import { inputBinding, provideZonelessChangeDetection } from "@angular/core";
+import { Component, inject, inputBinding, provideZonelessChangeDetection, signal } from "@angular/core";
 import {
   ODONTOGRAM_ENGINE_LIFECYCLE,
   OdontogramShellComponent,
@@ -47,9 +51,12 @@ import type { SettingsState } from "./components/settings-modal/settings-modal.c
 import { OdontogramUiService } from "./components/odontogram-ui.service";
 import { getToothAnatomy } from "./core/odontogram";
 import { isMeasuredProfileLoaded } from "./core/anatomy/profiles";
-import { getI18nLanguage, t } from "./core/i18n/useI18n";
+import { getI18nLanguage, setI18nLanguage, t } from "./core/i18n/useI18n";
 import { isLanguageLoaded, loadLanguage } from "./core/i18n/loader";
-import type { Language } from "./core/i18n/languages";
+import { FALLBACK_LANGUAGE, LANGUAGES, type Language } from "./core/i18n/languages";
+import { OdontogramTopbarComponent } from "./components/surfaces/odontogram-topbar.component";
+import { SettingsModalComponent } from "./components/settings-modal/settings-modal.component";
+import { makeSettings } from "./components/settings-modal/testing/make-settings";
 
 // `src/`, not just `src/lib/` — `public-api.ts` (the package's actual entry
 // point, one level above `lib/`) is exactly where this class of regression
@@ -75,12 +82,21 @@ function sourceFiles(dir: string, relDir: string, out: string[] = []): string[] 
 }
 
 /** Every module specifier a file statically `import`s/`export ... from`s —
- *  `import type`/`export type` excluded, exactly like upstream's own guard
- *  regex (a type-only import is erased at compile time; it cannot pull
- *  runtime content into the bundle). */
+ *  `import type`/`export type` excluded, as in upstream's own guard regex (a
+ *  type-only import is erased at compile time; it cannot pull runtime content
+ *  into the bundle).
+ *
+ *  Upstream's regex requires a `from` clause, which leaves a bare side-effect
+ *  import (`import "../core/fonts/notoKR";`) invisible to every scan built on
+ *  it — and that form bundles the module just as completely as a named one.
+ *  Implausible as a mistake, but these guards exist precisely for the
+ *  implausible, so the second alternative below catches it too. */
 function staticImportSpecifiers(src: string): string[] {
   const specs: string[] = [];
   for (const m of src.matchAll(/^\s*(?:import|export)\b(?!\s+type\b)[^;]*?\bfrom\s*["']([^"']+)["']/gm)) {
+    specs.push(m[1]);
+  }
+  for (const m of src.matchAll(/^\s*import\s+["']([^"']+)["']\s*;?\s*$/gm)) {
     specs.push(m[1]);
   }
   return specs;
@@ -335,5 +351,108 @@ describe("Angular shell: measured anatomy loads on demand", () => {
 
     expect(getToothAnatomy()).toBe("classic");
     expect(grid.hasAttribute("data-anatomy")).toBe(false);
+  });
+});
+
+// Mirrors upstream's i18n-lazy-load.test.tsx "the loader reaches every other
+// language through a literal dynamic import" guard. That file is excluded from
+// test:corpus (it mixes these static scans with React render assertions), and
+// the scans above port only its two import checks, so this one needs a home
+// that actually executes.
+describe("i18n: the code split holds (registry-derived loader guard)", () => {
+  it("the loader reaches every other language through a literal dynamic import", () => {
+    const loader = readFileSync(path.join(__dirname, "core/i18n/loader.ts"), "utf8");
+    // From the registry rather than a literal list: a hand-written list is the
+    // one way to leave a language out of the guard itself.
+    for (const lang of LANGUAGES.filter((l) => l !== FALLBACK_LANGUAGE)) {
+      expect(loader, lang).toContain(`import("./locales/${lang}")`);
+    }
+    // English is the one statically bundled locale, being the fallback.
+    expect(FALLBACK_LANGUAGE).toBe("en");
+    expect(loader).toMatch(/^import en from "\.\/locales\/en";$/m);
+  });
+});
+
+@Component({
+  imports: [OdontogramTopbarComponent],
+  providers: [OdontogramUiService],
+  template: `<aao-odontogram-topbar />`,
+})
+class TopbarHostComponent {
+  private readonly ui = inject(OdontogramUiService);
+  constructor() {
+    this.ui.configure();
+  }
+}
+
+@Component({
+  imports: [SettingsModalComponent],
+  template: `<aao-settings-modal [open]="true" [settings]="settings()" (close)="0" />`,
+})
+class SettingsHostComponent {
+  settings = signal(makeSettings({}));
+}
+
+describe("Angular shell: the language pickers cover the whole registry", () => {
+  it("the topbar and Settings pickers both offer every language in LANGUAGES, in registry order", async () => {
+    // A hand-written picker list is how a language gets wired into the core
+    // and still never reaches the UI. Each rendered list is checked against
+    // the registry, not against the other one, and ORDER matters: upstream's
+    // two LANGUAGE_OPTIONS arrays are in LANGUAGES order and this port copies
+    // them verbatim.
+    TestBed.configureTestingModule({
+      imports: [TopbarHostComponent, SettingsHostComponent],
+      providers: [provideZonelessChangeDetection()],
+    });
+    await setI18nLanguage("en");
+    const expectedLabels = LANGUAGES.map((l) => t(`language.${l}`));
+
+    // Topbar: a menu of buttons carrying the translated label, no value attr.
+    const top = TestBed.createComponent(TopbarHostComponent);
+    await top.whenStable();
+    (top.nativeElement.querySelector("#languageMenu button.btn-theme") as HTMLElement).click();
+    await top.whenStable();
+    const topLabels = Array.from(
+      top.nativeElement.querySelectorAll("#languageMenu .dropdown-item"),
+      (el) => ((el as HTMLElement).textContent ?? "").trim(),
+    );
+    expect(topLabels, "topbar").toEqual(expectedLabels);
+
+    // Settings: a real <select> whose option values are the language codes.
+    const set = TestBed.createComponent(SettingsHostComponent);
+    await set.whenStable();
+    const select = set.nativeElement.querySelector(
+      `select[aria-label="${t("language.label")}"]`,
+    ) as HTMLSelectElement;
+    expect(select, "settings language select").not.toBeNull();
+    const values = Array.from(select.options, (o) => o.value);
+    expect(values, "settings").toEqual([...LANGUAGES]);
+  });
+
+  it("every picker label key resolves in the fallback language", () => {
+    // A label key with no string shows the raw key in the menu.
+    for (const lang of LANGUAGES) {
+      expect(t(`language.${lang}`), lang).not.toBe(`language.${lang}`);
+    }
+  });
+});
+
+describe("Angular shell: no static import of an embedded PDF font", () => {
+  it("nothing outside lib/core/ statically imports an embedded PDF font (incl. public-api.ts)", () => {
+    // notoKR.ts alone is 3.2 MB of base64. core/fonts/loader.ts reaches every
+    // font through a dynamic import so each stays its own chunk, loaded only
+    // when a PDF is exported in that language; one static import anywhere above
+    // lib/core/ undoes that for every consumer of this package.
+    const offenders: string[] = [];
+    for (const file of sourceFiles(SRC_ROOT, "")) {
+      const rel = path.relative(SRC_ROOT, file);
+      for (const spec of staticImportSpecifiers(readFileSync(file, "utf8"))) {
+        if (/(^|\/)fonts\/noto[A-Za-z]+$/.test(spec)) offenders.push(`${rel} -> ${spec}`);
+      }
+    }
+    expect(
+      offenders,
+      "a static import of an embedded font pulls it into the main bundle — reach fonts through core/fonts/loader.ts's loadPdfFont()",
+    ).toEqual([]);
   });
 });

@@ -22,7 +22,7 @@
 //    package's actual framework/build tool per `package.json`) — jsPDF,
 //    DOMPurify, TypeScript and Tailwind CSS are genuinely still used here
 //    unchanged.
-//  - `credits.intro` (translations.ts, all 12 languages, core file): the
+//  - `credits.intro` (translations.ts, all 14 languages, core file): the
 //    app-name mention "React Advanced Odontogram" swapped to "Angular
 //    Advanced Odontogram" — the same proper-noun substitution already
 //    applied to `app.title` (spec §2 deviation #4), just re-applied to this
@@ -31,7 +31,7 @@
 //    creator credit stays intact verbatim, per the brief.
 //  - NEW: an "Original Project" section (`ORIGINAL_PROJECT_URL`,
 //    `credits.originalProjectTitle`/`.originalProjectDesc`, translated in all
-//    12 languages) was ADDED, mirroring the Creator section's own
+//    14 languages) was ADDED, mirroring the Creator section's own
 //    heading+list+link+desc shape, immediately after it. Restores a visible,
 //    clickable, in-modal credit to https://github.com/ZoliQua/React-Advanced-Odontogram
 //    — the three adaptations above only redirect THIS package's own

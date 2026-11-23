@@ -259,6 +259,8 @@ const LANGUAGE_OPTIONS: ReadonlyArray<{ value: Language; labelKey: string }> = [
   { value: "zh", labelKey: "language.zh" },
   { value: "ar", labelKey: "language.ar" },
   { value: "fr", labelKey: "language.fr" },
+  { value: "ja", labelKey: "language.ja" },
+  { value: "ko", labelKey: "language.ko" },
 ];
 
 const DIAGNOSIS_CODING_OPTIONS: ReadonlyArray<{ value: string; labelKey: string }> = [

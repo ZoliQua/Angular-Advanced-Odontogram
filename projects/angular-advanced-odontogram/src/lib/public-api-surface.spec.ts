@@ -104,7 +104,7 @@ describe("public API surface — public-api.ts (this package's npm entry point)"
     expect(none).toEqual([]);
   });
 
-  it("does NOT re-export the raw i18n translations record (would inline all 12 languages into the FESM — see public-api.ts's own header comment and task-2-report.md §5)", () => {
+  it("does NOT re-export the raw i18n translations record (would inline all 14 languages into the FESM — see public-api.ts's own header comment and task-2-report.md §5)", () => {
     const key = "translations"; // indirected: esbuild statically flags a literal "translations" property access as always-undefined (it IS, by design) and warns at build time; the check itself is the point.
     expect((PublicApi as Surface)[key]).toBeUndefined();
   });

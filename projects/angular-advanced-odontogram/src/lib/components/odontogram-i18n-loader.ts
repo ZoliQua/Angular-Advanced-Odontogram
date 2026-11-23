@@ -7,7 +7,7 @@
 // unit-test builder's Vitest integration hard-blocks `vi.mock()`/`vi.doMock()`
 // for relative specifiers, so a spec that needs the gate to observe a
 // language as NOT YET loaded — every real `beforeEach`/`afterEach` cycle
-// preloads all twelve via `reset-engine-state.ts`, so `isLanguageLoaded()`
+// preloads all fourteen via `reset-engine-state.ts`, so `isLanguageLoaded()`
 // is always true for a real `Language` by the time any test's `configure()`
 // runs — has no way to force that state through the real core module. This
 // token lets a spec override BOTH functions via TestBed's provider array with
