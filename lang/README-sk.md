@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.9.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -13,7 +13,7 @@
 
 ---
 
-> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 Slovenčina (tento súbor) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 [简体中文](README-zh.md)
+> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 Slovenčina (tento súbor) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 [简体中文](README-zh.md) | 🇯🇵 [日本語](README-ja.md) | 🇰🇷 [한국어](README-ko.md)
 
 ---
 
@@ -48,7 +48,7 @@
 
 Tento projekt je interaktívny editor odontogramu v prehliadači pre **Angular + TypeScript**, ktorý umožňuje rýchle zaznamenávanie zubného statusu s prehľadným rozhraním. Vykresľuje vrstvené SVG šablóny zubov na reprezentáciu náhrad, kazu, endodontického stavu, mobility a ďalších klinických detailov, pričom poskytuje viacnásobný výber, filtre výberu a preddefinované stavové predvoľby.
 
-**Toto je oficiálny Angular port projektu [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Funkčná parita s `react-advanced-odontogram` **v2.8.0** (engine commit `a11468d`), verzia payloadu **2.22** — exporty JSON a FHIR R4 sú medzi oboma knižnicami obojsmerne kompatibilné (round-trip). Klinický engine (`projects/angular-advanced-odontogram/src/lib/core/`) je zdieľaný doslovne — logika zubného statusu, parodontálne zaznamenávanie, diagnostické kódovanie, export/import FHIR, i18n reťazce, sprievodná prehliadka a SVG šablóny sú bajtovo identické s pôvodným React projektom, pri každej synchronizácii znovu skopírované z pripnutého upstream commitu; iba shell komponentov (`projects/angular-advanced-odontogram/src/lib/components/`) je natívne Angular riešenie. Existuje malá, explicitne zdokumentovaná sada odchýlok (iba reťazce brandingu/identity — pozri špecifikáciu návrhu portu v tomto repozitári). Verzovanie prebieha v lockstepe s React modulom.
+**Toto je oficiálny Angular port projektu [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Funkčná parita s `react-advanced-odontogram` **v2.9.0** (engine commit `3321e63`), verzia payloadu **2.22** — exporty JSON a FHIR R4 sú medzi oboma knižnicami obojsmerne kompatibilné (round-trip). Klinický engine (`projects/angular-advanced-odontogram/src/lib/core/`) je zdieľaný doslovne — logika zubného statusu, parodontálne zaznamenávanie, diagnostické kódovanie, export/import FHIR, i18n reťazce, sprievodná prehliadka a SVG šablóny sú bajtovo identické s pôvodným React projektom, pri každej synchronizácii znovu skopírované z pripnutého upstream commitu; iba shell komponentov (`projects/angular-advanced-odontogram/src/lib/components/`) je natívne Angular riešenie. Existuje malá, explicitne zdokumentovaná sada odchýlok (iba reťazce brandingu/identity — pozri špecifikáciu návrhu portu v tomto repozitári). Verzovanie prebieha v lockstepe s React modulom.
 
 ---
 ![Náhľad editora odontogramu](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
@@ -105,7 +105,7 @@ import { OdontogramShellComponent } from "angular-advanced-odontogram";
 export class ChartComponent {}
 ```
 
-`language` akceptuje `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr`; `numberingSystem` akceptuje `FDI | UNIVERSAL | PALMER`.
+`language` akceptuje `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr | ja | ko`; `numberingSystem` akceptuje `FDI | UNIVERSAL | PALMER`.
 
 #### Vstupy komponentu
 
@@ -113,7 +113,7 @@ export class ChartComponent {}
 
 | Vstup | Typ | Predvolená hodnota | Popis |
 |------|------|---------|-------------|
-| `language` | `Language` | `"hu"` | Jazyk používateľského rozhrania (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`). |
+| `language` | `Language` | `"hu"` | Jazyk používateľského rozhrania (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`/`ja`/`ko`). |
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | Systém číslovania zubov. |
 | `darkMode` | `boolean` | `false` | Prepínač tmavého motívu. |
 | `readOnly` | `boolean` | `false` | Vypne všetky úpravy (iba na zobrazenie). |
@@ -255,7 +255,7 @@ Obidva existujú preto, lebo skutočné funkcie pristupujú k internej implement
 - **Hárok štýlov je samostatný** — **musíte** raz zaregistrovať `angular-advanced-odontogram/styles.css`; nevkladá sa automaticky. Štýlovanie je globálne CSS ohraničené pod `.odontogram-root` a riadené CSS premennými `--odon-*`.
 - **SSR / iba klient** — komponent pri pripojení číta DOM, preto musí bežať v prehliadači; vykresľujte ho iba na strane prehliadača.
 - **Zdroje sú samostatné** — SVG súbory zubov a ikon sú pri zostavení vložené priamo do balíka (generované moduly TypeScript, `npm run gen:assets`); **nie je potrebné konfigurovať žiadne získavanie zdrojov za behu** a nič netreba kopírovať do verejného priečinka vašej aplikácie.
-- **Načítanie na požiadanie** — v úvodnom balíku je zabudovaná iba angličtina a grafika anatómie zubov profilu `classic`; ostatných 11 tabuliek jazykov rozhrania a grafika profilu anatómie `measured` sú samostatné, lenivo (lazy) načítavané časti, ktoré sa načítajú až vtedy, keď na ne hostiteľ prvýkrát prepne (`[language]` / `I18nService.setLanguage()`/ponuka jazykov, resp. `setToothAnatomy("measured")`/Nastavenia → Odontogram → anatómia zubov). Rozdelenie v 2.6.0 znížilo hlavnú časť dema z 3,12 MB na 1,25 MB a úvodný súčet z 3,21 MB na 1,33 MB; v 2.7.0 ich grafika maľovaná tokenmi mierne zväčší na 1,29 MB a 1,38 MB, zatiaľ čo lenivo načítavaná časť nameranej anatómie s dokončenou anatómiou narastie z 1,2 MB na 4,0 MB — na strane hostiteľa nie je potrebné nič konfigurovať. Vo verzii 2.8.0 majú 1,30 MB a 1,39 MB a lenivo načítavaná časť measured 3,9 MB.
+- **Načítanie na požiadanie** — v úvodnom balíku je zabudovaná iba angličtina a grafika anatómie zubov profilu `classic`; ostatných 13 tabuliek jazykov rozhrania a grafika profilu anatómie `measured` sú samostatné, lenivo (lazy) načítavané časti, ktoré sa načítajú až vtedy, keď na ne hostiteľ prvýkrát prepne (`[language]` / `I18nService.setLanguage()`/ponuka jazykov, resp. `setToothAnatomy("measured")`/Nastavenia → Odontogram → anatómia zubov). Rozdelenie v 2.6.0 znížilo hlavnú časť dema z 3,12 MB na 1,25 MB a úvodný súčet z 3,21 MB na 1,33 MB; v 2.7.0 ich grafika maľovaná tokenmi mierne zväčší na 1,29 MB a 1,38 MB, zatiaľ čo lenivo načítavaná časť nameranej anatómie s dokončenou anatómiou narastie z 1,2 MB na 4,0 MB — na strane hostiteľa nie je potrebné nič konfigurovať. Vo verzii 2.8.0 majú 1,30 MB a 1,39 MB a lenivo načítavaná časť measured 3,9 MB. Vo verzii 2.9.0 zostávajú úvodné hodnoty nezmenené na 1,30 MB a 1,39 MB: japončina, korejčina a ich dva PDF fonty sú lenivo načítavané časti (3,24 MB korejský font, 289 kB japonský, 87 kB a 79 kB tabuľky jazykov), takže žiadna z nich sa nedotkne úvodného balíka; lenivo načítavaná časť measured má 3,89 MB.
 - **Jedna inštancia na stránku** v tomto vydaní — stav enginu je singleton na úrovni modulu (rovnako ako v pôvodnom React projekte), takže vykreslenie dvoch inštancií `<aao-odontogram-shell>` na tej istej stránke by spôsobilo, že by zdieľali stav jednej karty.
 - **Prepísania šablón zubov a otvorený parodontálny graf** — vstup `toothTemplates` sa uplatní pred inicializáciou enginu a pri neskoršej zmene prestavia hlavnú mriežku; imperatívne volanie `setToothTemplateOverrides()` na už vykreslenom grafe ho **neprekreslí**, preto ho zavolajte pred pripojením grafu alebo použite vstup. **Už otvorený** parodontálny graf sa pri zmene `toothTemplates` neprestavia: ponechá predchádzajúcu grafiku zubov, kým sa znovu neotvorí alebo kým sa nezmení profil anatómie (zodpovedá to pôvodnej verzii pre React).
 
@@ -317,7 +317,7 @@ Obidva existujú preto, lebo skutočné funkcie pristupujú k internej implement
 - ⏳ Prekrytie priebehom počas exportu obrázka
 - 🎓 Interaktívna úvodná prehliadka (sprievodné predstavenie ovládacích prvkov shellu)
 - 🔢 Tri systémy číslovania (FDI, Universal, Palmer)
-- 🌐 I18n — 12 jazykov rozhrania (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) s prepínačom jazyka; arabčina vykresľuje rozhranie sprava doľava, pričom zubné/parodontálne grafy zostávajú zľava doprava; v hlavnom balíku je zabudovaný iba aktívny jazyk — každý ďalší jazyk je samostatná časť, ktorá sa načíta pri prvom výbere
+- 🌐 I18n — 14 jazykov rozhrania (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO) s prepínačom jazyka; arabčina vykresľuje rozhranie sprava doľava, pričom zubné/parodontálne grafy zostávajú zľava doprava (strojovo preložené, kontrola rodeným hovorcom pre AR/ZH/FR/JA/KO zatiaľ neprebehla); v hlavnom balíku je zabudovaná iba angličtina — každý ďalší jazyk je samostatná časť, ktorá sa načíta pri prvom výbere
 - 🌗 Podpora tmavého režimu s prepínacím tlačidlom (samostatný alebo riadený nadradenou aplikáciou)
 - 🎨 Témovateľný graf a grafika zubov: `themeConfig` (`colors`, `tooth`, `tokens`, `selection`) riadi CSS vlastnosti `--odon-*` — vrátane samotných kresieb zubov (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) — a vstavaná je tmavá paleta grafiky
 - 🎨 Témovanie implantátu a obrysu: `--odon-implant-tint` posunie farebnosť celého telesa implantátu jedným CSS filtrom, `--odon-implant-fill` ho vyfarbí jednou plochou farbou a šírka obrysu zuba je témovateľná (`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`), pričom okluzná silueta sleduje túto šírku
@@ -352,7 +352,7 @@ Obidva existujú preto, lebo skutočné funkcie pristupujú k internej implement
 - 🎛️ Ovládacie prvky a stavový panel (`ToothControlsSurfaceComponent` + 8 deklaratívnych kariet)
 - 🎨 SVG vrstevnací modul a šablóny (jadro nezávislé od frameworku, `core/odontogram.ts`)
 - 🔢 Číslovanie zubov a mapovanie popiskov (FDI/Universal/Palmer, `core/utils/numbering.ts`)
-- 🌐 Lokalizácia — 12 jazykov rozhrania (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR), vrátane arabčiny (RTL) (`core/i18n/`, `I18nService`)
+- 🌐 Lokalizácia — 14 jazykov rozhrania (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO), vrátane arabčiny (RTL) (`core/i18n/`, `I18nService`)
 - 💾 Export/import stavu
 - 📋 Doplnky stavu: preddefinované šablóny reštaurácií
 - 🎨 Konfigurácia témy: prispôsobiteľná farebná paleta cez CSS vlastnosti `--odon-*`
@@ -369,7 +369,7 @@ Obidva existujú preto, lebo skutočné funkcie pristupujú k internej implement
 ### 🛠️ Ovládacie prvky rozhrania
 
 **🔝 Horná lišta** (`OdontogramTopbarComponent`):
-- Prepínač jazyka (rozbaľovací zoznam HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR)
+- Prepínač jazyka (rozbaľovací zoznam HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO)
 - Prepínacie tlačidlo tmavého režimu (ikona slnka/mesiaca, prepína medzi svetlou a tmavou témou)
 - Prepínač systému číslovania (rozbaľovací zoznam FDI/Universal/Palmer)
 - Tlačidlá Exportovať stav / Importovať stav
@@ -918,7 +918,7 @@ Okrem vlastného exportu odontogramu Stav JSON / FHIR / PNG / JPG / SVG má **pa
 - `projects/angular-advanced-odontogram/src/lib/core/perioExport.ts` / `perioGraphic.ts` / `perioIndexNames.ts` - SVG vykresľovanie parodontálneho grafu za celé ústa
 - `projects/angular-advanced-odontogram/src/lib/core/perioPdf.ts` - čistý zostavovač PDF správy postavený na jsPDF (`assemblePdf`)
 - `projects/angular-advanced-odontogram/src/lib/core/status_extras.ts` - 22 preddefinovaných šablón reštaurácií
-- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - preklady, po jednom lenivo (lazy) načítavanom module na jazyk pod `i18n/locales/` (angličtina statická, ostatných 11 sa načíta cez `i18n/loader.ts` pri prvom použití) a zbernica i18n nezávislá od frameworku
+- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - preklady, po jednom lenivo (lazy) načítavanom module na jazyk pod `i18n/locales/` (angličtina statická, ostatných 13 sa načíta cez `i18n/loader.ts` pri prvom použití) a zbernica i18n nezávislá od frameworku
 - `projects/angular-advanced-odontogram/src/lib/core/dx/` - diagnostické kódovanie podľa štandardov: pravidlá odvodenia (`derive.ts`), katalóg diagnóz ICD-10 (`codes.ts`/`caseCodes.ts`), národné kódovacie balíčky — BNO-10/ICD-10-CM (`packs.ts`) — a vrstva spresnenia ICD-10-CM/SNOMED CT (`refine.ts`)
 - `projects/angular-advanced-odontogram/src/lib/core/anatomy/` - profily anatómie zubov (`classic`/`measured`); literatúrou odmerané šablóny `measured` (`measured.ts`) sa načítavajú ako samostatná lenivá (lazy) časť
 - `projects/angular-advanced-odontogram/src/lib/core/utils/numbering.ts` - konverzia číslovania FDI, Universal, Palmer
@@ -978,7 +978,7 @@ Okrem vlastného exportu odontogramu Stav JSON / FHIR / PNG / JPG / SVG má **pa
 
 Tento balík nemá vlastný citačný záznam — ide o port, ktorý zdieľa svoj klinický engine doslovne s pôvodným projektom. Ak toto softvérové dielo použijete vo výskume, prosím, citujte pôvodný projekt:
 
-> Dul, Z. (2026). *React Advanced Odontogram* (v2.8.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
+> Dul, Z. (2026). *React Advanced Odontogram* (v2.9.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
 
 **Všetky verzie (konceptové DOI):** https://doi.org/10.5281/zenodo.21156787
 

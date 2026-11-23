@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.9.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -13,7 +13,7 @@
 
 ---
 
-> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 Magyar (ez a fájl) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 [简体中文](README-zh.md)
+> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 Magyar (ez a fájl) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 [简体中文](README-zh.md) | 🇯🇵 [日本語](README-ja.md) | 🇰🇷 [한국어](README-ko.md)
 
 ---
 
@@ -48,7 +48,7 @@
 
 Ez a projekt egy interaktív, böngészőben futó odontogram szerkesztő **Angular + TypeScript** alapon, amely a fogazati státuszrögzítést áttekinthető kezelőfelülettel támogatja. A rendszer rétegzett SVG fogsablonok segítségével jeleníti meg a pótlásokat, szuvasodásokat, endodonciai állapotokat, mobilitást és egyéb klinikai jellemzőket, miközben többfogos kiválasztást, kiválasztási szűrőket és előre definiált státusz mintákat is biztosít.
 
-**Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) hivatalos Angular portja** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Funkcionális paritás a react-advanced-odontogram **v2.8.0** kiadásával (`a11468d` motor commit), payload verzió **2.22** — a JSON és FHIR R4 exportok a két könyvtár között oda-vissza kompatibilisek. A klinikai motor (`projects/angular-advanced-odontogram/src/lib/core/`) szó szerint megosztott — a fogazati státusz logika, a parodontális rögzítés, a diagnóziskódolás, a FHIR export/import, az i18n szövegek, az irányított bemutató túra és az SVG sablonok byte-azonosak a React eredetivel, és minden egyes resync alkalmával egy rögzített upstream commitból kerülnek újramásolásra; kizárólag a komponens váz (`projects/angular-advanced-odontogram/src/lib/components/`) natív Angular. Egy kis, explicit módon dokumentált eltérés-halmaz létezik (kizárólag márka-/identitás-szövegek — lásd a port tervezési specifikációját ebben a repóban). A verziószámozás lépést tart a React modul verziószámozásával.
+**Ez a [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram) hivatalos Angular portja** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Funkcionális paritás a react-advanced-odontogram **v2.9.0** kiadásával (`3321e63` motor commit), payload verzió **2.22** — a JSON és FHIR R4 exportok a két könyvtár között oda-vissza kompatibilisek. A klinikai motor (`projects/angular-advanced-odontogram/src/lib/core/`) szó szerint megosztott — a fogazati státusz logika, a parodontális rögzítés, a diagnóziskódolás, a FHIR export/import, az i18n szövegek, az irányított bemutató túra és az SVG sablonok byte-azonosak a React eredetivel, és minden egyes resync alkalmával egy rögzített upstream commitból kerülnek újramásolásra; kizárólag a komponens váz (`projects/angular-advanced-odontogram/src/lib/components/`) natív Angular. Egy kis, explicit módon dokumentált eltérés-halmaz létezik (kizárólag márka-/identitás-szövegek — lásd a port tervezési specifikációját ebben a repóban). A verziószámozás lépést tart a React modul verziószámozásával.
 
 ---
 ![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_hu_odontogram.png)
@@ -105,7 +105,7 @@ import { OdontogramShellComponent } from "angular-advanced-odontogram";
 export class ChartComponent {}
 ```
 
-A `language` a `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr` értékeket fogadja el; a `numberingSystem` a `FDI | UNIVERSAL | PALMER` értékeket.
+A `language` a `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr | ja | ko` értékeket fogadja el; a `numberingSystem` a `FDI | UNIVERSAL | PALMER` értékeket.
 
 #### Komponens bemenetek
 
@@ -113,7 +113,7 @@ Az `OdontogramShellComponent` egy vezérelt (controlled) komponens — minden be
 
 | Input | Típus | Alapértelmezett | Leírás |
 |------|------|---------|-------------|
-| `language` | `Language` | `"hu"` | UI nyelv (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`). |
+| `language` | `Language` | `"hu"` | UI nyelv (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`/`ja`/`ko`). |
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | Fogszámozási rendszer. |
 | `darkMode` | `boolean` | `false` | Sötét téma kapcsoló. |
 | `readOnly` | `boolean` | `false` | Minden szerkesztés letiltása (csak megtekintés). |
@@ -255,7 +255,7 @@ Mindkettő azért létezik, mert a valódi függvények a DOM-ot/canvast/`jsPDF`
 - **A stíluslap külön van** — kötelező egyszer regisztrálnod az `angular-advanced-odontogram/styles.css` fájlt; ez nem töltődik be automatikusan. A stílus globális CSS, amely a `.odontogram-root` alá van skálázva, és `--odon-*` CSS változók vezérlik.
 - **SSR / kizárólag kliensoldali** — a komponens csatoláskor (mount) olvassa a DOM-ot, ezért a böngészőben kell futnia; kizárólag kliensoldalon rendereld.
 - **Az eszközök (assets) önállóak** — a fog- és ikon-SVG-k build időben be vannak ágyazva a bundle-be (generált TypeScript modulok, `npm run gen:assets`); **nincs futásidejű asset lekérés**, amit be kellene állítani, és semmi extrát nem kell átmásolni az alkalmazásod public mappájába.
-- **Igény szerinti betöltés** — csak az angol nyelv és a `classic` fogazatanatómia grafikái szerepelnek a kezdeti bundle-ben; a másik 11 UI-nyelv táblázata és a `measured` anatómia-profil grafikái külön, lazán betöltött (lazy) chunkok, amelyek csak akkor töltődnek le, amikor egy hoszt először vált rájuk (`[language]` / `I18nService.setLanguage()`/a nyelvválasztó menü, illetve `setToothAnatomy("measured")`/Beállítások → Odontogram → Fog anatómia). A 2.6.0-s szétválasztás a demó fő chunkját 3,12 MB-ról 1,25 MB-ra, a kezdeti teljes méretet pedig 3,21 MB-ról 1,33 MB-ra csökkentette; a 2.7.0-ban a tokenekkel festett grafika kissé megnöveli ezeket 1,29 MB-ra, illetve 1,38 MB-ra, míg a lazán betöltött mért-anatómia chunk a teljessé tett anatómiával 1,2 MB-ról 4,0 MB-ra nő — a hoszt oldalán nincs mit beállítani. A 2.8.0-ban ezek 1,30 MB és 1,39 MB, a lustán betöltött measured csomag pedig 3,9 MB.
+- **Igény szerinti betöltés** — csak az angol nyelv és a `classic` fogazatanatómia grafikái szerepelnek a kezdeti bundle-ben; a másik 13 UI-nyelv táblázata és a `measured` anatómia-profil grafikái külön, lazán betöltött (lazy) chunkok, amelyek csak akkor töltődnek le, amikor egy hoszt először vált rájuk (`[language]` / `I18nService.setLanguage()`/a nyelvválasztó menü, illetve `setToothAnatomy("measured")`/Beállítások → Odontogram → Fog anatómia). A 2.6.0-s szétválasztás a demó fő chunkját 3,12 MB-ról 1,25 MB-ra, a kezdeti teljes méretet pedig 3,21 MB-ról 1,33 MB-ra csökkentette; a 2.7.0-ban a tokenekkel festett grafika kissé megnöveli ezeket 1,29 MB-ra, illetve 1,38 MB-ra, míg a lazán betöltött mért-anatómia chunk a teljessé tett anatómiával 1,2 MB-ról 4,0 MB-ra nő — a hoszt oldalán nincs mit beállítani. A 2.8.0-ban ezek 1,30 MB és 1,39 MB, a lustán betöltött measured csomag pedig 3,9 MB. A 2.9.0-ban a kezdeti értékek változatlanok: 1,30 MB és 1,39 MB — a japán, a koreai és a hozzájuk tartozó két PDF-betűkészlet mind lazán betöltött chunk (3,24 MB a koreai betűkészlet, 289 kB a japán, 87 kB és 79 kB a nyelvi táblázatok), így egyik sem kerül a kezdeti bundle-be; a lustán betöltött measured csomag 3,89 MB.
 - **Oldalanként egy példány** ebben a kiadásban — a motor állapota modul-szintű singleton (ugyanúgy, mint a React eredetiben), ezért ha ugyanazon az oldalon két `<aao-odontogram-shell>` példányt renderelsz, azok egyetlen diagram állapotát osztanák meg egymással.
 - **Fogsablon-felülírások és a megnyitott parodontális térkép** — a `toothTemplates` bemenet a motor inicializálása előtt érvényesül, és később módosítva újraépíti a fő rácsot; a `setToothTemplateOverrides()` imperatív meghívása egy már megrajzolt diagramon **nem** rajzolja újra azt, ezért hívd meg a diagram csatlakoztatása előtt, vagy használd a bemenetet. Egy **már megnyitott** parodontális térképet a `toothTemplates` módosítása nem épít újra: az előző fograjzokat tartja meg, amíg újra nem nyitod, vagy amíg az anatómiaprofil meg nem változik (ez megegyezik a React eredetivel).
 
@@ -317,7 +317,7 @@ Mindkettő azért létezik, mert a valódi függvények a DOM-ot/canvast/`jsPDF`
 - ⏳ Folyamatjelző overlay a képexport alatt
 - 🎓 Interaktív bemutató túra (irányított bejárás a shell vezérlőin)
 - 🔢 Három számozási rendszer (FDI, Universal, Palmer)
-- 🌐 I18n — 12 UI nyelv (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) nyelvváltóval; az arab a felületet jobbról balra rendereli, a fog-/parodontális diagramokat balról jobbra rögzítve; csak az aktív nyelv szerepel a fő bundle-ben — minden más nyelv külön chunk, amely csak az első kiválasztáskor töltődik le
+- 🌐 I18n — 14 UI nyelv (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO) nyelvváltóval; az arab a felületet jobbról balra rendereli, a fog-/parodontális diagramokat balról jobbra rögzítve (gépi fordítás, anyanyelvi lektorálás az AR/ZH/FR/JA/KO nyelveknél még várat magára); csak az angol szerepel a fő bundle-ben — minden más nyelv külön chunk, amely csak az első kiválasztáskor töltődik le
 - 🌗 Sötét mód támogatás váltógombbal (önálló vagy szülő alkalmazás által vezérelt)
 - 🎨 Témázható diagram és fograjzok: a `themeConfig` (`colors`, `tooth`, `tokens`, `selection`) a `--odon-*` CSS custom property-ket vezérli — maguknak a fograjzoknak a színeit is (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) —, és beépített sötét paletta tartozik a grafikához
 - 🎨 Implantátum- és kontúr-témázás: a `--odon-implant-tint` egyetlen CSS-szűrővel eltolja az egész implantátum-csavar színét, a `--odon-implant-fill` egyetlen egységes színnel festi ki, a fog körvonalának vastagsága pedig témázható (`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`), a rágófelszíni sziluett pedig követi ezt a vastagságot
@@ -352,7 +352,7 @@ Mindkettő azért létezik, mert a valódi függvények a DOM-ot/canvast/`jsPDF`
 - 🎛️ Vezérlők és státusz panel (`ToothControlsSurfaceComponent` + a 8 deklaratív kártya)
 - 🎨 SVG rétegelő motor és fogsablonok (framework-mentes mag, `core/odontogram.ts`)
 - 🔢 Fogszámozás és címke generálás (FDI/Universal/Palmer, `core/utils/numbering.ts`)
-- 🌐 Lokalizáció — 12 UI nyelv (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR), beleértve az arabot (RTL) (`core/i18n/`, `I18nService`)
+- 🌐 Lokalizáció — 14 UI nyelv (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO), beleértve az arabot (RTL) (`core/i18n/`, `I18nService`)
 - 💾 Státusz export/import
 - 📋 Státusz extrák: előre definiált restaurációs sablonok
 - 🎨 Téma konfiguráció: testreszabható színpaletta `--odon-*` CSS property-kkel
@@ -369,7 +369,7 @@ Mindkettő azért létezik, mert a valódi függvények a DOM-ot/canvast/`jsPDF`
 ### 🛠️ UI vezérlők
 
 **🔝 Fejléc sáv** (`OdontogramTopbarComponent`):
-- Nyelvválasztó (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR legördülő)
+- Nyelvválasztó (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO legördülő)
 - Sötét mód váltógomb (nap/hold ikon, világos és sötét téma között vált)
 - Számozási rendszer választó (FDI/Universal/Palmer legördülő)
 - Státusz exportálás / Státusz importálás gombok
@@ -919,7 +919,7 @@ Az odontogram saját Státusz JSON / FHIR / PNG / JPG / SVG exportján túl a **
 - `projects/angular-advanced-odontogram/src/lib/core/perioExport.ts` / `perioGraphic.ts` / `perioIndexNames.ts` - a teljes szájüreg parodontális diagram SVG renderelése
 - `projects/angular-advanced-odontogram/src/lib/core/perioPdf.ts` - a PDF jelentés tiszta jsPDF összeállítója (`assemblePdf`)
 - `projects/angular-advanced-odontogram/src/lib/core/status_extras.ts` - 22 előre definiált restaurációs sablon
-- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - fordítások, nyelvenként egy lazán betöltött (lazy) modulként az `i18n/locales/` alatt (az angol statikus, a másik 11 az `i18n/loader.ts`-en keresztül, első használatkor töltődik le) és a framework-mentes i18n busz
+- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - fordítások, nyelvenként egy lazán betöltött (lazy) modulként az `i18n/locales/` alatt (az angol statikus, a másik 13 az `i18n/loader.ts`-en keresztül, első használatkor töltődik le) és a framework-mentes i18n busz
 - `projects/angular-advanced-odontogram/src/lib/core/dx/` - szabvány alapú diagnóziskódolás: levezetési szabályok (`derive.ts`), az ICD-10 diagnózis-katalógus (`codes.ts`/`caseCodes.ts`), nemzeti kódolási csomagok — BNO-10/ICD-10-CM (`packs.ts`) — és az ICD-10-CM/SNOMED CT finomító réteg (`refine.ts`)
 - `projects/angular-advanced-odontogram/src/lib/core/anatomy/` - fogazatanatómia-profilok (`classic`/`measured`); a `measured` szakirodalom alapján bemért sablonjai (`measured.ts`) külön lazán betöltött (lazy) chunkként töltődnek be
 - `projects/angular-advanced-odontogram/src/lib/core/utils/numbering.ts` - FDI, Universal, Palmer számozási konverzió
@@ -979,7 +979,7 @@ Az odontogram saját Státusz JSON / FHIR / PNG / JPG / SVG exportján túl a **
 
 Ennek a csomagnak nincs saját hivatkozási rekordja — ez egy port, amely szó szerint osztozik a klinikai motorján az eredeti projekttel. Ha ezt a szoftvert felhasználod a kutatásodban, kérlek hivatkozz az eredetire:
 
-> Dul, Z. (2026). *React Advanced Odontogram* (v2.8.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
+> Dul, Z. (2026). *React Advanced Odontogram* (v2.9.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
 
 **Összes verzió (koncepció DOI):** https://doi.org/10.5281/zenodo.21156787
 

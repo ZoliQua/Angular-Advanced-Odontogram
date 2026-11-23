@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.9.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -13,7 +13,7 @@
 
 ---
 
-> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 العربية (هذا الملف) | 🇨🇳 [简体中文](README-zh.md)
+> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 العربية (هذا الملف) | 🇨🇳 [简体中文](README-zh.md) | 🇯🇵 [日本語](README-ja.md) | 🇰🇷 [한국어](README-ko.md)
 
 ---
 
@@ -48,7 +48,7 @@
 
 هذا المشروع محرر تخطيط أسنان (أودونتوغرام) تفاعلي يعمل داخل المتصفح لإطار **Angular + TypeScript**، ويدعم تسجيل حالة الأسنان بسرعة من خلال واجهة مستخدم نظيفة وواضحة. يعرض المشروع قوالب أسنان بصيغة SVG متعددة الطبقات لتمثيل الترميمات، والنخر، وحالة العلاج اللبي، ودرجة حركة السن، وتفاصيل سريرية أخرى، مع توفير إمكانية التحديد المتعدد، ومرشحات التحديد، وأنماط حالة جاهزة مسبقًا.
 
-**هذا هو المنفذ الرسمي بلغة Angular لمشروع [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (حزمة npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). يحقق المشروع تكافؤًا وظيفيًا مع الإصدار **v2.8.0** من react-advanced-odontogram (مُراجعة (commit) المحرك `a11468d`)، وإصدار الحمولة **2.22** — ويتبادل تصديرا JSON وFHIR R4 المسار (round-trip) بين المكتبتين. المحرك السريري (`projects/angular-advanced-odontogram/src/lib/core/`) مشترك، وحرفي (verbatim) — منطق حالة الأسنان، ومخطط دواعم السن، وترميز التشخيصات، وتصدير/استيراد FHIR، ونصوص الترجمة (i18n)، والجولة التعريفية الموجَّهة، وقوالب SVG جميعها مطابقة بايتًا بايت للمشروع الأصلي بلغة React، وتُنسخ مجددًا من مُراجعة (commit) مرجعية ثابتة في المنبع (upstream) عند كل إعادة مزامنة؛ ويقتصر الجزء الخاص بـAngular (`projects/angular-advanced-odontogram/src/lib/components/`) على غلاف المكوّنات فقط. توجد مجموعة صغيرة وموثَّقة صراحةً من الاختلافات (نصوص العلامة التجارية/الهوية فقط — انظر مواصفات تصميم المنفذ في هذا المستودع). يتزامن ترقيم الإصدارات (lockstep) مع وحدة React.
+**هذا هو المنفذ الرسمي بلغة Angular لمشروع [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (حزمة npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). يحقق المشروع تكافؤًا وظيفيًا مع الإصدار **v2.9.0** من react-advanced-odontogram (مُراجعة (commit) المحرك `3321e63`)، وإصدار الحمولة **2.22** — ويتبادل تصديرا JSON وFHIR R4 المسار (round-trip) بين المكتبتين. المحرك السريري (`projects/angular-advanced-odontogram/src/lib/core/`) مشترك، وحرفي (verbatim) — منطق حالة الأسنان، ومخطط دواعم السن، وترميز التشخيصات، وتصدير/استيراد FHIR، ونصوص الترجمة (i18n)، والجولة التعريفية الموجَّهة، وقوالب SVG جميعها مطابقة بايتًا بايت للمشروع الأصلي بلغة React، وتُنسخ مجددًا من مُراجعة (commit) مرجعية ثابتة في المنبع (upstream) عند كل إعادة مزامنة؛ ويقتصر الجزء الخاص بـAngular (`projects/angular-advanced-odontogram/src/lib/components/`) على غلاف المكوّنات فقط. توجد مجموعة صغيرة وموثَّقة صراحةً من الاختلافات (نصوص العلامة التجارية/الهوية فقط — انظر مواصفات تصميم المنفذ في هذا المستودع). يتزامن ترقيم الإصدارات (lockstep) مع وحدة React.
 
 ---
 ![معاينة محرر الأودونتوغرام](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
@@ -105,7 +105,7 @@ import { OdontogramShellComponent } from "angular-advanced-odontogram";
 export class ChartComponent {}
 ```
 
-تقبل `language` القيم `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr`؛ وتقبل `numberingSystem` القيم `FDI | UNIVERSAL | PALMER`.
+تقبل `language` القيم `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr | ja | ko`؛ وتقبل `numberingSystem` القيم `FDI | UNIVERSAL | PALMER`.
 
 #### مدخلات المكوّن
 
@@ -113,7 +113,7 @@ export class ChartComponent {}
 
 | المدخل | النوع | الافتراضي | الوصف |
 |------|------|---------|-------------|
-| `language` | `Language` | `"hu"` | لغة الواجهة (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`). |
+| `language` | `Language` | `"hu"` | لغة الواجهة (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`/`ja`/`ko`). |
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | نظام ترقيم الأسنان. |
 | `darkMode` | `boolean` | `false` | مفتاح تبديل السمة الداكنة. |
 | `readOnly` | `boolean` | `false` | تعطيل كل إمكانيات التحرير (عرض فقط). |
@@ -255,7 +255,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - **ملف التنسيق منفصل** — **يجب** عليك تسجيل `angular-advanced-odontogram/styles.css` مرة واحدة؛ فهو لا يُحقَن تلقائيًا. التنسيق عبارة عن CSS عام محصور ضمن `.odontogram-root` ومُتحكَّم به عبر متغيرات CSS من نوع `--odon-*`.
 - **العرض من جهة الخادم / جهة العميل فقط** — يقرأ المكوّن DOM عند التركيب، لذا يجب أن يعمل داخل المتصفح؛ اعرضه من جهة العميل فقط.
 - **الأصول مكتفية ذاتيًا** — تُدرَج رسومات الأسنان والأيقونات بصيغة SVG ضمن الحزمة وقت البناء (وحدات TypeScript مُولَّدة، `npm run gen:assets`)؛ **لا يوجد** أي طلب أصول وقت التشغيل يلزم إعداده، ولا شيء إضافي يلزم نسخه إلى المجلد العام لتطبيقك.
-- **التحميل عند الحاجة** — لا تُشحَن في الحزمة الأولية سوى اللغة الإنجليزية ورسومات ملف تشريح السن `classic`؛ أما جداول الـ11 لغة واجهة الأخرى ورسومات ملف تشريح `measured` فهي أجزاء (chunks) كسولة منفصلة، تُجلب أول مرة يبدّل فيها المضيف إليها (`[language]` / `I18nService.setLanguage()`/قائمة اللغة، و`setToothAnatomy("measured")`/الإعدادات ← مخطط الأسنان ← تشريح السن، على التوالي). خفَّض تقسيم الإصدار 2.6.0 الجزء الرئيسي للعرض التجريبي من 3.12 ميغابايت إلى 1.25 ميغابايت، والإجمالي الأولي من 3.21 ميغابايت إلى 1.33 ميغابايت؛ وفي الإصدار 2.7.0 تزيدهما الرسومات الملوَّنة بالرموز (tokens) قليلًا إلى 1.29 ميغابايت و1.38 ميغابايت، بينما يكبر الجزء المحمَّل عند الحاجة لتشريح `measured` من 1.2 ميغابايت إلى 4.0 ميغابايت مع اكتمال التشريح — ولا حاجة لضبط أي شيء من جهة المضيف. وفي الإصدار 2.8.0 تبلغ 1.30 MB و1.39 MB، وتبلغ الكتلة الكسولة لـ measured نحو 3.9 MB.
+- **التحميل عند الحاجة** — لا تُشحَن في الحزمة الأولية سوى اللغة الإنجليزية ورسومات ملف تشريح السن `classic`؛ أما جداول الـ13 لغة واجهة الأخرى ورسومات ملف تشريح `measured` فهي أجزاء (chunks) كسولة منفصلة، تُجلب أول مرة يبدّل فيها المضيف إليها (`[language]` / `I18nService.setLanguage()`/قائمة اللغة، و`setToothAnatomy("measured")`/الإعدادات ← مخطط الأسنان ← تشريح السن، على التوالي). خفَّض تقسيم الإصدار 2.6.0 الجزء الرئيسي للعرض التجريبي من 3.12 ميغابايت إلى 1.25 ميغابايت، والإجمالي الأولي من 3.21 ميغابايت إلى 1.33 ميغابايت؛ وفي الإصدار 2.7.0 تزيدهما الرسومات الملوَّنة بالرموز (tokens) قليلًا إلى 1.29 ميغابايت و1.38 ميغابايت، بينما يكبر الجزء المحمَّل عند الحاجة لتشريح `measured` من 1.2 ميغابايت إلى 4.0 ميغابايت مع اكتمال التشريح — ولا حاجة لضبط أي شيء من جهة المضيف. وفي الإصدار 2.8.0 تبلغ 1.30 MB و1.39 MB، وتبلغ الكتلة الكسولة لـ measured نحو 3.9 MB. وفي الإصدار 2.9.0 تبقى الأرقام الأولية كما هي عند 1.30 MB و1.39 MB: فاليابانية والكورية وخطَّا PDF الخاصان بهما كلها أجزاء (chunks) كسولة (3.24 MB خط الكورية، و289 kB خط اليابانية، و87 kB و79 kB جدولا اللغتين)، فلا يمسّ أي منها الحزمة الأولية؛ أما جزء measured الكسول فيبلغ 3.89 MB.
 - **نسخة واحدة لكل صفحة** في هذا الإصدار — حالة المحرك كائن وحيد (singleton) على مستوى الوحدة (كما في الأصل بلغة React)، لذا فإن عرض نسختين من `<aao-odontogram-shell>` في الصفحة نفسها سيجعلهما تتشاركان حالة مخطط واحد.
 - **تجاوزات قوالب الأسنان ومخطط دواعم السن المفتوح** — يُطبَّق مدخل `toothTemplates` قبل تهيئة المحرك ويعيد بناء الشبكة الرئيسية عند تغيّره لاحقًا؛ أما استدعاء `setToothTemplateOverrides()` برمجيًا على مخطط مرسوم بالفعل فلا يعيد رسمه، لذا استدعِه قبل تركيب المخطط أو استخدم المدخل. أما مخطط دواعم السن **المفتوح بالفعل** فلا يُعاد بناؤه عند تغيّر `toothTemplates`: يحتفظ بالرسومات السابقة للأسنان إلى أن يُعاد فتحه أو يتغير الملف التشريحي (وهذا يطابق النسخة الأصلية في React).
 
@@ -317,7 +317,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - ⏳ طبقة تغطية للتقدم أثناء تصدير الصورة
 - 🎓 جولة تعريفية تفاعلية (جولة إرشادية موجَّهة عبر عناصر تحكم الغلاف)
 - 🔢 ثلاثة أنظمة ترقيم (FDI، العالمي، بالمر)
-- 🌐 الترجمة (i18n) — 12 لغة واجهة (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) مع مبدّل لغة؛ تعرض العربية الواجهة من اليمين إلى اليسار مع تثبيت مخططَي الأسنان ودواعم السن من اليسار إلى اليمين؛ ولا تُشحَن في الحزمة الرئيسية سوى اللغة النشطة — فكل لغة أخرى جزء (chunk) منفصل يُجلب أول مرة تُختار فيها
+- 🌐 الترجمة (i18n) — 14 لغة واجهة (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO) مع مبدّل لغة؛ تعرض العربية الواجهة من اليمين إلى اليسار مع تثبيت مخططَي الأسنان ودواعم السن من اليسار إلى اليمين (ترجمة آلية، ومراجعة المتحدثين الأصليين للغات AR/ZH/FR/JA/KO لا تزال قيد الانتظار)؛ ولا تُشحَن في الحزمة الرئيسية سوى اللغة الإنجليزية — فكل لغة أخرى جزء (chunk) منفصل يُجلب أول مرة تُختار فيها
 - 🌗 دعم الوضع الداكن بزر تبديل (مستقل أو متحكَّم به من التطبيق الأصل)
 - 🎨 مخطط ورسومات أسنان قابلة للتخصيص بالسمات: يتحكم `themeConfig` (`colors`، `tooth`، `tokens`، `selection`) في خصائص CSS المخصصة `--odon-*` — بما في ذلك رسومات الأسنان نفسها (`--odon-tooth-body`، `--odon-milktooth-body`، `--odon-tooth-dentin`، …) — وتأتي لوحة ألوان داكنة للرسومات مدمجة
 - 🎨 تخصيص مظهر الزرعة والمحيط: يزيح `--odon-implant-tint` لون تركيبة الزرعة بالكامل بمرشّح CSS واحد، ويلوّنها `--odon-implant-fill` بلون واحد مسطّح، ويمكن التحكم بسمك محيط السن عبر السمات (`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`)، مع اتباع الظل الإطباقي لهذا السمك
@@ -352,7 +352,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🎛️ عناصر التحكم ولوحة الحالة (`ToothControlsSurfaceComponent` + البطاقات التصريحية الثماني)
 - 🎨 محرك طبقات SVG والقوالب (نواة خالية من الاعتماد على أي إطار عمل، `core/odontogram.ts`)
 - 🔢 ترقيم الأسنان وربط التسميات (FDI/العالمي/بالمر، `core/utils/numbering.ts`)
-- 🌐 الترجمة والتوطين — 12 لغة واجهة (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR)، بما في ذلك العربية (RTL) (`core/i18n/`، `I18nService`)
+- 🌐 الترجمة والتوطين — 14 لغة واجهة (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO)، بما في ذلك العربية (RTL) (`core/i18n/`، `I18nService`)
 - 💾 تصدير/استيراد الحالة
 - 📋 إضافات الحالة: قوالب ترميم جاهزة مسبقًا
 - 🎨 إعدادات السمة: لوحة ألوان قابلة للتخصيص عبر خصائص CSS من نوع `--odon-*`
@@ -369,7 +369,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 ### 🛠️ عناصر التحكم في الواجهة
 
 **🔝 الشريط العلوي** (`OdontogramTopbarComponent`):
-- مبدّل اللغة (قائمة منسدلة HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR)
+- مبدّل اللغة (قائمة منسدلة HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO)
 - زر تبديل الوضع الداكن (أيقونة شمس/قمر، يبدّل بين السمة الفاتحة والداكنة)
 - مبدّل نظام الترقيم (قائمة منسدلة FDI/العالمي/بالمر)
 - زرا تصدير الحالة / استيراد الحالة
@@ -918,7 +918,7 @@ enablePersistence({
 - `projects/angular-advanced-odontogram/src/lib/core/perioExport.ts` / `perioGraphic.ts` / `perioIndexNames.ts` - رسم SVG لمخطط دواعم السن لكامل الفم
 - `projects/angular-advanced-odontogram/src/lib/core/perioPdf.ts` - مُجمِّع تقرير PDF النقي الخاص بـjsPDF (`assemblePdf`)
 - `projects/angular-advanced-odontogram/src/lib/core/status_extras.ts` - 22 قالب ترميم جاهزًا مسبقًا
-- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - الترجمات، وحدة واحدة تُحمَّل كسوليًا لكل لغة تحت `i18n/locales/` (الإنجليزية ثابتة، بينما تُجلب اللغات الـ11 الأخرى عبر `i18n/loader.ts` عند أول استخدام)، وناقل الترجمة الخالي من أي إطار عمل
+- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - الترجمات، وحدة واحدة تُحمَّل كسوليًا لكل لغة تحت `i18n/locales/` (الإنجليزية ثابتة، بينما تُجلب اللغات الـ13 الأخرى عبر `i18n/loader.ts` عند أول استخدام)، وناقل الترجمة الخالي من أي إطار عمل
 - `projects/angular-advanced-odontogram/src/lib/core/dx/` - ترميز تشخيصي قائم على معيار موحّد: قواعد الاشتقاق (`derive.ts`)، وفهرس تشخيصات ICD-10 (`codes.ts`/`caseCodes.ts`)، وحزم الترميز الوطنية — BNO-10/ICD-10-CM (`packs.ts`) — وطبقة تنقيح ICD-10-CM/SNOMED CT (`refine.ts`)
 - `projects/angular-advanced-odontogram/src/lib/core/anatomy/` - ملفات تشريح السن (`classic`/`measured`)؛ تُحمَّل قوالب `measured` المقاسة وفق الأدبيات (`measured.ts`) كجزء (chunk) كسول منفصل
 - `projects/angular-advanced-odontogram/src/lib/core/utils/numbering.ts` - تحويل الترقيم بين FDI والعالمي وبالمر
@@ -978,7 +978,7 @@ enablePersistence({
 
 لا تملك هذه الحزمة سجل استشهاد خاصًا بها — فهي منفذ يشارك محركه السريري، حرفيًا، مع المشروع الأصلي. إذا استخدمت هذا البرنامج في بحث علمي، يُرجى الاستشهاد بالأصل:
 
-> Dul, Z. (2026). *React Advanced Odontogram* (v2.8.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
+> Dul, Z. (2026). *React Advanced Odontogram* (v2.9.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
 
 **كل الإصدارات (معرّف DOI المفاهيمي):** https://doi.org/10.5281/zenodo.21156787
 

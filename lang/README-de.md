@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.9.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -13,7 +13,7 @@
 
 ---
 
-> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 Deutsch (diese Datei) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 [简体中文](README-zh.md)
+> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 Deutsch (diese Datei) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 [简体中文](README-zh.md) | 🇯🇵 [日本語](README-ja.md) | 🇰🇷 [한국어](README-ko.md)
 
 ---
 
@@ -48,7 +48,7 @@
 
 Dieses Projekt ist ein interaktiver, browserbasierter Odontogramm-Editor für **Angular + TypeScript**, der eine schnelle Zahnstatuserfassung mit einer übersichtlichen Benutzeroberfläche unterstützt. Es rendert geschichtete SVG-Zahnvorlagen zur Darstellung von Restaurationen, Karies, endodontischem Status, Mobilität und anderen klinischen Details, und bietet Mehrfachauswahl, Auswahlfilter und vordefinierte Statusvorlagen.
 
-**Dies ist der offizielle Angular-Port von [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Funktionsparität mit react-advanced-odontogram **v2.8.0** (Engine-Commit `a11468d`), Payload-Version **2.22** — JSON- und FHIR-R4-Exporte sind zwischen beiden Bibliotheken wechselseitig kompatibel. Die klinische Engine (`projects/angular-advanced-odontogram/src/lib/core/`) wird wortwörtlich geteilt — die Zahnstatuslogik, die parodontale Erfassung, die Diagnosekodierung, der FHIR-Export/-Import, die i18n-Strings, die geführte Tour und die SVG-Vorlagen sind byte-identisch mit dem React-Original und werden bei jedem Resync erneut aus einem fixierten Upstream-Commit kopiert; lediglich die Komponentenhülle (`projects/angular-advanced-odontogram/src/lib/components/`) ist Angular-nativ. Es existiert eine kleine, explizit dokumentierte Menge an Abweichungen (nur Marken-/Identitätstexte — siehe die Port-Design-Spezifikation in diesem Repository). Die Versionierung läuft im Gleichschritt mit dem React-Modul.
+**Dies ist der offizielle Angular-Port von [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Funktionsparität mit react-advanced-odontogram **v2.9.0** (Engine-Commit `3321e63`), Payload-Version **2.22** — JSON- und FHIR-R4-Exporte sind zwischen beiden Bibliotheken wechselseitig kompatibel. Die klinische Engine (`projects/angular-advanced-odontogram/src/lib/core/`) wird wortwörtlich geteilt — die Zahnstatuslogik, die parodontale Erfassung, die Diagnosekodierung, der FHIR-Export/-Import, die i18n-Strings, die geführte Tour und die SVG-Vorlagen sind byte-identisch mit dem React-Original und werden bei jedem Resync erneut aus einem fixierten Upstream-Commit kopiert; lediglich die Komponentenhülle (`projects/angular-advanced-odontogram/src/lib/components/`) ist Angular-nativ. Es existiert eine kleine, explizit dokumentierte Menge an Abweichungen (nur Marken-/Identitätstexte — siehe die Port-Design-Spezifikation in diesem Repository). Die Versionierung läuft im Gleichschritt mit dem React-Modul.
 
 ---
 ![Odontogram editor preview](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_de_odontogram.png)
@@ -105,7 +105,7 @@ import { OdontogramShellComponent } from "angular-advanced-odontogram";
 export class ChartComponent {}
 ```
 
-`language` akzeptiert `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr`; `numberingSystem` akzeptiert `FDI | UNIVERSAL | PALMER`.
+`language` akzeptiert `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr | ja | ko`; `numberingSystem` akzeptiert `FDI | UNIVERSAL | PALMER`.
 
 #### Komponenten-Eingaben
 
@@ -113,7 +113,7 @@ export class ChartComponent {}
 
 | Input | Typ | Standard | Beschreibung |
 |------|------|---------|-------------|
-| `language` | `Language` | `"hu"` | UI-Sprache (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`). |
+| `language` | `Language` | `"hu"` | UI-Sprache (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`/`ja`/`ko`). |
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | Zahnnummerierungssystem. |
 | `darkMode` | `boolean` | `false` | Umschalter für dunkles Design. |
 | `readOnly` | `boolean` | `false` | Deaktiviert jegliche Bearbeitung (nur Ansicht). |
@@ -255,7 +255,7 @@ Beide existieren, weil die echten Funktionen DOM/Canvas/`jsPDF`-Interna berühre
 - **Das Stylesheet ist separat** — Sie **müssen** `angular-advanced-odontogram/styles.css` einmal registrieren; es wird nicht automatisch eingebunden. Das Styling ist globales CSS, das unter `.odontogram-root` skoped ist und von `--odon-*`-CSS-Variablen gesteuert wird.
 - **SSR / nur clientseitig** — die Komponente liest beim Mounten das DOM, daher muss sie im Browser laufen; rendern Sie sie nur clientseitig.
 - **Assets sind eigenständig** — die Zahn- und Icon-SVGs werden zur Build-Zeit in das Bundle eingebettet (generierte TypeScript-Module, `npm run gen:assets`); es gibt **keinen Laufzeit-Asset-Abruf**, den man konfigurieren müsste, und nichts Zusätzliches, das in den öffentlichen Ordner Ihrer App kopiert werden müsste.
-- **Bedarfsgesteuertes Laden** — nur Englisch und die `classic`-Zahnanatomie-Grafik sind im initialen Bundle enthalten; die 11 anderen UI-Sprachtabellen und die Grafik des `measured`-Anatomieprofils sind separate Lazy-Chunks, die beim ersten Wechsel eines Hosts zu ihnen nachgeladen werden (`[language]` / `I18nService.setLanguage()`/das Sprachmenü bzw. `setToothAnatomy("measured")`/Einstellungen → Zahnschema → Zahnanatomie). Die Aufteilung in 2.6.0 hat den Haupt-Chunk der Demo von 3,12 MB auf 1,25 MB und die anfängliche Gesamtgröße von 3,21 MB auf 1,33 MB reduziert; in 2.7.0 wachsen beide durch die token-gemalte Grafik leicht auf 1,29 MB und 1,38 MB, während der Lazy-Chunk der vermessenen Anatomie mit der vervollständigten Anatomie von 1,2 MB auf 4,0 MB wächst — nichts, das hostseitig konfiguriert werden müsste. In 2.8.0 liegen sie bei 1,30 MB und 1,39 MB, und der Lazy-Chunk für measured bei 3,9 MB.
+- **Bedarfsgesteuertes Laden** — nur Englisch und die `classic`-Zahnanatomie-Grafik sind im initialen Bundle enthalten; die 13 anderen UI-Sprachtabellen und die Grafik des `measured`-Anatomieprofils sind separate Lazy-Chunks, die beim ersten Wechsel eines Hosts zu ihnen nachgeladen werden (`[language]` / `I18nService.setLanguage()`/das Sprachmenü bzw. `setToothAnatomy("measured")`/Einstellungen → Zahnschema → Zahnanatomie). Die Aufteilung in 2.6.0 hat den Haupt-Chunk der Demo von 3,12 MB auf 1,25 MB und die anfängliche Gesamtgröße von 3,21 MB auf 1,33 MB reduziert; in 2.7.0 wachsen beide durch die token-gemalte Grafik leicht auf 1,29 MB und 1,38 MB, während der Lazy-Chunk der vermessenen Anatomie mit der vervollständigten Anatomie von 1,2 MB auf 4,0 MB wächst — nichts, das hostseitig konfiguriert werden müsste. In 2.8.0 liegen sie bei 1,30 MB und 1,39 MB, und der Lazy-Chunk für measured bei 3,9 MB. In 2.9.0 bleiben die initialen Werte unverändert bei 1,30 MB und 1,39 MB: Japanisch, Koreanisch und ihre beiden PDF-Schriften sind alle Lazy-Chunks (3,24 MB koreanische Schrift, 289 kB japanische Schrift, 87 kB und 79 kB Sprachtabellen), sodass keine davon das initiale Bundle berührt; der Lazy-Chunk für measured liegt bei 3,89 MB.
 - **Eine Instanz pro Seite** in dieser Version — der Engine-Zustand ist ein Singleton auf Modulebene (wie im React-Original), daher würden zwei `<aao-odontogram-shell>`-Instanzen auf derselben Seite den Zustand eines einzigen Befunds gemeinsam nutzen.
 - **Zahnvorlagen-Überschreibungen und das geöffnete Parodontalchart** — die Eingabe `toothTemplates` wird angewendet, bevor die Engine initialisiert wird, und baut das Hauptraster neu auf, wenn sie sich später ändert; ein imperativer Aufruf von `setToothTemplateOverrides()` auf einem bereits gezeichneten Diagramm zeichnet es **nicht** neu, rufen Sie ihn also vor dem Mounten des Diagramms auf oder verwenden Sie die Eingabe. Ein **bereits geöffnetes** Parodontalchart wird nicht neu aufgebaut, wenn sich `toothTemplates` ändert: es behält die bisherige Zahngrafik, bis es erneut geöffnet wird oder sich das Anatomieprofil ändert (das entspricht dem React-Original).
 
@@ -317,7 +317,7 @@ Beide existieren, weil die echten Funktionen DOM/Canvas/`jsPDF`-Interna berühre
 - ⏳ Fortschrittsanzeige beim Bildexport
 - 🎓 Interaktive Einführungstour (geführter Durchlauf durch die Steuerungen der Shell)
 - 🔢 Drei Nummerierungssysteme (FDI, Universal, Palmer)
-- 🌐 I18n — 12 UI-Sprachen (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) mit Sprachumschalter; Arabisch stellt die Oberfläche von rechts nach links dar, wobei die Zahn-/Parodontalstatus-Charts von links nach rechts fixiert bleiben; nur die aktive Sprache ist im Hauptbundle enthalten — jede andere Sprache ist ein separater Chunk, der beim ersten Auswählen nachgeladen wird
+- 🌐 I18n — 14 UI-Sprachen (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO) mit Sprachumschalter; Arabisch stellt die Oberfläche von rechts nach links dar, wobei die Zahn-/Parodontalstatus-Charts von links nach rechts fixiert bleiben (AR/ZH/FR/JA/KO sind maschinell übersetzt, muttersprachliche Überprüfung ausstehend); nur Englisch ist im Hauptbundle enthalten — jede andere Sprache ist ein separater Chunk, der beim ersten Auswählen nachgeladen wird
 - 🌗 Dunkler Modus mit Umschalt-Button (eigenständig oder von der übergeordneten App gesteuert)
 - 🎨 Themefähiges Diagramm und Zahngrafik: `themeConfig` (`colors`, `tooth`, `tokens`, `selection`) steuert die CSS Custom Properties `--odon-*` — auch die Zahnzeichnungen selbst (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) — und eine dunkle Grafikpalette ist eingebaut
 - 🎨 Theming von Implantat und Kontur: `--odon-implant-tint` verschiebt die gesamte Implantat-Fixtur mit einem einzigen CSS-Filter, `--odon-implant-fill` färbt sie einheitlich in einer flachen Farbe, und die Konturbreite des Zahns ist themefähig (`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`), wobei die okklusale Silhouette dieser Breite folgt
@@ -352,7 +352,7 @@ Beide existieren, weil die echten Funktionen DOM/Canvas/`jsPDF`-Interna berühre
 - 🎛️ Steuerung und Statuspanel (`ToothControlsSurfaceComponent` + die 8 deklarativen Karten)
 - 🎨 SVG-Schichtungsmotor und Vorlagen (frameworkfreier Kern, `core/odontogram.ts`)
 - 🔢 Zahnnummerierung und Beschriftung (FDI/Universal/Palmer, `core/utils/numbering.ts`)
-- 🌐 Lokalisierung — 12 UI-Sprachen (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR), einschließlich Arabisch (RTL) (`core/i18n/`, `I18nService`)
+- 🌐 Lokalisierung — 14 UI-Sprachen (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO), einschließlich Arabisch (RTL) (`core/i18n/`, `I18nService`)
 - 💾 Status-Export/Import
 - 📋 Status-Extras: vordefinierte Restaurationsvorlagen
 - 🎨 Theme-Konfiguration: anpassbare Farbpalette über `--odon-*` CSS-Eigenschaften
@@ -369,7 +369,7 @@ Beide existieren, weil die echten Funktionen DOM/Canvas/`jsPDF`-Interna berühre
 ### 🛠️ UI-Steuerung
 
 **🔝 Kopfleiste** (`OdontogramTopbarComponent`):
-- Sprachumschalter (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR Dropdown)
+- Sprachumschalter (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO Dropdown)
 - Dunkelmodus-Umschalter (Sonnen-/Mond-Symbol, wechselt zwischen hellem und dunklem Thema)
 - Nummerierungssystem-Umschalter (FDI/Universal/Palmer Dropdown)
 - Status exportieren / Status importieren Buttons
@@ -919,7 +919,7 @@ Auch parodontale Daten durchlaufen inzwischen einen Rückweg über den FHIR-Impo
 - `projects/angular-advanced-odontogram/src/lib/core/perioExport.ts` / `perioGraphic.ts` / `perioIndexNames.ts` - das SVG-Rendering des Ganzmund-Parodontalstatus-Charts
 - `projects/angular-advanced-odontogram/src/lib/core/perioPdf.ts` - der reine jsPDF-Berichts-Assembler (`assemblePdf`)
 - `projects/angular-advanced-odontogram/src/lib/core/status_extras.ts` - 22 vordefinierte Restaurationsvorlagen
-- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - Übersetzungen, ein pro Sprache lazy geladenes Modul unter `i18n/locales/` (Englisch statisch, die anderen 11 werden über `i18n/loader.ts` beim ersten Gebrauch nachgeladen) sowie der frameworkfreie i18n-Bus
+- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - Übersetzungen, ein pro Sprache lazy geladenes Modul unter `i18n/locales/` (Englisch statisch, die anderen 13 werden über `i18n/loader.ts` beim ersten Gebrauch nachgeladen) sowie der frameworkfreie i18n-Bus
 - `projects/angular-advanced-odontogram/src/lib/core/dx/` - standardbasierte Diagnosekodierung: Ableitungsregeln (`derive.ts`), der ICD-10-Diagnosekatalog (`codes.ts`/`caseCodes.ts`), nationale Kodierungspakete — BNO-10/ICD-10-CM (`packs.ts`) — sowie die ICD-10-CM-/SNOMED-CT-Verfeinerungsschicht (`refine.ts`)
 - `projects/angular-advanced-odontogram/src/lib/core/anatomy/` - Zahnanatomie-Profile (`classic`/`measured`); die literaturvermessenen `measured`-Vorlagen (`measured.ts`) werden als separater Lazy-Chunk geladen
 - `projects/angular-advanced-odontogram/src/lib/core/utils/numbering.ts` - FDI-, Universal-, Palmer-Nummerierungskonvertierung
@@ -979,7 +979,7 @@ Auch parodontale Daten durchlaufen inzwischen einen Rückweg über den FHIR-Impo
 
 Dieses Paket hat keinen eigenen Zitationseintrag — es ist ein Port, der seine klinische Engine wortwörtlich mit dem ursprünglichen Projekt teilt. Wenn Sie diese Software in Ihrer Forschung verwenden, zitieren Sie bitte das Original:
 
-> Dul, Z. (2026). *React Advanced Odontogram* (v2.8.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
+> Dul, Z. (2026). *React Advanced Odontogram* (v2.9.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
 
 **Alle Versionen (Konzept-DOI):** https://doi.org/10.5281/zenodo.21156787
 

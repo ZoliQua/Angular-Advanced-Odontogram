@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.9.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -13,7 +13,7 @@
 
 ---
 
-> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 Русский (этот файл) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 [简体中文](README-zh.md)
+> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 Русский (этот файл) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 [简体中文](README-zh.md) | 🇯🇵 [日本語](README-ja.md) | 🇰🇷 [한국어](README-ko.md)
 
 ---
 
@@ -48,7 +48,7 @@
 
 Данный проект представляет собой интерактивный браузерный редактор одонтограммы для **Angular + TypeScript**, обеспечивающий быстрое заполнение зубной карты с удобным интерфейсом. Компонент отображает многослойные SVG-шаблоны зубов для представления реставраций, кариеса, эндодонтического статуса, подвижности и других клинических данных, а также поддерживает множественный выбор, фильтры выделения и предустановленные статусные шаблоны.
 
-**Это официальный Angular-порт [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Паритет функциональности с react-advanced-odontogram **v2.8.0** (коммит движка `a11468d`), версия payload **2.22** — экспорт JSON и FHIR R4 совместимы между двумя библиотеками в обе стороны. Клинический движок (`projects/angular-advanced-odontogram/src/lib/core/`) переиспользуется дословно — логика статуса зубов, пародонтальное картирование, кодирование диагнозов, экспорт/импорт FHIR, строки i18n, направляемый тур и SVG-шаблоны побайтово идентичны оригиналу на React и копируются заново из зафиксированного коммита апстрима при каждой синхронизации; только оболочка компонентов (`projects/angular-advanced-odontogram/src/lib/components/`) написана нативно для Angular. Существует небольшой, явно задокументированный набор отклонений (только строки брендинга/идентификации — см. спецификацию дизайна порта в этом репозитории). Версионирование синхронизировано (lockstep) с React-модулем.
+**Это официальный Angular-порт [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)** (npm: [`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)). Паритет функциональности с react-advanced-odontogram **v2.9.0** (коммит движка `3321e63`), версия payload **2.22** — экспорт JSON и FHIR R4 совместимы между двумя библиотеками в обе стороны. Клинический движок (`projects/angular-advanced-odontogram/src/lib/core/`) переиспользуется дословно — логика статуса зубов, пародонтальное картирование, кодирование диагнозов, экспорт/импорт FHIR, строки i18n, направляемый тур и SVG-шаблоны побайтово идентичны оригиналу на React и копируются заново из зафиксированного коммита апстрима при каждой синхронизации; только оболочка компонентов (`projects/angular-advanced-odontogram/src/lib/components/`) написана нативно для Angular. Существует небольшой, явно задокументированный набор отклонений (только строки брендинга/идентификации — см. спецификацию дизайна порта в этом репозитории). Версионирование синхронизировано (lockstep) с React-модулем.
 
 ---
 ![Предпросмотр редактора одонтограммы](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
@@ -105,7 +105,7 @@ import { OdontogramShellComponent } from "angular-advanced-odontogram";
 export class ChartComponent {}
 ```
 
-`language` принимает значения `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr`; `numberingSystem` принимает `FDI | UNIVERSAL | PALMER`.
+`language` принимает значения `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr | ja | ko`; `numberingSystem` принимает `FDI | UNIVERSAL | PALMER`.
 
 #### Входные параметры компонента
 
@@ -113,7 +113,7 @@ export class ChartComponent {}
 
 | Входной параметр | Тип | По умолчанию | Описание |
 |------|------|---------|-------------|
-| `language` | `Language` | `"hu"` | Язык интерфейса (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`). |
+| `language` | `Language` | `"hu"` | Язык интерфейса (`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`/`ja`/`ko`). |
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | Система нумерации зубов. |
 | `darkMode` | `boolean` | `false` | Переключатель тёмной темы. |
 | `readOnly` | `boolean` | `false` | Отключить всё редактирование (только просмотр). |
@@ -255,7 +255,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - **Таблица стилей отдельная** — вы **обязаны** зарегистрировать `angular-advanced-odontogram/styles.css` один раз; она не подключается автоматически. Стилизация — это глобальный CSS, ограниченный областью `.odontogram-root` и управляемый CSS-переменными `--odon-*`.
 - **SSR / только клиент** — компонент обращается к DOM при монтировании, поэтому он должен выполняться в браузере; отрисовывайте его только на стороне браузера.
 - **Ресурсы самодостаточны** — SVG зубов и иконок встраиваются в бандл на этапе сборки (сгенерированные TypeScript-модули, `npm run gen:assets`); **не требуется настраивать загрузку ресурсов во время выполнения**, и нечего дополнительно копировать в публичную папку вашего приложения.
-- **Загрузка по требованию** — в исходный бандл входят только английский язык и графика анатомии зубов `classic`; таблицы 11 остальных языков интерфейса и графика профиля анатомии `measured` загружаются отдельными ленивыми частями (chunks) при первом переключении хоста на них (`[language]` / `I18nService.setLanguage()`/меню языка и `setToothAnatomy("measured")`/Настройки → Одонтограмма → анатомия зубов соответственно). Разделение в 2.6.0 сократило основной чанк демо-приложения с 3,12 МБ до 1,25 МБ, а исходный общий объём — с 3,21 МБ до 1,33 МБ; в 2.7.0 графика, окрашиваемая токенами, немного увеличивает их до 1,29 МБ и 1,38 МБ, а лениво загружаемый чанк измеренной анатомии с завершённой анатомией вырастает с 1,2 МБ до 4,0 МБ — на стороне хоста настраивать ничего не нужно. В версии 2.8.0 они составляют 1,30 MB и 1,39 MB, а лениво загружаемый чанк measured — 3,9 MB.
+- **Загрузка по требованию** — в исходный бандл входят только английский язык и графика анатомии зубов `classic`; таблицы 13 остальных языков интерфейса и графика профиля анатомии `measured` загружаются отдельными ленивыми частями (chunks) при первом переключении хоста на них (`[language]` / `I18nService.setLanguage()`/меню языка и `setToothAnatomy("measured")`/Настройки → Одонтограмма → анатомия зубов соответственно). Разделение в 2.6.0 сократило основной чанк демо-приложения с 3,12 МБ до 1,25 МБ, а исходный общий объём — с 3,21 МБ до 1,33 МБ; в 2.7.0 графика, окрашиваемая токенами, немного увеличивает их до 1,29 МБ и 1,38 МБ, а лениво загружаемый чанк измеренной анатомии с завершённой анатомией вырастает с 1,2 МБ до 4,0 МБ — на стороне хоста настраивать ничего не нужно. В версии 2.8.0 они составляют 1,30 MB и 1,39 MB, а лениво загружаемый чанк measured — 3,9 MB. В версии 2.9.0 исходные значения не меняются — 1,30 MB и 1,39 MB: японский, корейский и два их PDF-шрифта целиком вынесены в ленивые чанки (3,24 MB корейский шрифт, 289 kB японский, 87 kB и 79 kB таблицы языков), поэтому ни один из них не попадает в исходный бандл; лениво загружаемый чанк measured составляет 3,89 MB.
 - **Один экземпляр на страницу** в этом релизе — состояние движка является синглтоном на уровне модуля (как и в оригинале на React), поэтому отрисовка двух экземпляров `<aao-odontogram-shell>` на одной странице приведёт к тому, что они будут использовать общее состояние одной карты.
 - **Переопределения шаблонов зубов и открытая пародонтальная карта** — вход `toothTemplates` применяется до инициализации движка и перестраивает основную сетку при последующем изменении; императивный вызов `setToothTemplateOverrides()` на уже отрисованной диаграмме её **не** перерисовывает, поэтому вызывайте его до монтирования диаграммы или используйте вход. **Уже открытая** пародонтальная карта не перестраивается при изменении `toothTemplates`: она сохраняет прежнюю графику зубов, пока не будет открыта заново или не сменится профиль анатомии (это соответствует оригиналу на React).
 
@@ -317,7 +317,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - ⏳ Индикатор прогресса при экспорте изображения
 - 🎓 Интерактивный вводный тур (направляемый обзор элементов управления оболочки)
 - 🔢 Три системы нумерации (FDI, Universal, Palmer)
-- 🌐 Интернационализация — 12 языков интерфейса (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR) с переключателем языков; арабский отображает интерфейс справа налево, при этом зубные/пародонтальные карты закреплены слева направо; в основной бандл входит только активный язык — каждый остальной язык загружается отдельной частью (chunk) при первом выборе
+- 🌐 Интернационализация — 14 языков интерфейса (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO) с переключателем языков; арабский отображает интерфейс справа налево, при этом зубные/пародонтальные карты закреплены слева направо (машинный перевод, проверка носителем языка для AR/ZH/FR/JA/KO ожидается); в основной бандл входит только английский — каждый остальной язык загружается отдельной частью (chunk) при первом выборе
 - 🌗 Поддержка тёмного режима с кнопкой переключения (автономный или управляемый родительским приложением)
 - 🎨 Темизация диаграммы и графики зубов: `themeConfig` (`colors`, `tooth`, `tokens`, `selection`) управляет CSS-переменными `--odon-*` — включая сами рисунки зубов (`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …) — и встроена тёмная палитра графики
 - 🎨 Темизация имплантатов и контура: `--odon-implant-tint` сдвигает цвет всего тела имплантата одним CSS-фильтром, `--odon-implant-fill` закрашивает его одним плоским цветом, а толщина контура зуба поддаётся темизации (`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`), причём окклюзионный силуэт следует этой толщине
@@ -352,7 +352,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🎛️ Панель управления и статуса (`ToothControlsSurfaceComponent` + 8 декларативных карточек)
 - 🎨 Движок слоёв SVG и шаблоны (ядро без привязки к фреймворку, `core/odontogram.ts`)
 - 🔢 Нумерация зубов и сопоставление меток (FDI/Universal/Palmer, `core/utils/numbering.ts`)
-- 🌐 Локализация — 12 языков интерфейса (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR), включая арабский (RTL) (`core/i18n/`, `I18nService`)
+- 🌐 Локализация — 14 языков интерфейса (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO), включая арабский (RTL) (`core/i18n/`, `I18nService`)
 - 💾 Экспорт/импорт статуса
 - 📋 Дополнительные статусы: предустановленные шаблоны реставраций
 - 🎨 Настройка темы: настраиваемая цветовая палитра через CSS-свойства `--odon-*`
@@ -369,7 +369,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 ### 🛠️ Элементы управления интерфейса
 
 **🔝 Верхняя панель** (`OdontogramTopbarComponent`):
-- Переключатель языков (выпадающий список HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR)
+- Переключатель языков (выпадающий список HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO)
 - Кнопка переключения тёмного режима (иконка солнца/луны, переключает между светлой и тёмной темой)
 - Переключатель системы нумерации (выпадающий список FDI/Universal/Palmer)
 - Кнопки «Экспорт статуса» / «Импорт статуса»
@@ -918,7 +918,7 @@ enablePersistence({
 - `projects/angular-advanced-odontogram/src/lib/core/perioExport.ts` / `perioGraphic.ts` / `perioIndexNames.ts` — рендеринг SVG пародонтальной карты на всю полость рта
 - `projects/angular-advanced-odontogram/src/lib/core/perioPdf.ts` — чистый сборщик PDF-отчёта на jsPDF (`assemblePdf`)
 - `projects/angular-advanced-odontogram/src/lib/core/status_extras.ts` — 22 предустановленных шаблона реставраций
-- `projects/angular-advanced-odontogram/src/lib/core/i18n/` — переводы, по одному лениво загружаемому модулю на язык в `i18n/locales/` (английский статичен, остальные 11 загружаются через `i18n/loader.ts` при первом использовании) и шина i18n без привязки к фреймворку
+- `projects/angular-advanced-odontogram/src/lib/core/i18n/` — переводы, по одному лениво загружаемому модулю на язык в `i18n/locales/` (английский статичен, остальные 13 загружаются через `i18n/loader.ts` при первом использовании) и шина i18n без привязки к фреймворку
 - `projects/angular-advanced-odontogram/src/lib/core/dx/` — кодирование диагнозов на основе стандартов: правила вывода (`derive.ts`), каталог диагнозов ICD-10 (`codes.ts`/`caseCodes.ts`), национальные пакеты кодирования — BNO-10/ICD-10-CM (`packs.ts`) — и уровень уточнения ICD-10-CM/SNOMED CT (`refine.ts`)
 - `projects/angular-advanced-odontogram/src/lib/core/anatomy/` — профили анатомии зубов (`classic`/`measured`); литературные шаблоны `measured` (`measured.ts`) загружаются отдельной ленивой частью
 - `projects/angular-advanced-odontogram/src/lib/core/utils/numbering.ts` — преобразование нумерации FDI, Universal, Palmer
@@ -978,7 +978,7 @@ enablePersistence({
 
 Этот пакет не имеет собственной отдельной записи для цитирования — это порт, который дословно переиспользует клинический движок оригинального проекта. Если вы используете это программное обеспечение в исследовательской работе, пожалуйста, цитируйте оригинал:
 
-> Dul, Z. (2026). *React Advanced Odontogram* (v2.8.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
+> Dul, Z. (2026). *React Advanced Odontogram* (v2.9.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
 
 **Все версии (концептуальный DOI):** https://doi.org/10.5281/zenodo.21156787
 

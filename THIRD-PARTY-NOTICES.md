@@ -43,10 +43,24 @@ The point most often asked about: **the tooth drawings are not third-party asset
 ## 2. Fonts embedded in the published package
 
 These are base64-embedded in the library so that PDF export works fully offline.
-They are **subsets**, reduced to the glyphs the report needs, which counts as a
-modification under their licenses. Each font is a separate code-split chunk of
-the published bundle, loaded only when a PDF in the matching script is generated
-(it stays bundled in the package, never fetched from a third-party host).
+They are **subsets**, reduced to the glyphs the report needs, and pinned to a
+single weight because jsPDF cannot read a variable font — it renders a variable
+font's default instance, which for Noto's variable sources is Thin. Both the
+subsetting and the weight pinning count as a modification under their licenses.
+Each font is a separate code-split chunk of the published bundle, loaded only
+when a PDF in the matching script is generated (it stays bundled in the package,
+never fetched from a third-party host).
+
+The bytes are generated, not hand-made: upstream's
+[`tools/fonts/build_fonts.py`](https://github.com/ZoliQua/React-Advanced-Odontogram/blob/main/tools/fonts/build_fonts.py)
+instances each Noto variable source to `wght=400`, subsets it to the codepoints
+the locale it serves actually uses, and writes the module. This Angular port does
+**not** carry that generator: it copies the generated modules from the pinned
+upstream React release, so there is one source of truth for bytes neither project
+should be hand-editing. `core/__tests__/pdf-font-coverage.test.ts` is what holds
+them honest here — it parses the base64 each module ships, walks its `cmap`, and
+fails if a character the locale displays has no glyph or if any embedded face is
+still variable.
 
 ### Roboto (subset)
 
@@ -72,8 +86,31 @@ built-in Helvetica cannot encode Hungarian double-acute accents or Cyrillic.
   https://fonts.google.com/noto/specimen/Noto+Sans+SC
 - **License:** SIL Open Font License, Version 1.1 (full text in § 4)
 
-> **Note on the OFL and modified versions.** Both Noto subsets are modified
-> (subsetted) versions. The OFL permits this, and permits selling the result
+### Noto Sans JP (subset)
+
+- **File:** `projects/angular-advanced-odontogram/src/lib/core/fonts/notoJP.ts` (Regular)
+- **Upstream:** Noto Sans Japanese, by The Noto Project Authors —
+  https://fonts.google.com/noto/specimen/Noto+Sans+JP
+- **License:** SIL Open Font License, Version 1.1 (full text in § 4)
+
+Covers every kana plus the kanji the Japanese UI strings use. A kanji outside
+that set shows a missing glyph; Japanese can always be written phonetically, so
+complete kana coverage is what makes a name renderable.
+
+### Noto Sans KR (subset)
+
+- **File:** `projects/angular-advanced-odontogram/src/lib/core/fonts/notoKR.ts` (Regular)
+- **Upstream:** Noto Sans Korean, by The Noto Project Authors —
+  https://fonts.google.com/noto/specimen/Noto+Sans+KR
+- **License:** SIL Open Font License, Version 1.1 (full text in § 4)
+
+Covers all 11,172 precomposed hangul syllables and the jamo blocks — hence
+3.2 MB, the largest chunk in the package. A PDF performs no OpenType composition
+here, so a hangul syllable is one glyph and a syllable missing from the subset
+cannot be drawn at all; Korean has no phonetic script to fall back to.
+
+> **Note on the OFL and modified versions.** Every Noto subset here is a modified
+> (subsetted) version. The OFL permits this, and permits selling the result
 > *bundled in* software; it only forbids selling the font software on its own.
 > If you subset or re-generate these fonts yourself, confirm the exact copyright
 > line and any Reserved Font Name declaration in the specific upstream font files
@@ -110,7 +147,8 @@ for the authoritative text.
 
 ## 4. SIL Open Font License, Version 1.1
 
-Applies to the Noto Naskh Arabic and Noto Sans SC subsets listed in § 2.
+Applies to the Noto Naskh Arabic, Noto Sans SC, Noto Sans JP and Noto Sans KR
+subsets listed in § 2.
 
 ```
 Copyright (c) The Noto Project Authors

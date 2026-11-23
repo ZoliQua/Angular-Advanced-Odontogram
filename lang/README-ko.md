@@ -317,7 +317,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - ⏳ 이미지 내보내기 중 진행 오버레이
 - 🎓 대화형 소개 투어(셸 컨트롤을 안내하며 둘러봅니다)
 - 🔢 세 가지 치식 표기(FDI, 유니버설, 팔머)
-- 🌐 다국어 지원 — 14개 UI 언어(HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO)와 언어 전환기. 아랍어는 UI를 오른쪽에서 왼쪽으로 그리고 치식/치주 차트는 왼쪽에서 오른쪽으로 고정합니다(기계 번역이며 AR/ZH/FR/JA/KO는 모국어 화자 검토 대기 중입니다). 주 번들에는 활성 언어만 들어갑니다 — 다른 모든 언어는 별도 청크로, 처음 선택될 때 받아옵니다
+- 🌐 다국어 지원 — 14개 UI 언어(HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO)와 언어 전환기. 아랍어는 UI를 오른쪽에서 왼쪽으로 그리고 치식/치주 차트는 왼쪽에서 오른쪽으로 고정합니다(기계 번역이며 AR/ZH/FR/JA/KO는 모국어 화자 검토 대기 중입니다). 주 번들에는 영어만 들어갑니다 — 다른 모든 언어는 별도 청크로, 처음 선택될 때 받아옵니다
 - 🌗 토글 버튼이 있는 다크 모드 지원(단독 또는 상위 앱이 제어)
 - 🎨 테마를 적용할 수 있는 차트와 치아 아트워크: `themeConfig`(`colors`, `tooth`, `tokens`, `selection`)가 `--odon-*` CSS 사용자 정의 속성을 구동합니다 — 치아 도형 자체(`--odon-tooth-body`, `--odon-milktooth-body`, `--odon-tooth-dentin`, …)까지 포함하며, 다크 아트워크 팔레트가 기본으로 들어 있습니다
 - 🎨 임플란트와 윤곽선 테마: `--odon-implant-tint`는 CSS 필터 하나로 임플란트 픽스처 전체의 색조를 바꾸고, `--odon-implant-fill`은 단색으로 칠하며, 치아 윤곽선 굵기도 테마로 지정할 수 있습니다(`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`). 교합면 실루엣도 그 굵기를 따릅니다

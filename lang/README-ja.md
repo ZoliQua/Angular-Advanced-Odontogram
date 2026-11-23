@@ -317,7 +317,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - ⏳ 画像エクスポート中の進捗オーバーレイ
 - 🎓 対話的な導入ツアー（シェルのコントロールをガイド付きで一巡します）
 - 🔢 3 つの歯式表記（FDI、ユニバーサル、パルマー）
-- 🌐 多言語対応 — 14 の UI 言語（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO）と言語切り替え。アラビア語は UI を右から左に描画し、歯式／歯周チャートは左から右に固定します（機械翻訳であり、AR/ZH/FR/JA/KO は母語話者によるレビュー待ちです）。主バンドルに含まれるのは有効な言語のみ — 他のすべての言語は別チャンクで、最初に選択された時点で取得されます
+- 🌐 多言語対応 — 14 の UI 言語（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO）と言語切り替え。アラビア語は UI を右から左に描画し、歯式／歯周チャートは左から右に固定します（機械翻訳であり、AR/ZH/FR/JA/KO は母語話者によるレビュー待ちです）。主バンドルに含まれるのは英語のみ — 他のすべての言語は別チャンクで、最初に選択された時点で取得されます
 - 🌗 トグルボタン付きのダークモード対応（単独利用、または親アプリからの制御）
 - 🎨 テーマ設定できるチャートと歯のアートワーク: `themeConfig`（`colors`、`tooth`、`tokens`、`selection`）が `--odon-*` CSS カスタムプロパティを駆動します — 歯の描画そのもの（`--odon-tooth-body`、`--odon-milktooth-body`、`--odon-tooth-dentin`、…）も含みます。ダーク用のアートワークパレットも同梱です
 - 🎨 インプラントと輪郭のテーマ設定: `--odon-implant-tint` は 1 つの CSS フィルタでインプラントのフィクスチャ全体をシフトさせ、`--odon-implant-fill` はフィクスチャを 1 色でフラットに塗り、歯の輪郭の幅もテーマ設定できます（`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`）。咬合面のシルエットもその幅に従います

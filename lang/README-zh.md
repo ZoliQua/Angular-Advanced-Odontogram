@@ -5,7 +5,7 @@
 # 🦷 Angular Advanced Odontogram
 
 [![npm](https://img.shields.io/npm/v/angular-advanced-odontogram?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/angular-advanced-odontogram)
-[![Version](https://img.shields.io/badge/version-2.8.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
+[![Version](https://img.shields.io/badge/version-2.9.0-green?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/releases)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/LICENSE)
 
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
@@ -13,7 +13,7 @@
 
 ---
 
-> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 简体中文（本文件）
+> 🌐 **Languages:** 🇬🇧 [English](README-en.md) | 🇭🇺 [Magyar](README-hu.md) | 🇩🇪 [Deutsch](README-de.md) | 🇪🇸 [Español](README-es.md) | 🇫🇷 [Français](README-fr.md) | 🇮🇹 [Italiano](README-it.md) | 🇵🇱 [Polski](README-pl.md) | 🇧🇷 [Português (BR)](README-pt-br.md) | 🇸🇰 [Slovenčina](README-sk.md) | 🇷🇺 [Русский](README-ru.md) | 🇸🇦 [العربية](README-ar.md) | 🇨🇳 简体中文（本文件） | 🇯🇵 [日本語](README-ja.md) | 🇰🇷 [한국어](README-ko.md)
 
 ---
 
@@ -48,7 +48,7 @@
 
 本项目是一款面向 **Angular + TypeScript** 的交互式、基于浏览器的牙位图（口腔检查图）编辑器，界面简洁，支持快速的牙科病历记录。它通过分层渲染 SVG 牙齿模板来表现修复体、龋齿、牙髓治疗状态、松动度及其他临床细节，同时提供多选、选择过滤器和预设状态模板。
 
-**这是 [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)（npm 包：[`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)）的官方 Angular 移植版本。** 与 react-advanced-odontogram **v2.8.0**（引擎提交 `a11468d`）保持功能对等，数据版本为 **2.22**——JSON 与 FHIR R4 导出可在两个库之间无损互通。临床引擎（`projects/angular-advanced-odontogram/src/lib/core/`）为逐字节共享——牙位状态逻辑、牙周记录、诊断编码、FHIR 导出/导入、i18n 文本、引导式导览以及 SVG 模板均与 React 原版逐字节一致，并在每次同步时从锁定的上游提交重新复制；只有组件外壳（`projects/angular-advanced-odontogram/src/lib/components/`）是 Angular 原生实现。存在一小部分明确记录在案的差异（仅限品牌/标识文本——详见本仓库中的移植设计说明文档）。版本号与 React 模块保持同步（lockstep）。
+**这是 [React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)（npm 包：[`react-advanced-odontogram`](https://www.npmjs.com/package/react-advanced-odontogram)）的官方 Angular 移植版本。** 与 react-advanced-odontogram **v2.9.0**（引擎提交 `3321e63`）保持功能对等，数据版本为 **2.22**——JSON 与 FHIR R4 导出可在两个库之间无损互通。临床引擎（`projects/angular-advanced-odontogram/src/lib/core/`）为逐字节共享——牙位状态逻辑、牙周记录、诊断编码、FHIR 导出/导入、i18n 文本、引导式导览以及 SVG 模板均与 React 原版逐字节一致，并在每次同步时从锁定的上游提交重新复制；只有组件外壳（`projects/angular-advanced-odontogram/src/lib/components/`）是 Angular 原生实现。存在一小部分明确记录在案的差异（仅限品牌/标识文本——详见本仓库中的移植设计说明文档）。版本号与 React 模块保持同步（lockstep）。
 
 ---
 ![牙位图编辑器预览](https://raw.githubusercontent.com/ZoliQua/React-Advanced-Odontogram/main/lang/screenshot_en_odontogram.png)
@@ -105,7 +105,7 @@ import { OdontogramShellComponent } from "angular-advanced-odontogram";
 export class ChartComponent {}
 ```
 
-`language` 接受 `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr`；`numberingSystem` 接受 `FDI | UNIVERSAL | PALMER`。
+`language` 接受 `hu | en | de | es | it | sk | pl | ru | pt-br | zh | ar | fr | ja | ko`；`numberingSystem` 接受 `FDI | UNIVERSAL | PALMER`。
 
 #### 组件输入
 
@@ -113,7 +113,7 @@ export class ChartComponent {}
 
 | 输入 | 类型 | 默认值 | 说明 |
 |------|------|---------|-------------|
-| `language` | `Language` | `"hu"` | 界面语言（`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`）。 |
+| `language` | `Language` | `"hu"` | 界面语言（`hu`/`en`/`de`/`es`/`it`/`sk`/`pl`/`ru`/`pt-br`/`zh`/`ar`/`fr`/`ja`/`ko`）。 |
 | `numberingSystem` | `"FDI" \| "UNIVERSAL" \| "PALMER"` | `"FDI"` | 牙位编号系统。 |
 | `darkMode` | `boolean` | `false` | 深色主题切换。 |
 | `readOnly` | `boolean` | `false` | 禁用所有编辑（仅查看）。 |
@@ -255,7 +255,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - **样式表是独立的**——你**必须**注册一次 `angular-advanced-odontogram/styles.css`；它不会被自动注入。样式为全局 CSS，作用域限定在 `.odontogram-root` 下，并由 `--odon-*` CSS 变量驱动。
 - **SSR / 仅限客户端**——该组件在挂载时会读取 DOM，因此必须在浏览器中运行；请仅在浏览器端渲染它。
 - **资源是自包含的**——牙齿和图标的 SVG 在构建时被内联到包中（生成的 TypeScript 模块，`npm run gen:assets`）；**无需配置任何运行时资源请求**，也无需向你的应用 public 文件夹额外复制任何文件。
-- **按需加载**——初始包中只包含英语和 `classic` 牙齿解剖美术资源；另外 11 种界面语言的语言表以及 `measured` 解剖轮廓的美术资源均为独立的懒加载分片，仅在宿主首次切换到它们时才会被获取（分别对应 `[language]` / `I18nService.setLanguage()`/语言菜单，以及 `setToothAnatomy("measured")`/设置 → 牙位图 → 牙齿解剖）。2.6.0 的拆分将演示应用的主分片从 3.12 MB 降至 1.25 MB，初始总体积从 3.21 MB 降至 1.33 MB；2.7.0 中由令牌着色的图形使二者略增至 1.29 MB 和 1.38 MB，而按需加载的实测解剖分片随解剖补全从 1.2 MB 增至 4.0 MB——宿主端无需任何额外配置。 在 2.8.0 中它们分别为 1.30 MB 和 1.39 MB，按需加载的 measured 分块为 3.9 MB。
+- **按需加载**——初始包中只包含英语和 `classic` 牙齿解剖美术资源；另外 13 种界面语言的语言表以及 `measured` 解剖轮廓的美术资源均为独立的懒加载分片，仅在宿主首次切换到它们时才会被获取（分别对应 `[language]` / `I18nService.setLanguage()`/语言菜单，以及 `setToothAnatomy("measured")`/设置 → 牙位图 → 牙齿解剖）。2.6.0 的拆分将演示应用的主分片从 3.12 MB 降至 1.25 MB，初始总体积从 3.21 MB 降至 1.33 MB；2.7.0 中由令牌着色的图形使二者略增至 1.29 MB 和 1.38 MB，而按需加载的实测解剖分片随解剖补全从 1.2 MB 增至 4.0 MB——宿主端无需任何额外配置。 在 2.8.0 中它们分别为 1.30 MB 和 1.39 MB，按需加载的 measured 分块为 3.9 MB。 在 2.9.0 中初始体积保持不变，仍为 1.30 MB 和 1.39 MB：日语、韩语及其两种 PDF 字体全部是懒加载分片（韩文字体 3.24 MB，日文字体 289 kB，语言表 87 kB 和 79 kB），因此都不会进入初始包；懒加载的 measured 分块为 3.89 MB。
 - **本版本中每个页面仅限一个实例**——引擎状态是模块级单例（与 React 原版相同），因此在同一页面渲染两个 `<aao-odontogram-shell>` 实例会导致它们共享同一份图表状态。
 - **牙齿模板覆盖与已打开的牙周图** — `toothTemplates` 输入会在引擎初始化之前应用，并在其后变化时重建主网格；对已绘制的图表以命令式方式调用 `setToothTemplateOverrides()` **不会**重绘，因此请在图表挂载之前调用，或改用该输入。**已打开**的牙周图在 `toothTemplates` 变化时不会被重建：在重新打开或解剖轮廓变化之前，它会沿用之前的牙齿图形（这与 React 原版一致）。
 
@@ -317,7 +317,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - ⏳ 图像导出过程中的进度浮层
 - 🎓 交互式新手导览（对 shell 各项控件的引导式讲解）
 - 🔢 三种牙位编号系统（FDI、通用编号法、Palmer）
-- 🌐 国际化——12 种界面语言（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR），支持语言切换；阿拉伯语界面从右到左渲染，同时牙位图/牙周图表固定保持从左到右；主包中只包含当前使用的语言——其余每种语言都是一个独立分片，仅在首次被选中时才会加载
+- 🌐 国际化——14 种界面语言（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO），支持语言切换；阿拉伯语界面从右到左渲染，同时牙位图/牙周图表固定保持从左到右（机器翻译，AR/ZH/FR/JA/KO 仍待母语者审校）；主包中只包含英语——其余每种语言都是一个独立分片，仅在首次被选中时才会加载
 - 🌗 支持深色模式，附带切换按钮（独立控制或由父应用控制）
 - 🎨 可主题化的图表与牙齿美术：`themeConfig`（`colors`、`tooth`、`tokens`、`selection`）驱动 `--odon-*` CSS 自定义属性——包括牙齿图形本身（`--odon-tooth-body`、`--odon-milktooth-body`、`--odon-tooth-dentin` 等）——并内置了深色美术配色
 - 🎨 种植体与轮廓主题化：`--odon-implant-tint` 通过一个 CSS 滤镜整体偏移种植体固定体的色调，`--odon-implant-fill` 将其涂成单一纯色，牙齿轮廓线宽也可主题化（`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`），咬合面轮廓会跟随该线宽
@@ -352,7 +352,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 - 🎛️ 控件与状态面板（`ToothControlsSurfaceComponent` + 8 张声明式卡片）
 - 🎨 SVG 分层渲染引擎及模板（框架无关的核心，`core/odontogram.ts`）
 - 🔢 牙位编号与标签映射（FDI/通用编号法/Palmer，`core/utils/numbering.ts`）
-- 🌐 本地化——12 种界面语言（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR），包括阿拉伯语（RTL)（`core/i18n/`、`I18nService`）
+- 🌐 本地化——14 种界面语言（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO），包括阿拉伯语（RTL）（`core/i18n/`、`I18nService`）
 - 💾 状态导出/导入
 - 📋 状态附加项：预定义修复体模板
 - 🎨 主题配置：通过 `--odon-*` CSS 属性实现的可自定义配色方案
@@ -369,7 +369,7 @@ readonly summary = engineState(getOdontogramSummary); // Signal<OdontogramSummar
 ### 🛠️ 界面控件
 
 **🔝 顶部工具栏**（`OdontogramTopbarComponent`）：
-- 语言切换器（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR 下拉菜单）
+- 语言切换器（HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO 下拉菜单）
 - 深色模式切换按钮（太阳/月亮图标，在亮色与深色主题间切换）
 - 编号系统切换器（FDI/通用编号法/Palmer 下拉菜单）
 - 导出状态 / 导入状态按钮
@@ -918,7 +918,7 @@ enablePersistence({
 - `projects/angular-advanced-odontogram/src/lib/core/perioExport.ts` / `perioGraphic.ts` / `perioIndexNames.ts` - 全口牙周图表的 SVG 渲染
 - `projects/angular-advanced-odontogram/src/lib/core/perioPdf.ts` - PDF 报告的纯 jsPDF 组装器（`assemblePdf`）
 - `projects/angular-advanced-odontogram/src/lib/core/status_extras.ts` - 22 种预定义修复体模板
-- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - 翻译文件，`i18n/locales/` 下每种语言均为一个懒加载模块（英语为静态内置，其余 11 种通过 `i18n/loader.ts` 在首次使用时加载）以及框架无关的 i18n 总线
+- `projects/angular-advanced-odontogram/src/lib/core/i18n/` - 翻译文件，`i18n/locales/` 下每种语言均为一个懒加载模块（英语为静态内置，其余 13 种通过 `i18n/loader.ts` 在首次使用时加载）以及框架无关的 i18n 总线
 - `projects/angular-advanced-odontogram/src/lib/core/dx/` - 基于标准的诊断编码：推算规则（`derive.ts`）、ICD-10 诊断目录（`codes.ts`/`caseCodes.ts`）、国家编码包——BNO-10/ICD-10-CM（`packs.ts`）——以及 ICD-10-CM/SNOMED CT 精细化层（`refine.ts`）
 - `projects/angular-advanced-odontogram/src/lib/core/anatomy/` - 牙齿解剖轮廓（`classic`/`measured`）；`measured` 依据文献测量的模板（`measured.ts`）以独立的懒加载分片形式加载
 - `projects/angular-advanced-odontogram/src/lib/core/utils/numbering.ts` - FDI、通用编号法、Palmer 编号转换
@@ -978,7 +978,7 @@ enablePersistence({
 
 本包没有自己的引用记录——它是一个与原始项目逐字节共享临床引擎的移植版本。如果您在研究中使用本软件，请引用原始项目：
 
-> Dul, Z. (2026). *React Advanced Odontogram* (v2.8.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
+> Dul, Z. (2026). *React Advanced Odontogram* (v2.9.0). Zenodo. https://doi.org/10.5281/zenodo.21156787
 
 **所有版本（概念 DOI）：** https://doi.org/10.5281/zenodo.21156787
 

@@ -9,12 +9,12 @@
 [![Angular](https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular)](https://angular.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
-An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angular + TypeScript** — with a full **periodontal charting module**, multi-surface caries/restorations, endodontic/prosthetic states, FDI/Universal/Palmer numbering, **HL7 FHIR R4** export/import, optional ICDAS scoring, and a 12-language UI.
+An interactive, SVG-based **dental odontogram (dental chart) editor** for **Angular + TypeScript** — with a full **periodontal charting module**, multi-surface caries/restorations, endodontic/prosthetic states, FDI/Universal/Palmer numbering, **HL7 FHIR R4** export/import, optional ICDAS scoring, and a 14-language UI.
 
-This is the official Angular port of **[React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)**, also published on npm as **[react-advanced-odontogram](https://www.npmjs.com/package/react-advanced-odontogram)**. Feature parity with react-advanced-odontogram **v2.8.0** (engine `a11468d`), payload **2.22**. The clinical engine is shared, verbatim, between the two libraries — only the component shell is framework-native — so JSON and FHIR R4 exports round-trip cleanly between an Angular app using this package and a React app using the original.
+This is the official Angular port of **[React Advanced Odontogram](https://github.com/ZoliQua/React-Advanced-Odontogram)**, also published on npm as **[react-advanced-odontogram](https://www.npmjs.com/package/react-advanced-odontogram)**. Feature parity with react-advanced-odontogram **v2.9.0** (engine `3321e63`), payload **2.22**. The clinical engine is shared, verbatim, between the two libraries — only the component shell is framework-native — so JSON and FHIR R4 exports round-trip cleanly between an Angular app using this package and a React app using the original.
 
 🔗 **Live demo:** https://angular-advanced-odontogram.vercel.app/ \
-📖 **Full documentation:** https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/lang/README-en.md (11 more languages linked from there) \
+📖 **Full documentation:** https://github.com/ZoliQua/Angular-Advanced-Odontogram/blob/main/lang/README-en.md (13 more languages linked from there) \
 ⚛️ **Original React project:** https://github.com/ZoliQua/React-Advanced-Odontogram \
 📦 **Original npm package:** https://www.npmjs.com/package/react-advanced-odontogram
 
@@ -67,9 +67,9 @@ export class ChartComponent {}
 - 🎚️ **Implant and contour theming** — `--odon-implant-tint` (one CSS filter over the whole implant fixture), `--odon-implant-fill` (one flat colour) and a themable tooth contour width (`themeConfig.tooth.outlineWidth` → `--odon-tooth-outline-width`) that the occlusal silhouette follows
 - 🩺 **Periodontal chart fixes** — the focused cell survives a grid rebuild, and the grid relabels itself when the UI language changes
 - ⚖️ **Exam comparison and display settings** — `compareExams()` diffs two exported exams of the same mouth; the chart display settings (tooth spacing, tooth-number size, selection colour and border style, tooth-information panel) and `getNumberingSystem()` are part of the public API
-- ⚡ **On-demand loading** — only English and the `classic` anatomy ship in the initial bundle; the 11 other UI languages and the `measured` anatomy artwork load as separate chunks on first use
+- ⚡ **On-demand loading** — only English and the `classic` anatomy ship in the initial bundle; the 13 other UI languages and the `measured` anatomy artwork load as separate chunks on first use
 - 💾 Opt-in **localStorage persistence** API (host-wired, off by default)
-- 🔢 FDI / Universal / Palmer numbering · 🌐 12 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR, Arabic RTL) · 🎨 theming via `--odon-*` CSS variables · 🧩 plugin system · ⌨️ keyboard accessibility
+- 🔢 FDI / Universal / Palmer numbering · 🌐 14 UI languages (HU/EN/DE/ES/IT/SK/PL/RU/PT-BR/AR/ZH/FR/JA/KO, Arabic RTL; AR/ZH/FR/JA/KO machine-translated, native-speaker review pending) · 🎨 theming via `--odon-*` CSS variables · 🧩 plugin system · ⌨️ keyboard accessibility
 
 ## 📡 Public API (named exports)
 

@@ -47,8 +47,11 @@ framework-free.**
 | Assets | `assets/teeth-svgs/`, `assets/icon-svgs/` | — | n/a | copy + codegen (§5) |
 | Tests | `src/__tests__/` — 152 entries incl. golden `parity/` fixtures | — | mixed | core tests copied; `.tsx` tests re-written (§7) |
 
-¹ Five sanctioned deviations (re-applied fresh on every core re-sync,
-including the 1.1.0/v2.4.0 resync — Phase 6 Task 1, 2026-08-11): (1) the
+¹ Five sanctioned deviations at the time of this design, **seven as of 2.9.0** —
+(6) is the credits extension recorded under deviation (4) below and (7) the
+PDF-font coverage allowance added in Phase 14. All of them are re-applied fresh
+on every core re-sync, including the 1.1.0/v2.4.0 resync (Phase 6 Task 1,
+2026-08-11): (1) the
 `?raw` SVG import block at the top of `odontogram.ts` (and the icon `?raw`
 imports currently in `App.tsx`) is replaced by imports from generated TS
 asset modules (§5); (2) the copied test-infra `core/__tests__/parity/capture.ts`
@@ -61,7 +64,7 @@ the React-only `useI18n()` hook and its `react` import removed — the hook's
 role moves to the Phase-2 `I18nService`; (4) **branding** (owner decision,
 2026-08-11): every language's `"app.title"` value in `i18n/translations.ts` is
 overwritten from `"React Advanced Odontogram"` to `"Angular Advanced
-Odontogram"` (12 languages, `app.title` only — no other string touched); (5)
+Odontogram"` (14 languages as of 2.9.0, `app.title` only — no other string touched); (5)
 **branding, PDF footer** (controller-ruled extension of the same owner
 decision, 2026-08-18): in `odontogram.ts`'s `exportPdf()` footer assembly, the
 hardcoded `app: "React Advanced Odontogram"` string passed to
@@ -80,11 +83,11 @@ React repo.
 file as deviation (4), `i18n/translations.ts`, so the branding-string
 deviation is extended rather than given a new number: (a) `credits.intro`'s
 existing "React Advanced Odontogram" app-name mention is swapped to "Angular
-Advanced Odontogram" in all 12 languages, the same proper-noun substitution
+Advanced Odontogram" in all 14 languages, the same proper-noun substitution
 already applied to `app.title`; (b) two NEW keys,
 `credits.originalProjectTitle` and `credits.originalProjectDesc`, are added
 (not upstream keys — upstream has no equivalent, since upstream IS the
-original project and never credits itself) and translated in all 12
+original project and never credits itself) and translated in all 14
 languages, register-matched against the neighbouring `credits.creatorTitle`/
 `credits.contributorsTitle`/`credits.contrib.*` keys.
 
@@ -123,11 +126,11 @@ component-only rendering change, not a core edit) even though the Angular
 
 **Deviation (4), extended again (Phase 9 Task 1, 2026-08-19 owner
 directive: credits.welcome reworded ×12 (contributors clause removed)).**
-The `credits.welcome` string in all 12 language tables of
+The `credits.welcome` string in all 14 language tables of
 `i18n/translations.ts` closed with a clause promising the contributor
 ("…you will be credited here" / its per-language equivalent) that stopped
 being true once the Contributors section was removed from the modal (see
-the Phase 8 Task 1 note immediately above). Reworded in all 12 languages to
+the Phase 8 Task 1 note immediately above). Reworded in all 14 languages to
 drop the now-false promise while keeping the "open a pull request on
 GitHub" invitation; EN: "Contributions are welcome — open a pull request on
 GitHub." No other `credits.*` key was touched.
@@ -141,10 +144,11 @@ lazily `import()`ed via the new framework-free `i18n/loader.ts`);
 and guarded by a test that fails if any non-test module imports it. Deviation
 (4) (branding: `"app.title"`; the Phase 7/9 credits adaptations:
 `credits.intro`, `credits.originalProjectTitle`/`Desc`, `credits.welcome`)
-now applies **in each of the 12 `locales/*.ts` files** instead of the one
-retired aggregator — same strings, same 12 languages, new file boundary; the
-Angular shell (`I18nService`/`ODONTOGRAM_I18N_LOADER`) must preload all 12
-languages before tests run, same as production lazy-loads them on demand.
+now applies **in each of the `locales/*.ts` files** instead of the one
+retired aggregator — same strings, same languages (12 then, 14 since 2.9.0
+added `ja` and `ko`), new file boundary; the
+Angular shell (`I18nService`/`ODONTOGRAM_I18N_LOADER`) must preload all of
+them before tests run, same as production lazy-loads them on demand.
 Deviation (1) (the `?raw` SVG-import swap) now applies on a SECOND path too:
 upstream split the tooth-anatomy artwork into `anatomy/profiles.ts` (dispatch)
 and a lazy `anatomy/measured.ts` (the nine measured templates, `import()`ed
@@ -153,6 +157,32 @@ covers both `odontogram.ts`'s classic templates and this new lazy module,
 and the codegen pipeline (`scripts/generate-svg-assets.mjs`) preserves the
 laziness rather than folding the measured SVGs into the main chunk. See the
 Phase 11 Task 1/Task 2 reports for the file-by-file verification.
+
+**Deviation (7) — one `KNOWN_GAPS` entry in the ported PDF-font coverage test
+(Phase 14 Task 1, 2026-11-23, v2.9.0 resync to engine `3321e63`).** Upstream's
+new `__tests__/pdf-font-coverage.test.ts` parses the base64 each embedded font
+module ships, walks its `cmap`, and fails if a character the locale displays has
+no glyph. Upstream generates those subsets from **upstream's** locale files
+(`tools/fonts/build_fonts.py`), and deviation (4)/(6) gives this port's `zh.ts`
+one Han character upstream's does not have: 库 ("library"), in
+`credits.originalProjectDesc` — "the React library this Angular port is based
+on". So the shipped subset carries no glyph for it, and the ported test would
+fail on a character that is upstream's to cover and ours to use. The ported file
+is therefore verbatim except for one added allowance, `zh: [0x5e93]`, beside
+upstream's own `ar: [0x2264, 0x2265]`.
+
+Why an allowance rather than a regenerated font: the string is on-screen only —
+no PDF label prints `credits.*`, and the UI draws it with the browser's own
+fonts, not the embedded subset — so the gap has no user-visible effect, while
+regenerating the subset here would mean fetching the ~20 MB OFL Noto Sans SC
+source and shipping font bytes that differ from the pinned upstream blob, which
+is the one thing the core-verbatim rule exists to prevent. The test's own
+allowance audit still asserts each entry is genuinely absent from the font **and**
+genuinely used by the locale, so the entry cannot outlive its reason: if upstream
+ever regenerates `notoSC.ts` from a locale that happens to include 库, the suite
+goes red until the entry is removed. This port does **not** carry
+`tools/fonts/build_fonts.py`: it copies the generated modules from the pin, so
+there is a single source of truth for bytes neither project should hand-edit.
 
 **Public API — deliberate superset of upstream (pre-existing, formally
 recorded Phase 11 Task 5, ledger ruling #2).** `public-api.ts`'s
@@ -526,6 +556,28 @@ Vite `?raw` imports are not supported by ng-packagr. Replacement:
    and the acceptance sheet `docs/superpowers/specs/2.8.0-acceptance.md`
    (Task 4). Known limitation, matching upstream: an already-open perio chart
    is not rebuilt when `toothTemplates` changes.
+10. **2.9.0 upstream resync — DELIVERED (Phase 14, 2026-11-23).** Resync to
+   `react-advanced-odontogram` v2.9.0 (`$ENGINE` @ `3321e63`, payload 2.22
+   unchanged, 3 commits past the `a11468d` pin). Core + corpus re-copied under
+   the seven sanctioned deviations (Task 1): the `ja` and `ko` locale tables
+   (full key set, own lazy chunks), the two new embedded PDF fonts
+   (`notoJP.ts` 284 KB — every kana plus the kanji the `ja` strings use;
+   `notoKR.ts` 3.2 MB — all 11,172 precomposed hangul syllables, because a PDF
+   does no OpenType composition and Korean has no phonetic fallback), the
+   regenerated `notoSC.ts`/`notoArabic.ts` carrying upstream's three font
+   defect fixes (hairline Chinese PDFs, 84 missing Han characters, never-bold
+   Arabic), the new `pdf-font-coverage` suite and four language tests that now
+   derive their list from `LANGUAGES`. Deviation (7) was ruled here. Shell work
+   (Task 2): both language pickers, and the registry-derived code-split guard
+   that upstream keeps in a corpus file this port must exclude — until it was
+   ported, no executed test in this repo proved any language was code-split.
+   Packaging verified (Task 3): 21 FESM chunks, main FESM unchanged at 2.3 MB
+   with zero kana, zero hangul and no font payload; the package grows to 48
+   files / 7.0 MB packed, almost all of it the Korean font. This documentation
+   refresh, the two new language READMEs, the version cut to 2.9.0 and the
+   acceptance sheet `docs/superpowers/specs/2.9.0-acceptance.md` (Task 4).
+   Known limitation, matching upstream: neither Japanese nor Korean has had a
+   native-speaker review; the READMEs say so.
 
 ## 9. Risks & mitigations
 

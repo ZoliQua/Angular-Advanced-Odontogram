@@ -6,6 +6,110 @@ versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-11-23
+
+Resync to `react-advanced-odontogram` v2.9.0 (engine commit `3321e63`,
+payload version stays 2.22 — no migration) — 3 upstream commits past the
+previous `a11468d` pin. See `docs/superpowers/specs/2.9.0-acceptance.md` for the
+acceptance evidence and `docs/superpowers/plans/2026-11-23-phase14-resync-290.md`
+for the resync plan.
+
+### Added
+- **Japanese (`ja`) and Korean (`ko`): the thirteenth and fourteenth UI
+  languages.** Both carry the full key set, checked against Hungarian as every
+  other locale is, with clinical terminology from Japanese Society of
+  Conservative Dentistry / Japanese Society of Periodontology and Korean Academy
+  of Conservative Dentistry / Korean Academy of Periodontology usage; the 2017
+  periodontal classification keeps its international stage/grade wording in both,
+  as the Japanese and Korean literature does. Like every language but English,
+  each is its own lazy chunk (64,948 B and 62,237 B built), and both appear in
+  the topbar menu and in Settings. **Neither has had a native-speaker review
+  yet** — the language READMEs say so, alongside AR/ZH/FR.
+- **Documentation in Japanese and Korean**: `lang/README-ja.md` and
+  `lang/README-ko.md`, bringing the per-language documentation set to 14.
+- **Two embedded PDF fonts**, `core/fonts/notoJP.ts` and `core/fonts/notoKR.ts`,
+  each its own lazy chunk loaded only when a PDF is exported in that language.
+  The report embeds one subset font per script so an export works offline, and
+  the existing Chinese subset contains no kana and no hangul — so neither
+  language could have rendered at all. The coverage of each is a measured
+  trade-off, not a default:
+
+  | | coverage | built chunk |
+  |---|---|---|
+  | `notoJP.ts` | every kana + the kanji in the `ja` strings | 290,892 B |
+  | `notoKR.ts` | **all 11,172** precomposed hangul syllables + jamo | 3,239,293 B |
+
+  Japanese has a phonetic fallback — any name can be written in kana — so
+  complete kana matters more than complete kanji. Korean has none, and a PDF
+  performs no OpenType composition here: a hangul syllable is one glyph, and a
+  syllable missing from the subset cannot be drawn at all. This port's Korean UI
+  uses 432 of them (upstream's own uses 429 — the three extra come from this
+  port's credits strings); a patient's name uses whichever it likes.
+- **`core/__tests__/pdf-font-coverage.test.ts`**: does the PDF actually render,
+  or does it render boxes? It parses the base64 each font module ships, walks its
+  `cmap` (computing glyph ids, so a range mapped to `.notdef` is never counted as
+  covered), and compares that against the locale the font serves. It also
+  requires every embedded face to be static and to weigh what its name claims.
+- **A registry-derived code-split guard that actually runs.** The upstream guard
+  proving every non-English language is reached through a literal dynamic import
+  lives in a corpus file this port must exclude from `test:corpus` (it mixes
+  static analysis with React render assertions), and the Angular replacement had
+  only ported that file's two static-import scans. So until now no executed test
+  in this repo checked that claim for any language. It is now in
+  `lib/lazy-loading.guard.spec.ts`, derived from `LANGUAGES`, which is what makes
+  it cover a language added later. A sibling guard fails if anything above
+  `lib/core/` statically imports an embedded font — `notoKR.ts` alone is 3.2 MB.
+
+### Fixed
+- **Chinese PDF text rendered hairline Thin.** The Chinese subset was cut from a
+  variable font without instancing it, so `fvar`/`gvar` survived into the
+  embedded TTF — and that font's `fvar` default is `wght=100`. jsPDF has no
+  variable-font support: it renders the default instance. Every Chinese PDF this
+  package has ever produced was Thin. Instancing to `wght=400` fixes the weight
+  and, with the variation tables gone, makes the module **40% smaller**.
+- **The Chinese PDF font was missing 84 characters the Chinese UI displays.** It
+  was generated before the case-diagnoses strings existed and never regenerated,
+  so 唾 (saliva), 腺 (gland), 瘘 (fistula), 颞 (temporal) and the rest came out as
+  missing glyphs. Regenerating from the locale closed the gap; the new coverage
+  test is what will keep it closed.
+- **Arabic bold text was never bold.** `notoArabic.ts` embeds two faces, and the
+  bold one was a variable subset whose `fvar` default — and `OS/2` weight class —
+  was `400`. jsPDF renders the default instance, so every "bold" Arabic run in a
+  PDF came out at regular weight. Pinned to `wght=700`, which also dropped the
+  module another 25%.
+- **Four language tests restated the language list instead of reading it.**
+  `translations`, `tour`, `dx-settings` and the `i18n-lazy-load` guard each
+  carried a hand-written list of twelve codes, so a new language could be wired
+  into the registry, the loader, the aggregator and both pickers and still have
+  none of its 1000+ keys checked — the suite would stay green and say nothing.
+  All four now derive the list from `LANGUAGES`.
+
+### Changed
+- `notoArabic.ts`'s Regular face is now static too, with its coverage verified
+  unchanged. For that face this is **not** a rendering fix: its `fvar` default
+  was already `wght=400`, so regular Arabic was never hairline. Every embedded
+  face is now static, which is what the new test requires — a font whose variable
+  default happens to be right today is one edit away from not being.
+- The published package grows to **48 files, 7.0 MB packed / 24.7 MB unpacked**
+  (2.8.0: 40 files, 4.6 MB / 18.1 MB). The Korean font is almost all of it. The
+  main FESM is unchanged at 2.3 MB and contains no kana, no hangul and no font
+  payload: an app that never exports a Korean PDF never downloads those bytes.
+
+### Notes
+- Payload version unchanged at **2.22**; no state, render or FHIR-content change.
+  The SVG-fingerprint, roundtrip-golden, API-surface and shell-DOM parity
+  fixtures are byte-identical. The FHIR goldens and the published `fhir/`
+  terminology artifacts differ only in the package version string.
+- **Port deviation (new):** the ported coverage test carries one extra
+  `KNOWN_GAPS` entry, `zh: [0x5E93]`. 库 ("library") reaches the Chinese locale
+  only through this port's own credits string naming the React library this port
+  is based on — a string upstream does not have — and `notoSC.ts` is subset
+  upstream from upstream's locale, so it has no glyph for it. The credits text is
+  on-screen only: no PDF label prints it, and the UI draws it with the browser's
+  fonts. The test's own allowance audit still requires the character to be
+  genuinely absent from the font *and* genuinely used by the locale, so the entry
+  cannot quietly outlive its reason.
+
 ## [2.8.0] - 2026-10-30
 
 Resync to `react-advanced-odontogram` v2.8.0 (engine commit `a11468d`,
@@ -674,7 +778,8 @@ acceptance evidence.
 
 ---
 
-[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/ZoliQua/Angular-Advanced-Odontogram/compare/v2.4.1...v2.6.0
