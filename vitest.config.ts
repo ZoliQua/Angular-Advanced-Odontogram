@@ -121,7 +121,7 @@ export default defineConfig({
   // imported once from `public-api.ts`) — but the corpus test harness here runs
   // core files directly, never through that shim.
   //
-  // The value here is "2.8.0" — the PINNED ENGINE version this resync adopts (Phase 13; was "2.7.0")
+  // The value here is "2.9.0" — the PINNED ENGINE version this resync adopts (Phase 14; was "2.8.0")
   // (matches the CodeSystem.version baked into the adopted upstream goldens,
   // e.g. `__tests__/parity/fhir-golden.json`). As of Task 7's version cut this
   // also happens to equal this package's own package.json/app-version.ts
@@ -130,7 +130,7 @@ export default defineConfig({
   // make the corpus's FHIR-export goldens (captured against the pinned
   // engine) match; it does not read package.json and does not change
   // anything the built library ships.
-  define: { __APP_VERSION__: JSON.stringify("2.8.0") },
+  define: { __APP_VERSION__: JSON.stringify("2.9.0") },
   test: {
     globals: true,
     environment: "jsdom",
